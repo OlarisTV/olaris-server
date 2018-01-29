@@ -22,7 +22,7 @@ var sessions = make(map[string]*ffmpeg.TranscodingSession)
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/{filename}/{sessionId}/manifest.mpd", serveManifest)
-	r.HandleFunc("/{filename}/{sessionId}/{segment_id:[0-9]+}.m4s", serveSegment)
+	r.HandleFunc("/{filename}/{sessionId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.Handle("/", http.FileServer(http.Dir(mediaFilesDir)))
 
 	http.ListenAndServe(":8080", r)
@@ -48,7 +48,10 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 func serveSegment(w http.ResponseWriter, r *http.Request) {
 	sessionId := mux.Vars(r)["sessionId"]
 	s := sessions[sessionId]
-	segmentId, _ := strconv.Atoi(mux.Vars(r)["segmentId"])
+	segmentId, err := strconv.Atoi(mux.Vars(r)["segmentId"])
+	if err != nil {
+		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
+	}
 
 	if s != nil {
 		availableSegments, _ := s.AvailableSegments()
@@ -68,7 +71,6 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		s.Start()
 
 	}
-
 
 	for {
 		availableSegments, _ := s.AvailableSegments()
