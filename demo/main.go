@@ -10,6 +10,8 @@ import(
 	"strconv"
 	"os"
 	"time"
+	"context"
+	"os/signal"
 )
 
 const mediaFilesDir = "/home/leon/Videos"
@@ -20,12 +22,27 @@ const segmentDuration = 5
 var sessions = make(map[string]*ffmpeg.TranscodingSession)
 
 func main() {
+	// subscribe to SIGINT signals
+	stopChan := make(chan os.Signal)
+	signal.Notify(stopChan, os.Interrupt)
+
 	r := mux.NewRouter()
 	r.HandleFunc("/{filename}/{sessionId}/manifest.mpd", serveManifest)
 	r.HandleFunc("/{filename}/{sessionId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.Handle("/", http.FileServer(http.Dir(mediaFilesDir)))
 
-	http.ListenAndServe(":8080", r)
+	srv := &http.Server{Addr: ":8080", Handler: r}
+	go srv.ListenAndServe()
+
+	// Wait for termination signal
+	<-stopChan
+
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	srv.Shutdown(ctx)
+
+	for _, s := range sessions {
+		s.Destroy()
+	}
 }
 
 func serveManifest(w http.ResponseWriter, r *http.Request) {
