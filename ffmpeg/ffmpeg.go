@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"path/filepath"
 	"log"
+	"fmt"
 )
 
 type TranscodingSession struct {
@@ -19,6 +20,10 @@ type TranscodingSession struct {
 	outputDir string
 	// ffmpeg always starts with segment 1. However, when we start at an offset in time, we
 	segmentOffset int
+	// Usually something like "direct-stream", to which "-video" and "-audio" will be appended
+	representationIdBase string
+	// Output streams of this session
+	streams []string
 }
 
 // TranscodeAndSegment starts a new ffmpeg transcode process with the given settings.
@@ -34,11 +39,12 @@ func NewTranscodingSession(inputPath string, outputDirBase string, startDuration
 
 	cmd := exec.Command("ffmpeg",
 		"-i", inputPath,
-		"-c", "copy",
+		"-c:v", "copy",
+		"-c:a", "copy",
 		"-f", "dash",
 		"-ss", strconv.FormatInt(startDuration, 10),
 		"-min_seg_duration", "5000000",
-		"-media_seg_name", "segment_$Number$.m4s",
+		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
 	log.Println("ffmpeg started with %s", cmd.Args)
@@ -70,7 +76,7 @@ func (s *TranscodingSession) Destroy() error {
 	return nil
 }
 
-func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
+func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string, error) {
 	res := make(map[int]string)
 
 	files, err := ioutil.ReadDir(s.outputDir)
@@ -78,7 +84,17 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 		return nil, err
 	}
 
-	r := regexp.MustCompile("segment_(?P<number>\\d+).m4s")
+	var streamFilenamePrefix string;
+
+	if streamId == "video" {
+		streamFilenamePrefix = "stream0"
+	} else if streamId == "audio" {
+		streamFilenamePrefix = "stream1"
+	} else {
+		return nil, fmt.Errorf("Invalid stream ID", streamId)
+	}
+
+	r := regexp.MustCompile(streamFilenamePrefix + "_(?P<number>\\d+).m4s")
 
 	for _, f := range files {
 		match := r.FindString(f.Name())
@@ -90,4 +106,16 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	}
 
 	return res, nil
+}
+
+// InitialSegment returns the path of the initial segment for the given stream
+// or error if no initial segment is available for the given stream.
+func (s *TranscodingSession) InitialSegment(streamId string) (string, error) {
+	if streamId == "video" {
+		return filepath.Join(s.outputDir, "init-stream0.m4s"), nil
+	}
+	if streamId == "audio" {
+		return filepath.Join(s.outputDir, "init-stream1.m4s"), nil
+	}
+	return "", fmt.Errorf("No initial segment for the given stream \"%s\"", streamId)
 }
