@@ -1,22 +1,22 @@
 package main
 
-import(
-	"github.com/gorilla/mux"
-	"net/http"
-	"path"
+import (
 	"bytesized-hosting.com/media/streaming/ffmpeg"
-	"log"
-	"strconv"
-	"os"
-	"time"
 	"context"
-	"os/signal"
-	"text/template"
-	"strings"
 	"fmt"
-	"github.com/rs/cors"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path"
+	"strconv"
+	"strings"
 	"sync"
+	"text/template"
+	"time"
 )
 
 const mediaFilesDir = "/home/leon/Videos"
@@ -25,6 +25,7 @@ const segmentDuration = 5
 
 // TODO(Leon Handreke): Get rid of the singleton pattern.
 var sessions = make(map[string]*ffmpeg.TranscodingSession)
+
 // TODO(Leon Handreke): Enable concurrency once we've figured out how to let TranscodingSessions report what they *almost* have
 var requestMutex = sync.Mutex{}
 
@@ -65,13 +66,31 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	minBufferTime="PT30S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
 		<AdaptationSet segmentAlignment="true" contentType="video">
-			<SegmentTemplate timescale="1" duration="5" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+				<SegmentTimeline>
+					{{ range $index, $duration := .segmentDurations }}
+						{{ if eq $index 0}}
+						<S t="0" d="{{ $duration }}"></S> <!-- $index -->
+ 						{{ else }}
+						<S d="{{ $duration }}"></S> <!-- {{ $index }} -->
+						{{ end}}
+					{{ end }}
+				</SegmentTimeline>
 			</SegmentTemplate>
 			<Representation id="direct-stream-video" mimeType="video/mp4" codecs="avc1.64001e" width="1024" height="552">
 			</Representation>
 		</AdaptationSet>
 		<AdaptationSet segmentAlignment="true" contentType="audio">
-			<SegmentTemplate timescale="1" duration="5" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+				<SegmentTimeline>
+					{{ range $index, $duration := .segmentDurations }}
+						{{ if eq $index 0}}
+						<S t="0" d="{{ $duration }}"></S> <!-- {{ $index }} -->
+ 						{{ else }}
+						<S d="{{ $duration }}"></S> <!-- {{ $index }} -->
+						{{ end}}
+					{{ end }}
+				</SegmentTimeline>
 			</SegmentTemplate>
 			<Representation id="direct-stream-audio" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="0" audioSamplingRate="48000">
 			</Representation>
@@ -91,13 +110,31 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 
 	d := probeData.Format.Duration().Round(time.Millisecond)
 	durationXml := fmt.Sprintf("PT%dH%dM%d.%dS",
-		d / time.Hour,
-		(d % time.Hour) / time.Minute,
-		(d % time.Minute) / time.Second,
-		(d % time.Second) / time.Millisecond)
+		d/time.Hour,
+		(d%time.Hour)/time.Minute,
+		(d%time.Minute)/time.Second,
+		(d%time.Second)/time.Millisecond)
+
+	keyframes, err := ffmpeg.ProbeKeyframes(mediaFilePath)
+	log.Println(keyframes)
+	if err != nil {
+		log.Fatal("Failed to ffprobe %s", mediaFilePath)
+	}
+	segmentDurations := []int{}
+	lastKeyframe := 0
+	for i, keyframe := range keyframes {
+		if i == 0 {
+			continue
+		}
+		d := keyframe - keyframes[lastKeyframe]
+		if d > segmentDuration {
+			segmentDurations = append(segmentDurations, int(d*1000))
+			lastKeyframe = i
+		}
+	}
 
 	t := template.Must(template.New("manifest").Parse(manifestTemplate))
-	templateData := map[string]string{"duration": durationXml}
+	templateData := map[string]interface{}{"duration": durationXml, "segmentDurations": segmentDurations}
 	t.Execute(w, templateData)
 }
 
@@ -138,7 +175,6 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		s, _ = getOrStartTranscodingSession(sessionId, filename, representationIdBase, segmentId)
 	}
 
-
 	for {
 		availableSegments, _ := s.AvailableSegments(streamId)
 		if path, ok := availableSegments[segmentId]; ok {
@@ -149,7 +185,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getOrStartTranscodingSession(sessionId string, filename string, representationIdBase string, segmentId int) (*ffmpeg.TranscodingSession, error){
+func getOrStartTranscodingSession(sessionId string, filename string, representationIdBase string, segmentId int) (*ffmpeg.TranscodingSession, error) {
 	s := sessions[sessionId]
 
 	if s == nil {
@@ -157,7 +193,7 @@ func getOrStartTranscodingSession(sessionId string, filename string, representat
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
 		mediaFilePath := path.Join(mediaFilesDir, filename)
 		startTime := int64(segmentId * segmentDuration)
-		s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId - 1)
+		s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId-1)
 		sessions[sessionId] = s
 		s.Start()
 		time.Sleep(2 * time.Second)
@@ -190,5 +226,3 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(500 * time.Millisecond)
 	}
 }
-
-

@@ -3,20 +3,20 @@
 package ffmpeg
 
 import (
-	"os/exec"
-	"os"
-	"strconv"
-	"path"
-	"syscall"
-	"io/ioutil"
-	"regexp"
-	"path/filepath"
-	"log"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"syscall"
 )
 
 type TranscodingSession struct {
-	cmd *exec.Cmd
+	cmd       *exec.Cmd
 	outputDir string
 	// ffmpeg always starts with segment 1. However, when we start at an offset in time, we
 	segmentOffset int
@@ -30,7 +30,7 @@ type TranscodingSession struct {
 // It returns the process that was started and any error it encountered while starting it.
 
 // TODO(Leon Handreke): Add argument to pass target codec settings in. For now, it will just copy
-func NewTranscodingSession(inputPath string, outputDirBase string, startDuration int64, segmentOffset int)(*TranscodingSession, error) {
+func NewTranscodingSession(inputPath string, outputDirBase string, startDuration int64, segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -38,11 +38,12 @@ func NewTranscodingSession(inputPath string, outputDirBase string, startDuration
 	}
 
 	cmd := exec.Command("ffmpeg",
+		// -ss being before -i is important for fast seeking
+		"-ss", strconv.FormatInt(startDuration, 10),
 		"-i", inputPath,
 		"-c:v", "copy",
 		"-c:a", "copy",
 		"-f", "dash",
-		"-ss", strconv.FormatInt(startDuration, 10),
 		"-min_seg_duration", "5000000",
 		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
 		// We serve our own manifest, so we don't really care about this.
@@ -52,7 +53,6 @@ func NewTranscodingSession(inputPath string, outputDirBase string, startDuration
 	cmd.Stdout = os.Stdout
 
 	return &TranscodingSession{cmd: cmd, outputDir: outputDir, segmentOffset: segmentOffset}, nil
-
 
 }
 
@@ -84,7 +84,7 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 		return nil, err
 	}
 
-	var streamFilenamePrefix string;
+	var streamFilenamePrefix string
 
 	if streamId == "video" {
 		streamFilenamePrefix = "stream0"
@@ -99,8 +99,8 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 	for _, f := range files {
 		match := r.FindString(f.Name())
 		if match != "" {
-			segmentFsNumber, _ := strconv.Atoi(match[len("segment_"):len(match)-len(".m4s")])
-			res[segmentFsNumber + s.segmentOffset] = filepath.Join(s.outputDir, f.Name())
+			segmentFsNumber, _ := strconv.Atoi(match[len("segment_") : len(match)-len(".m4s")])
+			res[segmentFsNumber+s.segmentOffset] = filepath.Join(s.outputDir, f.Name())
 		}
 
 	}

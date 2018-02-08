@@ -1,9 +1,12 @@
 package ffmpeg
 
 import (
+	"bufio"
 	"encoding/json"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,4 +62,42 @@ func Probe(filename string) (*ProbeData, error) {
 	}
 
 	return &v, nil
+}
+
+// ProbeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
+func ProbeKeyframes(filename string) ([]float64, error) {
+	cmd := exec.Command("ffprobe",
+		"-select_streams", "v",
+		"-show_entries", "packet=pts_time,flags",
+		"-v", "quiet",
+		"-of", "csv",
+		filename)
+	cmd.Stderr = os.Stderr
+
+	rawReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
+
+	keyframes := []float64{}
+	scanner := bufio.NewScanner(rawReader)
+	for scanner.Scan() {
+		// Each line has the format "packet,4.223000,K_"
+		line := strings.Split(scanner.Text(), ",")
+		if line[2][0] == 'K' {
+			pts, err := strconv.ParseFloat(line[1], 64)
+			if err != nil {
+				return nil, err
+			}
+			keyframes = append(keyframes, pts)
+		}
+	}
+
+	return keyframes, nil
+
 }
