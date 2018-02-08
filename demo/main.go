@@ -20,14 +20,12 @@ import (
 )
 
 const mediaFilesDir = "/home/leon/Videos"
-const cacheDir = "/tmp"
 const minSegDuration = time.Duration(5 * time.Second)
 
-// TODO(Leon Handreke): Get rid of the singleton pattern.
 var sessions = make(map[string]*ffmpeg.TranscodingSession)
 
-// TODO(Leon Handreke): Enable concurrency once we've figured out how to let TranscodingSessions report what they *almost* have
-var requestMutex = sync.Mutex{}
+// Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
+var sessionsMutex = sync.Mutex{}
 
 func main() {
 	// subscribe to SIGINT signals
@@ -87,9 +85,6 @@ func splitRepresentationId(representationId string) (string, string, error) {
 }
 
 func serveSegment(w http.ResponseWriter, r *http.Request) {
-	requestMutex.Lock()
-	defer requestMutex.Unlock()
-
 	sessionId := mux.Vars(r)["sessionId"]
 	filename := mux.Vars(r)["filename"]
 
@@ -105,24 +100,14 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 
 	s, _ := getOrStartTranscodingSession(sessionId, filename, representationIdBase, segmentId)
 
-	availableSegments, _ := s.AvailableSegments(streamId)
-	if _, ok := availableSegments[segmentId]; !ok {
-		go s.Destroy()
-		sessions[sessionId] = nil
-		s, _ = getOrStartTranscodingSession(sessionId, filename, representationIdBase, segmentId)
-	}
-
-	for {
-		availableSegments, _ := s.AvailableSegments(streamId)
-		if path, ok := availableSegments[segmentId]; ok {
-			http.ServeFile(w, r, path)
-			return
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
+	segmentPath, err := s.GetSegment(streamId, segmentId, time.Duration(20*time.Second))
+	http.ServeFile(w, r, segmentPath)
 }
 
 func getOrStartTranscodingSession(sessionId string, filename string, representationIdBase string, segmentId int) (*ffmpeg.TranscodingSession, error) {
+	sessionsMutex.Lock()
+	defer sessionsMutex.Unlock()
+
 	s := sessions[sessionId]
 
 	if s == nil {
@@ -140,9 +125,6 @@ func getOrStartTranscodingSession(sessionId string, filename string, representat
 }
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
-	requestMutex.Lock()
-	defer requestMutex.Unlock()
-
 	sessionId := mux.Vars(r)["sessionId"]
 	filename := mux.Vars(r)["filename"]
 

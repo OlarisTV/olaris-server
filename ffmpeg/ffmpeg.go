@@ -77,6 +77,21 @@ func (s *TranscodingSession) Destroy() error {
 	return nil
 }
 
+// GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
+// It will block for at most deadline.
+func (s *TranscodingSession) GetSegment(streamId string, segmentId int, deadline time.Duration) (string, error) {
+	// TODO(Leon Handreke): For transcoding we want some prediction mechanism, for now we just assume Direct Stream will
+	// have all the segments pretty soon.
+	for {
+		availableSegments, _ := s.AvailableSegments(streamId)
+		if path, ok := availableSegments[segmentId]; ok {
+			return path, nil
+		}
+		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string, error) {
 	res := make(map[int]string)
 
