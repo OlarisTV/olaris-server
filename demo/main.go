@@ -69,7 +69,7 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("Failed to ffprobe %s", mediaFilePath)
 	}
 
-	manifest := dash.BuildManifest(ffmpeg.GuessSegmentDurations(keyframes, minSegDuration), totalDuration)
+	manifest := dash.BuildManifest(ffmpeg.GuessSegmentDurations(keyframes, totalDuration, minSegDuration), totalDuration)
 	w.Write([]byte(manifest))
 }
 

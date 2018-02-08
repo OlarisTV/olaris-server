@@ -136,7 +136,10 @@ func (s *TranscodingSession) InitialSegment(streamId string) (string, error) {
 	return "", fmt.Errorf("No initial segment for the given stream \"%s\"", streamId)
 }
 
-func GuessSegmentDurations(keyframeTimestamps []time.Duration, minSegDuration time.Duration) []time.Duration {
+func GuessSegmentDurations(keyframeTimestamps []time.Duration, totalDuration time.Duration, minSegDuration time.Duration) []time.Duration {
+	// Insert dummy keyframe timestamp at the end so that the last segment duration is correctly reported
+	keyframeTimestamps = append(keyframeTimestamps, totalDuration)
+
 	segmentDurations := []time.Duration{}
 	lastKeyframe := 0
 	for i, keyframe := range keyframeTimestamps {
