@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytesized-hosting.com/media/streaming/dash"
 	"bytesized-hosting.com/media/streaming/ffmpeg"
 	"context"
 	"fmt"
@@ -15,13 +16,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 )
 
 const mediaFilesDir = "/home/leon/Videos"
 const cacheDir = "/tmp"
-const segmentDuration = time.Duration(5 * time.Second)
+const minSegDuration = time.Duration(5 * time.Second)
 
 // TODO(Leon Handreke): Get rid of the singleton pattern.
 var sessions = make(map[string]*ffmpeg.TranscodingSession)
@@ -54,42 +54,6 @@ func main() {
 	}
 }
 
-const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
-<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns="urn:mpeg:dash:schema:mpd:2011"
-	xmlns:xlink="http://www.w3.org/1999/xlink"
-	xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
-	profiles="urn:mpeg:dash:profile:isoff-live:2011"
-	type="static"
-	mediaPresentationDuration="{{ .duration }}"
-	maxSegmentDuration="PT10S"
-	minBufferTime="PT30S">
-	<Period start="PT0S" id="0" duration="{{ .duration }}">
-		<AdaptationSet segmentAlignment="true" contentType="video">
-			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
-				<SegmentTimeline>
-					{{ range $index, $duration := .segmentDurations }}
-					<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
-					{{ end }}
-				</SegmentTimeline>
-			</SegmentTemplate>
-			<Representation id="direct-stream-video" mimeType="video/mp4" codecs="avc1.64001e" width="1024" height="552">
-			</Representation>
-		</AdaptationSet>
-		<AdaptationSet segmentAlignment="true" contentType="audio">
-			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
-				<SegmentTimeline>
-					{{ range $index, $duration := .segmentDurations }}
-					<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
-					{{ end }}
-				</SegmentTimeline>
-			</SegmentTemplate>
-			<Representation id="direct-stream-audio" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="0" audioSamplingRate="48000">
-			</Representation>
-		</AdaptationSet>
-	</Period>
-</MPD>`
-
 func serveManifest(w http.ResponseWriter, r *http.Request) {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
@@ -100,28 +64,15 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("Failed to ffprobe %s", mediaFilePath)
 	}
 
-	d := probeData.Format.Duration().Round(time.Millisecond)
-	durationXml := fmt.Sprintf("PT%dH%dM%d.%dS",
-		d/time.Hour,
-		(d%time.Hour)/time.Minute,
-		(d%time.Minute)/time.Second,
-		(d%time.Second)/time.Millisecond)
+	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
 
 	keyframes, err := ffmpeg.ProbeKeyframes(mediaFilePath)
 	if err != nil {
 		log.Fatal("Failed to ffprobe %s", mediaFilePath)
 	}
 
-	// Segment durations in ms
-	segmentDurations := []int64{}
-	for _, d := range ffmpeg.GuessSegmentDurations(keyframes, segmentDuration) {
-		segmentDurations = append(segmentDurations, int64(d/time.Millisecond))
-
-	}
-
-	t := template.Must(template.New("manifest").Parse(manifestTemplate))
-	templateData := map[string]interface{}{"duration": durationXml, "segmentDurations": segmentDurations}
-	t.Execute(w, templateData)
+	manifest := dash.BuildManifest(ffmpeg.GuessSegmentDurations(keyframes, minSegDuration), totalDuration)
+	w.Write([]byte(manifest))
 }
 
 func splitRepresentationId(representationId string) (string, string, error) {
@@ -178,7 +129,7 @@ func getOrStartTranscodingSession(sessionId string, filename string, representat
 		// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
 		mediaFilePath := path.Join(mediaFilesDir, filename)
-		startTime := int64(segmentId) * int64(segmentDuration.Seconds())
+		startTime := int64(segmentId) * int64(minSegDuration.Seconds())
 		s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId-1)
 		sessions[sessionId] = s
 		s.Start()
