@@ -21,7 +21,7 @@ import (
 
 const mediaFilesDir = "/home/leon/Videos"
 const cacheDir = "/tmp"
-const segmentDuration = 5
+const segmentDuration = time.Duration(5 * time.Second)
 
 // TODO(Leon Handreke): Get rid of the singleton pattern.
 var sessions = make(map[string]*ffmpeg.TranscodingSession)
@@ -69,11 +69,7 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				<SegmentTimeline>
 					{{ range $index, $duration := .segmentDurations }}
-						{{ if eq $index 0}}
-						<S t="0" d="{{ $duration }}"></S> <!-- $index -->
- 						{{ else }}
-						<S d="{{ $duration }}"></S> <!-- {{ $index }} -->
-						{{ end}}
+					<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
 					{{ end }}
 				</SegmentTimeline>
 			</SegmentTemplate>
@@ -84,11 +80,7 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				<SegmentTimeline>
 					{{ range $index, $duration := .segmentDurations }}
-						{{ if eq $index 0}}
-						<S t="0" d="{{ $duration }}"></S> <!-- {{ $index }} -->
- 						{{ else }}
-						<S d="{{ $duration }}"></S> <!-- {{ $index }} -->
-						{{ end}}
+					<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
 					{{ end }}
 				</SegmentTimeline>
 			</SegmentTemplate>
@@ -116,21 +108,15 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 		(d%time.Second)/time.Millisecond)
 
 	keyframes, err := ffmpeg.ProbeKeyframes(mediaFilePath)
-	log.Println(keyframes)
 	if err != nil {
 		log.Fatal("Failed to ffprobe %s", mediaFilePath)
 	}
-	segmentDurations := []int{}
-	lastKeyframe := 0
-	for i, keyframe := range keyframes {
-		if i == 0 {
-			continue
-		}
-		d := keyframe - keyframes[lastKeyframe]
-		if d > segmentDuration {
-			segmentDurations = append(segmentDurations, int(d*1000))
-			lastKeyframe = i
-		}
+
+	// Segment durations in ms
+	segmentDurations := []int64{}
+	for _, d := range ffmpeg.GuessSegmentDurations(keyframes, segmentDuration) {
+		segmentDurations = append(segmentDurations, int64(d/time.Millisecond))
+
 	}
 
 	t := template.Must(template.New("manifest").Parse(manifestTemplate))
@@ -192,7 +178,7 @@ func getOrStartTranscodingSession(sessionId string, filename string, representat
 		// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
 		mediaFilePath := path.Join(mediaFilesDir, filename)
-		startTime := int64(segmentId * segmentDuration)
+		startTime := int64(segmentId) * int64(segmentDuration.Seconds())
 		s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId-1)
 		sessions[sessionId] = s
 		s.Start()

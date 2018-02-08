@@ -65,7 +65,7 @@ func Probe(filename string) (*ProbeData, error) {
 }
 
 // ProbeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
-func ProbeKeyframes(filename string) ([]float64, error) {
+func ProbeKeyframes(filename string) ([]time.Duration, error) {
 	cmd := exec.Command("ffprobe",
 		"-select_streams", "v",
 		"-show_entries", "packet=pts_time,flags",
@@ -84,7 +84,7 @@ func ProbeKeyframes(filename string) ([]float64, error) {
 		return nil, err
 	}
 
-	keyframes := []float64{}
+	keyframes := []time.Duration{}
 	scanner := bufio.NewScanner(rawReader)
 	for scanner.Scan() {
 		// Each line has the format "packet,4.223000,K_"
@@ -94,10 +94,9 @@ func ProbeKeyframes(filename string) ([]float64, error) {
 			if err != nil {
 				return nil, err
 			}
-			keyframes = append(keyframes, pts)
+			keyframes = append(keyframes, time.Duration(pts*float64(time.Second)))
 		}
 	}
 
 	return keyframes, nil
-
 }

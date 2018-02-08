@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 type TranscodingSession struct {
@@ -118,4 +119,21 @@ func (s *TranscodingSession) InitialSegment(streamId string) (string, error) {
 		return filepath.Join(s.outputDir, "init-stream1.m4s"), nil
 	}
 	return "", fmt.Errorf("No initial segment for the given stream \"%s\"", streamId)
+}
+
+func GuessSegmentDurations(keyframeTimestamps []time.Duration, minSegDuration time.Duration) []time.Duration {
+	segmentDurations := []time.Duration{}
+	lastKeyframe := 0
+	for i, keyframe := range keyframeTimestamps {
+		if i == 0 {
+			continue
+		}
+		d := keyframe - keyframeTimestamps[lastKeyframe]
+		if d > minSegDuration {
+			segmentDurations = append(segmentDurations, d)
+			lastKeyframe = i
+		}
+	}
+
+	return segmentDurations
 }
