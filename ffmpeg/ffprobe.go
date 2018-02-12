@@ -2,13 +2,18 @@ package ffmpeg
 
 import (
 	"bufio"
+	_ "bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var extraDataRegex = regexp.MustCompile(`0{8}: \d{2}(.{2})\s(.{4})`)
 
 type ProbeContainer struct {
 	Streams []ProbeStream `json:"streams"`
@@ -19,14 +24,27 @@ type ProbeStream struct {
 	Index         int               `json:"index"`
 	CodecName     string            `json:"codec_name"`
 	CodecLongName string            `json:"codec_long_name"`
+	CodecTag      string            `json:"codec_tag"`
 	Profile       string            `json:"profile"`
+	Level         int               `json:"level"`
 	Channels      int               `json:"channels"`
 	ChannelLayout string            `json:"channel_layout"`
 	CodecType     string            `json:"codec_type"`
 	BitRate       string            `json:"bit_rate"`
 	Width         int               `json:"width"`
 	Height        int               `json:"height"`
+	Extradata     string            `json:"extradata"`
 	Tags          map[string]string `json:"tags"`
+}
+
+func (self *ProbeStream) GetMime() string {
+	if self.CodecName == "h264" {
+		res := extraDataRegex.FindAllStringSubmatch(self.Extradata, -1)
+		if len(res) > 0 && len(res[0]) > 0 {
+			return fmt.Sprintf("avc1.%s%s", res[0][1], res[0][2])
+		}
+	}
+	return ""
 }
 
 type ProbeFormat struct {
@@ -56,7 +74,7 @@ type ProbeData struct {
 }
 
 func Probe(filename string) (*ProbeContainer, error) {
-	cmd := exec.Command("ffprobe", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
+	cmd := exec.Command("ffprobe", "-show_data", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
 	cmd.Stderr = os.Stderr
 
 	r, err := cmd.StdoutPipe()
