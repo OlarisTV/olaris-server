@@ -1,0 +1,23 @@
+package main
+
+import (
+	"fmt"
+	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"os"
+)
+
+func main() {
+	if len(os.Args) == 1 {
+		fmt.Println("please supply a filename")
+		return
+	}
+
+	probe, err := ffmpeg.Probe(os.Args[1])
+	if err != nil {
+		fmt.Println("ERROR:", err)
+		return
+	}
+
+	fmt.Println(probe.Format.Filename)
+	fmt.Printf("%+v\n", probe)
+}

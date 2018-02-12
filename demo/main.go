@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bytesized-hosting.com/media/streaming/dash"
-	"bytesized-hosting.com/media/streaming/ffmpeg"
 	"context"
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"gitlab.com/bytesized/bytesized-streaming/dash"
+	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"log"
 	"net/http"
 	"os"

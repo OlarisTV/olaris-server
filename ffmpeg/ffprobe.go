@@ -10,6 +10,25 @@ import (
 	"time"
 )
 
+type ProbeContainer struct {
+	Streams []ProbeStream `json:"streams"`
+	Format  ProbeFormat   `json:"format"`
+}
+
+type ProbeStream struct {
+	Index         int               `json:"index"`
+	CodecName     string            `json:"codec_name"`
+	CodecLongName string            `json:"codec_long_name"`
+	Profile       string            `json:"profile"`
+	Channels      int               `json:"channels"`
+	ChannelLayout string            `json:"channel_layout"`
+	CodecType     string            `json:"codec_type"`
+	BitRate       string            `json:"bit_rate"`
+	Width         int               `json:"width"`
+	Height        int               `json:"height"`
+	Tags          map[string]string `json:"tags"`
+}
+
 type ProbeFormat struct {
 	Filename         string            `json:"filename"`
 	NBStreams        int               `json:"nb_streams"`
@@ -36,8 +55,8 @@ type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
 
-func Probe(filename string) (*ProbeData, error) {
-	cmd := exec.Command("ffprobe", "-show_format", filename, "-print_format", "json", "-v", "quiet")
+func Probe(filename string) (*ProbeContainer, error) {
+	cmd := exec.Command("ffprobe", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
 	cmd.Stderr = os.Stderr
 
 	r, err := cmd.StdoutPipe()
@@ -50,7 +69,7 @@ func Probe(filename string) (*ProbeData, error) {
 		return nil, err
 	}
 
-	var v ProbeData
+	var v ProbeContainer
 	err = json.NewDecoder(r).Decode(&v)
 	if err != nil {
 		return nil, err
