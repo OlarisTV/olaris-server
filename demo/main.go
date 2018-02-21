@@ -22,7 +22,7 @@ import (
 const mediaFilesDir = "/home/leon/Videos"
 const minSegDuration = time.Duration(5 * time.Second)
 
-var sessions = make(map[string]*ffmpeg.TranscodingSession)
+var sessions = []*ffmpeg.TranscodingSession{}
 
 // Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
 var sessionsMutex = sync.Mutex{}
@@ -31,11 +31,10 @@ func main() {
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
-
 	r := mux.NewRouter()
-	r.HandleFunc("/{filename}/{sessionId}/manifest.mpd", serveManifest)
-	r.HandleFunc("/{filename}/{sessionId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
-	r.HandleFunc("/{filename}/{sessionId}/{representationId}/init.mp4", serveInit)
+	r.HandleFunc("/{filename}/manifest.mpd", serveManifest)
+	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
 	r.Handle("/", http.FileServer(http.Dir(mediaFilesDir)))
 
 	srv := &http.Server{Addr: ":8080", Handler: handlers.LoggingHandler(os.Stdout, cors.Default().Handler(r))}
@@ -57,19 +56,7 @@ func serveManifest(w http.ResponseWriter, r *http.Request) {
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(mediaFilesDir, mux.Vars(r)["filename"])
 
-	probeData, err := ffmpeg.Probe(mediaFilePath)
-	if err != nil {
-		log.Fatal("Failed to ffprobe %s", mediaFilePath)
-	}
-
-	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
-
-	keyframes, err := ffmpeg.ProbeKeyframes(mediaFilePath)
-	if err != nil {
-		log.Fatal("Failed to ffprobe %s", mediaFilePath)
-	}
-
-	manifest := dash.BuildManifest(ffmpeg.GuessSegmentDurations(keyframes, totalDuration, minSegDuration), totalDuration)
+	manifest := dash.BuildManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
 }
 
@@ -85,7 +72,7 @@ func splitRepresentationId(representationId string) (string, string, error) {
 }
 
 func serveSegment(w http.ResponseWriter, r *http.Request) {
-	sessionId := mux.Vars(r)["sessionId"]
+	//sessionId := mux.Vars(r)["sessionId"]
 	filename := mux.Vars(r)["filename"]
 
 	representationIdBase, streamId, err := splitRepresentationId(mux.Vars(r)["representationId"])
@@ -98,25 +85,57 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	s, _ := getOrStartTranscodingSession(sessionId, filename, representationIdBase, segmentId)
+	s, _ := getOrStartTranscodingSession(filename, representationIdBase, segmentId)
 
-	segmentPath, err := s.GetSegment(streamId, segmentId, time.Duration(20*time.Second))
+	segmentPath, err := s.GetSegment(streamId, segmentId, 20*time.Second)
+	log.Println(segmentPath)
 	http.ServeFile(w, r, segmentPath)
 }
 
-func getOrStartTranscodingSession(sessionId string, filename string, representationIdBase string, segmentId int) (*ffmpeg.TranscodingSession, error) {
+func getSessions(filename string, representationIdBase string) []*ffmpeg.TranscodingSession {
+	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
+	// https://golang.org/src/net/http/fs.go to see how they prevent that.
+	mediaFilePath := path.Join(mediaFilesDir, filename)
+
+	matching := []*ffmpeg.TranscodingSession{}
+
+	for _, s := range sessions {
+		log.Println(*s)
+		if s.InputPath == mediaFilePath && s.RepresentationIdBase == representationIdBase {
+			matching = append(matching, s)
+		}
+	}
+	return matching
+}
+
+func getOrStartTranscodingSession(filename string, representationIdBase string, segmentId int) (*ffmpeg.TranscodingSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
-	s := sessions[sessionId]
+	var s *ffmpeg.TranscodingSession
+
+	matchingSessions := getSessions(filename, representationIdBase)
+	for _, matchingSession := range matchingSessions {
+		if matchingSession.IsProjectedAvailable("0", segmentId, 20*time.Second) {
+			s = matchingSession
+			break
+		}
+	}
 
 	if s == nil {
 		// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
 		mediaFilePath := path.Join(mediaFilesDir, filename)
-		startTime := int64(segmentId) * int64(minSegDuration.Seconds())
-		s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId-1)
-		sessions[sessionId] = s
+		// At the moment, this will always be 0 for direct-stream
+		startTime := time.Duration(segmentId) * ffmpeg.MinSegDuration
+
+		if representationIdBase == "direct-stream" {
+			s, _ = ffmpeg.NewTransmuxingSession(mediaFilePath, os.TempDir(), startTime, segmentId)
+		} else {
+			s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId)
+		}
+		s.RepresentationIdBase = representationIdBase
+		sessions = append(sessions, s)
 		s.Start()
 		time.Sleep(2 * time.Second)
 	}
@@ -125,7 +144,6 @@ func getOrStartTranscodingSession(sessionId string, filename string, representat
 }
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
-	sessionId := mux.Vars(r)["sessionId"]
 	filename := mux.Vars(r)["filename"]
 
 	representationIdBase, streamId, err := splitRepresentationId(mux.Vars(r)["representationId"])
@@ -133,7 +151,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	s, _ := getOrStartTranscodingSession(sessionId, filename, representationIdBase, 0)
+	s, _ := getOrStartTranscodingSession(filename, representationIdBase, 0)
 
 	for {
 		initPath, _ := s.InitialSegment(streamId)

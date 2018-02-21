@@ -17,21 +17,29 @@ import (
 )
 
 type TranscodingSession struct {
-	cmd       *exec.Cmd
-	outputDir string
-	// ffmpeg always starts with segment 1. However, when we start at an offset in time, we
-	segmentOffset int
+	cmd            *exec.Cmd
+	InputPath      string
+	outputDir      string
+	firstSegmentId int
 	// Usually something like "direct-stream", to which "-video" and "-audio" will be appended
-	representationIdBase string
+	RepresentationIdBase string
 	// Output streams of this session
 	streams []string
 }
 
-// TranscodeAndSegment starts a new ffmpeg transcode process with the given settings.
-// It returns the process that was started and any error it encountered while starting it.
+// MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
+// just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
+// force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
+// segments.
+const MinSegDuration = 5 * time.Second
 
-// TODO(Leon Handreke): Add argument to pass target codec settings in. For now, it will just copy
-func NewTranscodingSession(inputPath string, outputDirBase string, startDuration int64, segmentOffset int) (*TranscodingSession, error) {
+// fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
+// balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
+// transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
+const segmentsPerSession = 12
+
+// NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
+func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration time.Duration, segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -40,21 +48,56 @@ func NewTranscodingSession(inputPath string, outputDirBase string, startDuration
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
-		"-ss", strconv.FormatInt(startDuration, 10),
+		"-ss", strconv.FormatInt(int64(startDuration/time.Second), 10),
 		"-i", inputPath,
 		"-c:v", "copy",
 		"-c:a", "copy",
 		"-f", "dash",
-		"-min_seg_duration", "5000000",
+		"-min_seg_duration", strconv.FormatInt(int64(MinSegDuration/time.Microsecond), 10),
+		// segment_start_number requires a custom ffmpeg
+		// +1 because ffmpeg likes to start segments at 1. The reverse transformation happens in AvailableSegments.
+		"-segment_start_number", strconv.FormatInt(int64(startDuration/MinSegDuration)+1, 10),
 		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
-	log.Println("ffmpeg started with %s", cmd.Args)
+	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
 
-	return &TranscodingSession{cmd: cmd, outputDir: outputDir, segmentOffset: segmentOffset}, nil
+	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
+}
 
+// NewTranscodingSession starts a new transcoding session.
+// It returns the process that was started and any error it encountered while starting it.
+func NewTranscodingSession(inputPath string, outputDirBase string, startDuration time.Duration, segmentOffset int) (*TranscodingSession, error) {
+
+	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command("ffmpeg",
+		// -ss being before -i is important for fast seeking
+		"-ss", strconv.FormatInt(int64(startDuration/time.Second), 10),
+		"-i", inputPath,
+		"-to", strconv.FormatInt(int64((startDuration+segmentsPerSession*MinSegDuration)/time.Second), 10),
+		"-copyts",
+		"-c:v", "libx264", "-b:v", "5000k", "-preset:v", "veryfast",
+		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
+		"-c:a", "aac", "-ac", "2", "-ab", "128k",
+		"-f", "dash",
+		// segment_start_number requires a custom ffmpeg.
+		// +1 because ffmpeg likes to start segments at 1. The reverse transformation happens in AvailableSegments.
+		"-segment_start_number", strconv.FormatInt(int64(startDuration/MinSegDuration)+1, 10),
+		"-min_seg_duration", strconv.FormatInt(int64(MinSegDuration/time.Microsecond), 10),
+		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
+		// We serve our own manifest, so we don't really care about this.
+		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
+	log.Println("ffmpeg started with", cmd.Args)
+	cmd.Stderr, _ = os.Open(os.DevNull)
+	cmd.Stdout = os.Stdout
+
+	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
 }
 
 func (s *TranscodingSession) Start() error {
@@ -80,8 +123,11 @@ func (s *TranscodingSession) Destroy() error {
 // GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
 // It will block for at most deadline.
 func (s *TranscodingSession) GetSegment(streamId string, segmentId int, deadline time.Duration) (string, error) {
-	// TODO(Leon Handreke): For transcoding we want some prediction mechanism, for now we just assume Direct Stream will
-	// have all the segments pretty soon.
+
+	if !s.IsProjectedAvailable(streamId, segmentId, deadline) {
+		return "", fmt.Errorf("Segment not projected to be available within deadline %s", deadline)
+	}
+
 	for {
 		availableSegments, _ := s.AvailableSegments(streamId)
 		if path, ok := availableSegments[segmentId]; ok {
@@ -90,6 +136,15 @@ func (s *TranscodingSession) GetSegment(streamId string, segmentId int, deadline
 		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+func (s *TranscodingSession) IsProjectedAvailable(streamId string, segmentId int, deadline time.Duration) bool {
+	// For transmuxed content we currently just spew out the whole file and serve it.
+	if s.RepresentationIdBase == "direct-stream" {
+		return true
+	}
+
+	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+segmentsPerSession
 }
 
 func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string, error) {
@@ -107,7 +162,7 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 	} else if streamId == "audio" {
 		streamFilenamePrefix = "stream1"
 	} else {
-		return nil, fmt.Errorf("Invalid stream ID", streamId)
+		return nil, fmt.Errorf("Invalid stream ID %s", streamId)
 	}
 
 	r := regexp.MustCompile(streamFilenamePrefix + "_(?P<number>\\d+).m4s")
@@ -116,7 +171,8 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 		match := r.FindString(f.Name())
 		if match != "" {
 			segmentFsNumber, _ := strconv.Atoi(match[len("segment_") : len(match)-len(".m4s")])
-			res[segmentFsNumber+s.segmentOffset] = filepath.Join(s.outputDir, f.Name())
+			// -1 because ffmpeg likes to start segment numbers at 1
+			res[segmentFsNumber-1] = filepath.Join(s.outputDir, f.Name())
 		}
 
 	}
