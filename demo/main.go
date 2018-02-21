@@ -141,7 +141,12 @@ func getOrStartTranscodingSession(filename string, representationIdBase string, 
 		if representationIdBase == "direct-stream" {
 			s, _ = ffmpeg.NewTransmuxingSession(mediaFilePath, os.TempDir(), startTime, segmentId)
 		} else {
-			s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId)
+			if encoderParams, ok := ffmpeg.EncoderPresets[representationIdBase]; ok {
+				s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), startTime, segmentId, encoderParams)
+			} else {
+				return nil, fmt.Errorf("No such encoder preset", representationIdBase)
+			}
+
 		}
 		s.RepresentationIdBase = representationIdBase
 		sessions = append(sessions, s)

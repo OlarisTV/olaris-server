@@ -36,7 +36,7 @@ const MinSegDuration = 5 * time.Second
 // fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
-const segmentsPerSession = 12
+const segmentsPerSession = 6
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
 func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration time.Duration, segmentOffset int) (*TranscodingSession, error) {
@@ -67,9 +67,28 @@ func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration
 	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
 }
 
+type EncoderParams struct {
+	// One of these may be -1 to keep aspect ratio
+	width        int
+	height       int
+	videoBitrate int
+	audioBitrate int
+}
+
+var EncoderPresets = map[string]EncoderParams{
+	"480-1000k":   EncoderParams{height: 480, width: -1, videoBitrate: 1000000, audioBitrate: 64000},
+	"720-5000k":   EncoderParams{height: 720, width: -1, videoBitrate: 5000000, audioBitrate: 128000},
+	"1080-10000k": EncoderParams{height: 1080, width: -1, videoBitrate: 10000000, audioBitrate: 128000},
+}
+
 // NewTranscodingSession starts a new transcoding session.
 // It returns the process that was started and any error it encountered while starting it.
-func NewTranscodingSession(inputPath string, outputDirBase string, startDuration time.Duration, segmentOffset int) (*TranscodingSession, error) {
+func NewTranscodingSession(
+	inputPath string,
+	outputDirBase string,
+	startDuration time.Duration,
+	segmentOffset int,
+	transcodingParams EncoderParams) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -82,9 +101,9 @@ func NewTranscodingSession(inputPath string, outputDirBase string, startDuration
 		"-i", inputPath,
 		"-to", strconv.FormatInt(int64((startDuration+segmentsPerSession*MinSegDuration)/time.Second), 10),
 		"-copyts",
-		"-c:v", "libx264", "-b:v", "5000k", "-preset:v", "veryfast",
+		"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
-		"-c:a", "aac", "-ac", "2", "-ab", "128k",
+		"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
 		"-f", "dash",
 		// segment_start_number requires a custom ffmpeg.
 		// +1 because ffmpeg likes to start segments at 1. The reverse transformation happens in AvailableSegments.
