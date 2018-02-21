@@ -23,13 +23,6 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	minBufferTime="PT30S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
 		<AdaptationSet segmentAlignment="true" contentType="video">
-			<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
-				<SegmentTimeline>
-					{{ range $index, $duration := .segmentDurations }}
-					<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
-					{{ end }}
-				</SegmentTimeline>
-			</SegmentTemplate>
 			<Representation id="direct-stream-video" mimeType="video/mp4" codecs="{{ .codecSpecs }}" width="{{ .width }}" bandwidth="{{ .bitRate }}" height="{{ .height }}">
 				<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 					<SegmentTimeline>
