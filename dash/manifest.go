@@ -31,6 +31,14 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 				</SegmentTimeline>
 			</SegmentTemplate>
 			<Representation id="direct-stream-video" mimeType="video/mp4" codecs="{{ .codecSpecs }}" width="{{ .width }}" bandwidth="{{ .bitRate }}" height="{{ .height }}">
+				<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+					<SegmentTimeline>
+						{{ range $index, $duration := .segmentDurations }}
+						<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
+						{{ end }}
+					</SegmentTimeline>
+				</SegmentTemplate>
+			</Representation>
 
 			<Representation id="720p-1000k-video" mimeType="video/mp4" codecs="avc1.64001e" width="1024" height="552">
 				<SegmentTemplate timescale="1000" duration="5000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
@@ -39,6 +47,16 @@ const manifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 
 		</AdaptationSet>
 		<AdaptationSet segmentAlignment="true" contentType="audio">
+			<Representation id="direct-stream-audio" mimeType="audio/mp4" codecs="mp4a.40.2">
+				<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+					<SegmentTimeline>
+						{{ range $index, $duration := .segmentDurations }}
+						<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
+						{{ end }}
+					</SegmentTimeline>
+				</SegmentTemplate>
+            </Representation>
+
 			<Representation id="720p-1000k-audio" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="128000" audioSamplingRate="48000">
 				<SegmentTemplate timescale="1000" duration="5000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
