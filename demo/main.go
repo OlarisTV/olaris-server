@@ -100,7 +100,6 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	s, _ := getOrStartTranscodingSession(filename, representationIdBase, segmentId)
 
 	segmentPath, err := s.GetSegment(streamId, segmentId, 20*time.Second)
-	log.Println(segmentPath)
 	http.ServeFile(w, r, segmentPath)
 }
 
@@ -112,7 +111,6 @@ func getSessions(filename string, representationIdBase string) []*ffmpeg.Transco
 	matching := []*ffmpeg.TranscodingSession{}
 
 	for _, s := range sessions {
-		log.Println(*s)
 		if s.InputPath == mediaFilePath && s.RepresentationIdBase == representationIdBase {
 			matching = append(matching, s)
 		}
