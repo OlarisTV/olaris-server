@@ -91,11 +91,7 @@ func BuildTransmuxingManifestFromFile(filePath string) string {
 		log.Fatal("Failed to ffprobe %s", filePath)
 	}
 	segmentDurations := ffmpeg.GuessSegmentDurations(keyframes, totalDuration, minSegDuration)
-	durationXml := fmt.Sprintf("PT%dH%dM%d.%dS",
-		totalDuration/time.Hour,
-		(totalDuration%time.Hour)/time.Minute,
-		(totalDuration%time.Minute)/time.Second,
-		(totalDuration%time.Second)/time.Millisecond)
+	durationXml := toXmlDuration(totalDuration)
 
 	// Segment durations in ms
 	segmentDurationsMs := []int64{}
@@ -124,13 +120,9 @@ func BuildTranscodingManifestFromFile(filePath string) string {
 	if err != nil {
 		log.Fatal("Failed to ffprobe %s", filePath)
 	}
-	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
 
-	durationXml := fmt.Sprintf("PT%dH%dM%d.%dS",
-		totalDuration/time.Hour,
-		(totalDuration%time.Hour)/time.Minute,
-		(totalDuration%time.Minute)/time.Second,
-		(totalDuration%time.Second)/time.Millisecond)
+	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
+	durationXml := toXmlDuration(totalDuration)
 
 	templateData := map[string]interface{}{
 		"duration": durationXml,
@@ -140,4 +132,12 @@ func BuildTranscodingManifestFromFile(filePath string) string {
 	t := template.Must(template.New("manifest").Parse(transcodingManifestTemplate))
 	t.Execute(&buf, templateData)
 	return buf.String()
+}
+
+func toXmlDuration(duration time.Duration) string {
+	return fmt.Sprintf("PT%dH%dM%d.%dS",
+		duration/time.Hour,
+		(duration%time.Hour)/time.Minute,
+		(duration%time.Minute)/time.Second,
+		(duration%time.Second)/time.Millisecond)
 }
