@@ -32,7 +32,10 @@ func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 	r := mux.NewRouter()
-	r.HandleFunc("/{filename}/manifest.mpd", serveManifest)
+	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
+	// segments.
+	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
+	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
 	r.Handle("/", http.FileServer(http.Dir(mediaFilesDir)))
@@ -51,12 +54,21 @@ func main() {
 	}
 }
 
-func serveManifest(w http.ResponseWriter, r *http.Request) {
+func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(mediaFilesDir, mux.Vars(r)["filename"])
 
-	manifest := dash.BuildManifestFromFile(mediaFilePath)
+	manifest := dash.BuildTransmuxingManifestFromFile(mediaFilePath)
+	w.Write([]byte(manifest))
+}
+
+func serveTranscodingManifest(w http.ResponseWriter, r *http.Request) {
+	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
+	// https://golang.org/src/net/http/fs.go to see how they prevent that.
+	mediaFilePath := path.Join(mediaFilesDir, mux.Vars(r)["filename"])
+
+	manifest := dash.BuildTranscodingManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
 }
 
