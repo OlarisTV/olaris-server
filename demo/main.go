@@ -8,7 +8,6 @@ import (
 	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/dash"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"

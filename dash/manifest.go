@@ -81,14 +81,14 @@ const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 func BuildTransmuxingManifestFromFile(filePath string) string {
 	probeData, err := ffmpeg.Probe(filePath)
 	if err != nil {
-		log.Fatal("Failed to ffprobe %s", filePath)
+		log.Fatal("Failed to ffprobe", filePath)
 	}
 
 	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
 
 	keyframes, err := ffmpeg.ProbeKeyframes(filePath)
 	if err != nil {
-		log.Fatal("Failed to ffprobe %s", filePath)
+		log.Fatal("Failed to ffprobe", filePath)
 	}
 	segmentDurations := ffmpeg.GuessSegmentDurations(keyframes, totalDuration, minSegDuration)
 	durationXml := toXmlDuration(totalDuration)
@@ -118,7 +118,7 @@ func BuildTransmuxingManifestFromFile(filePath string) string {
 func BuildTranscodingManifestFromFile(filePath string) string {
 	probeData, err := ffmpeg.Probe(filePath)
 	if err != nil {
-		log.Fatal("Failed to ffprobe %s", filePath)
+		log.Fatal("Failed to ffprobe", filePath)
 	}
 
 	totalDuration := probeData.Format.Duration().Round(time.Millisecond)

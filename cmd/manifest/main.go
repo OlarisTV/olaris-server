@@ -11,6 +11,6 @@ func main() {
 		fmt.Println("please supply a filename")
 		return
 	}
-	manifest := dash.BuildManifestFromFile(os.Args[1])
+	manifest := dash.BuildTransmuxingManifestFromFile(os.Args[1])
 	fmt.Println(manifest)
 }
