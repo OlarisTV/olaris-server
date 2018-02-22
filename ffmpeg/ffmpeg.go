@@ -104,6 +104,7 @@ func NewTranscodingSession(
 		"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
 		"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
+		"-threads", "2",
 		"-f", "hls",
 		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
 		"-hls_time", strconv.FormatInt(int64(MinSegDuration/time.Second), 10),
