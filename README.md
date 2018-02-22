@@ -5,7 +5,7 @@
 Bytesized Streaming Server currently requires a patched version of ffmpeg to
 work correctly.
 
-	git clone -b bytesized-streaming https://gitlab.com/bytesized/ffmpeg
+	git clone -b bytesized-streaming https://ndreke.de/~leon/dump/ffmpeg
 	cd ffmpeg
 
 On Debian Linux, I have successfully used the following command line to build a working binary
