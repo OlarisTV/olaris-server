@@ -76,9 +76,9 @@ type EncoderParams struct {
 }
 
 var EncoderPresets = map[string]EncoderParams{
-	"480-1000k":   EncoderParams{height: 480, width: -1, videoBitrate: 1000000, audioBitrate: 64000},
-	"720-5000k":   EncoderParams{height: 720, width: -1, videoBitrate: 5000000, audioBitrate: 128000},
-	"1080-10000k": EncoderParams{height: 1080, width: -1, videoBitrate: 10000000, audioBitrate: 128000},
+	"480-1000k":   EncoderParams{height: 480, width: -2, videoBitrate: 1000000, audioBitrate: 64000},
+	"720-5000k":   EncoderParams{height: 720, width: -2, videoBitrate: 5000000, audioBitrate: 128000},
+	"1080-10000k": EncoderParams{height: 1080, width: -2, videoBitrate: 10000000, audioBitrate: 128000},
 }
 
 // NewTranscodingSession starts a new transcoding session.
@@ -104,6 +104,7 @@ func NewTranscodingSession(
 		"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
 		"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
+		"-vf", fmt.Sprintf("scale=%d:%d", transcodingParams.width, transcodingParams.height),
 		"-threads", "2",
 		"-f", "hls",
 		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
