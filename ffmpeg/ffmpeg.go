@@ -104,17 +104,17 @@ func NewTranscodingSession(
 		"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
 		"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
-		"-f", "dash",
-		// segment_start_number requires a custom ffmpeg.
-		// +1 because ffmpeg likes to start segments at 1. The reverse transformation happens in AvailableSegments.
-		"-segment_start_number", strconv.FormatInt(int64(startDuration/MinSegDuration)+1, 10),
-		"-min_seg_duration", strconv.FormatInt(int64(MinSegDuration/time.Microsecond), 10),
-		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
+		"-f", "hls",
+		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
+		"-hls_time", strconv.FormatInt(int64(MinSegDuration/time.Second), 10),
+		"-hls_segment_type", "1",
+		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
+	cmd.Dir = outputDir
 
 	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
 }
@@ -190,8 +190,7 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 		match := r.FindString(f.Name())
 		if match != "" {
 			segmentFsNumber, _ := strconv.Atoi(match[len("segment_") : len(match)-len(".m4s")])
-			// -1 because ffmpeg likes to start segment numbers at 1
-			res[segmentFsNumber-1] = filepath.Join(s.outputDir, f.Name())
+			res[segmentFsNumber] = filepath.Join(s.outputDir, f.Name())
 		}
 
 	}
@@ -203,7 +202,7 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 // or error if no initial segment is available for the given stream.
 func (s *TranscodingSession) InitialSegment(streamId string) (string, error) {
 	if streamId == "video" {
-		return filepath.Join(s.outputDir, "init-stream0.m4s"), nil
+		return filepath.Join(s.outputDir, "init.mp4"), nil
 	}
 	if streamId == "audio" {
 		return filepath.Join(s.outputDir, "init-stream1.m4s"), nil
