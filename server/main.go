@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -18,8 +19,7 @@ import (
 	"time"
 )
 
-const mediaFilesDir = "/home/leon/Videos"
-const minSegDuration = time.Duration(5 * time.Second)
+var mediaFilesDir = flag.String("media_files_dir", "", "Path to the media files to be served")
 
 var sessions = []*ffmpeg.TranscodingSession{}
 
@@ -27,6 +27,8 @@ var sessions = []*ffmpeg.TranscodingSession{}
 var sessionsMutex = sync.Mutex{}
 
 func main() {
+	flag.Parse()
+
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -37,7 +39,7 @@ func main() {
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
-	r.Handle("/", http.FileServer(http.Dir(mediaFilesDir)))
+	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
 
 	srv := &http.Server{Addr: ":8080", Handler: handlers.LoggingHandler(os.Stdout, cors.Default().Handler(r))}
 	go srv.ListenAndServe()
@@ -56,7 +58,7 @@ func main() {
 func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
-	mediaFilePath := path.Join(mediaFilesDir, mux.Vars(r)["filename"])
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
 	manifest := dash.BuildTransmuxingManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
@@ -65,7 +67,7 @@ func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 func serveTranscodingManifest(w http.ResponseWriter, r *http.Request) {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
-	mediaFilePath := path.Join(mediaFilesDir, mux.Vars(r)["filename"])
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
 	manifest := dash.BuildTranscodingManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
@@ -105,7 +107,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 func getSessions(filename string, representationIdBase string) []*ffmpeg.TranscodingSession {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
-	mediaFilePath := path.Join(mediaFilesDir, filename)
+	mediaFilePath := path.Join(*mediaFilesDir, filename)
 
 	matching := []*ffmpeg.TranscodingSession{}
 
@@ -134,7 +136,7 @@ func getOrStartTranscodingSession(filename string, representationIdBase string, 
 	if s == nil {
 		// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
-		mediaFilePath := path.Join(mediaFilesDir, filename)
+		mediaFilePath := path.Join(*mediaFilesDir, filename)
 		// At the moment, this will always be 0 for direct-stream
 		startTime := time.Duration(segmentId) * ffmpeg.MinSegDuration
 
