@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/handlers"
@@ -9,15 +10,23 @@ import (
 	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/dash"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+var supportedExtensions = map[string]bool{
+	".mp4": true,
+	".mkv": true,
+	".mov": true,
+}
 
 var mediaFilesDir = flag.String("media_files_dir", "", "Path to the media files to be served")
 
@@ -36,10 +45,13 @@ func main() {
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
 	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(http.Dir("./public"))))
+	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
+
+	//TODO: (Maran) This is probably not serving subfolders yet
 	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
 
 	srv := &http.Server{Addr: ":8080", Handler: handlers.LoggingHandler(os.Stdout, cors.Default().Handler(r))}
@@ -54,6 +66,34 @@ func main() {
 	for _, s := range sessions {
 		s.Destroy()
 	}
+}
+
+type MediaFile struct {
+	Ext             string `json:"ext"`
+	TranscodingPath string `json:"path"`
+}
+
+func serveFileIndex(w http.ResponseWriter, r *http.Request) {
+	files := []MediaFile{}
+	err := filepath.Walk(*mediaFilesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if supportedExtensions[filepath.Ext(path)] {
+			relPath := strings.SplitAfter(path, *mediaFilesDir)
+
+			files = append(files, MediaFile{TranscodingPath: relPath[1] + "/transcoding-manifest.mpd"})
+			files = append(files, MediaFile{TranscodingPath: relPath[1] + "/transmuxing-manifest.mpd"})
+		}
+
+		return nil
+	})
+	if err != nil {
+		io.WriteString(w, `{"error": true}`)
+		return
+	}
+
+	json.NewEncoder(w).Encode(files)
 }
 
 func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {

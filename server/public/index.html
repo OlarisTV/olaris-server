@@ -10,6 +10,8 @@
   </head>
    <div>
      <h1>Video player</h1>
+     	<ul id="files">
+	</ul>
 	<input type="text" id="mpdUrl" style="width: 300px" />
 	<input type="button" id="load" value="Load"/>
 	<br/>
@@ -31,6 +33,19 @@ $("#load").on("click", function(e){
 
 })
 function initApp() {
+	$.get("/api/v1/files", function(e){
+		window.files = JSON.parse(e)
+		$.each(window.files, function(i,file){
+			console.log(file)
+			$("#files").append("<li><a href='#' class='content'>"+ window.location.origin + file.path+"</a></li>")
+		})
+		$(".content").on("click", function(e){
+			console.log("Click", )
+			window.player.load($(e.target).html()).then(function() {
+				console.log('The video has now been loaded!');
+			}).catch(onError);  // onError is executed if the asynchronous load fails.
+		})
+	})
   // Install built-in polyfills to patch browser incompatibilities.
   shaka.polyfill.installAll();
 
