@@ -35,6 +35,7 @@ func main() {
 	r := mux.NewRouter()
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
+	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(http.Dir("./public"))))
 	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
