@@ -52,17 +52,18 @@ func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration
 		"-i", inputPath,
 		"-c:v", "copy",
 		"-c:a", "copy",
-		"-f", "dash",
-		"-min_seg_duration", strconv.FormatInt(int64(MinSegDuration/time.Microsecond), 10),
-		// segment_start_number requires a custom ffmpeg
-		// +1 because ffmpeg likes to start segments at 1. The reverse transformation happens in AvailableSegments.
-		"-segment_start_number", strconv.FormatInt(int64(startDuration/MinSegDuration)+1, 10),
-		"-media_seg_name", "stream$RepresentationID$_$Number$.m4s",
+		"-threads", "2",
+		"-f", "hls",
+		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
+		"-hls_time", strconv.FormatInt(int64(MinSegDuration/time.Second), 10),
+		"-hls_segment_type", "1", // fMP4
+		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
+		path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
+	cmd.Dir = outputDir
 
 	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
 }
@@ -109,10 +110,10 @@ func NewTranscodingSession(
 		"-f", "hls",
 		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
 		"-hls_time", strconv.FormatInt(int64(MinSegDuration/time.Second), 10),
-		"-hls_segment_type", "1",
+		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.mpd"))
+		path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout

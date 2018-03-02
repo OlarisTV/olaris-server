@@ -25,7 +25,7 @@ const transmuxingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 		<AdaptationSet contentType="video">
 			<Representation
 					id="direct-stream-video" mimeType="video/mp4"
-					codecs="{{ .videoCodecSpecs }}"
+					codecs="{{ .videoCodecSpecs }},mp4a.40.2"
 					width="{{ .videoWidth }}"
 					bandwidth="{{ .videoBitRate }}"
 					height="{{ .videoHeight }}">
@@ -37,17 +37,6 @@ const transmuxingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
-		</AdaptationSet>
-		<AdaptationSet contentType="audio">
-			<Representation id="direct-stream-audio" mimeType="audio/mp4" codecs="mp4a.40.2">
-				<SegmentTemplate timescale="1000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
-					<SegmentTimeline>
-						{{ range $index, $duration := .segmentDurations }}
-						<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $duration }}"></S> <!-- {{ $index }} -->
-						{{ end }}
-					</SegmentTimeline>
-				</SegmentTemplate>
-            </Representation>
 		</AdaptationSet>
 	</Period>
 </MPD>`
