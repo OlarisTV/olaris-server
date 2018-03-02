@@ -1,5 +1,7 @@
 package main
 
+//go:generate go-bindata-assetfs -pkg $GOPACKAGE static/
+
 import (
 	"context"
 	"encoding/json"
@@ -44,7 +46,7 @@ func main() {
 	r := mux.NewRouter()
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
-	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(http.Dir("./public"))))
+	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)

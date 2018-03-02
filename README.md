@@ -1,5 +1,14 @@
 # Bytesized Streaming Server
 
+## Dependencies
+
+	go get github.com/jteeuwen/go-bindata/...
+	go get github.com/elazarl/go-bindata-assetfs/...
+
+## Running
+
+	go generate ./... && go run server/bindata.go server/main.go --media_files_dir ~/Videos
+
 ## Custom ffmpeg
 
 Bytesized Streaming Server currently requires a patched version of ffmpeg to
