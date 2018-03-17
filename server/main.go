@@ -12,6 +12,7 @@ import (
 	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/dash"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/bytesized/bytesized-streaming/hls"
 	"io"
 	"net/http"
 	"os"
@@ -50,6 +51,7 @@ func main() {
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
+	r.HandleFunc("/{filename}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
 
@@ -104,6 +106,15 @@ func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
 	manifest := dash.BuildTransmuxingManifestFromFile(mediaFilePath)
+	w.Write([]byte(manifest))
+}
+
+func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
+	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
+	// https://golang.org/src/net/http/fs.go to see how they prevent that.
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
+
+	manifest := hls.BuildTransmuxingManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
 }
 
