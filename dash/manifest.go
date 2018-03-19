@@ -53,16 +53,26 @@ const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	minBufferTime="PT30S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
 		<AdaptationSet contentType="video">
-			<Representation id="480-1000k-video" mimeType="video/mp4" codecs="avc1.64001e,mp4a.40.2" height="480" bandwidth="1000000">
+			<Representation id="480-1000k-video" mimeType="video/mp4" codecs="avc1.64001e" height="480" bandwidth="1000000">
 				<SegmentTemplate timescale="1000" duration="5000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
-			<Representation id="720-5000k-video" mimeType="video/mp4" codecs="avc1.64001f,mp4a.40.2" height="720" bandwidth="5000000">
-				<SegmentTemplate timescale="1000" duration="5000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+			<Representation id="720-5000k-video" mimeType="video/mp4" codecs="avc1.64001f" height="720" bandwidth="5000000">
+				<SegmentTemplate timescale="1000" duration="4992" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
-			<Representation id="1080-10000k-video" mimeType="video/mp4" codecs="avc1.640028,mp4a.40.2" height="1080" bandwidth="10000000">
-				<SegmentTemplate timescale="1000" duration="5000" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+			<Representation id="1080-10000k-video" mimeType="video/mp4" codecs="avc1.640028" height="1080" bandwidth="10000000">
+				<SegmentTemplate timescale="1000" duration="4992" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+				</SegmentTemplate>
+			</Representation>
+		</AdaptationSet>
+		<AdaptationSet contentType="audio">
+			<Representation id="64k-audio" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="64000">
+				<SegmentTemplate timescale="1000" duration="4992" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
+				</SegmentTemplate>
+			</Representation>
+			<Representation id="128k-audio" mimeType="audio/mp4" codecs="mp4a.40.2" bandwidth="128000">
+				<SegmentTemplate timescale="1000" duration="4992" initialization="$RepresentationID$/init.mp4" media="$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
 		</AdaptationSet>

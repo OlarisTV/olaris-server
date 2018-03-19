@@ -17,34 +17,34 @@ import (
 )
 
 type TranscodingSession struct {
-	cmd            *exec.Cmd
-	InputPath      string
-	outputDir      string
-	firstSegmentId int
-	// Usually something like "direct-stream", to which "-video" and "-audio" will be appended
-	RepresentationIdBase string
-	// Output streams of this session
-	streams []string
+	cmd              *exec.Cmd
+	InputPath        string
+	outputDir        string
+	firstSegmentId   int
+	RepresentationId string
+	streamType       string
 }
 
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
 // force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
 // segments.
-const MinSegDuration = 5 * time.Second
+const MinSegDuration = 5000 * time.Millisecond
 
 // fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
-const segmentsPerSession = 6
+const segmentsPerSession = 2
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
-func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration time.Duration, segmentOffset int) (*TranscodingSession, error) {
+func NewTransmuxingSession(inputPath string, outputDirBase string, segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
+
+	startDuration := MinSegDuration * time.Duration(segmentOffset)
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
@@ -65,7 +65,13 @@ func NewTransmuxingSession(inputPath string, outputDirBase string, startDuration
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
 
-	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
+	return &TranscodingSession{
+		cmd:            cmd,
+		InputPath:      inputPath,
+		outputDir:      outputDir,
+		firstSegmentId: segmentOffset,
+		streamType:     "video",
+	}, nil
 }
 
 type EncoderParams struct {
@@ -77,9 +83,11 @@ type EncoderParams struct {
 }
 
 var EncoderPresets = map[string]EncoderParams{
-	"480-1000k":   EncoderParams{height: 480, width: -2, videoBitrate: 1000000, audioBitrate: 64000},
-	"720-5000k":   EncoderParams{height: 720, width: -2, videoBitrate: 5000000, audioBitrate: 128000},
-	"1080-10000k": EncoderParams{height: 1080, width: -2, videoBitrate: 10000000, audioBitrate: 128000},
+	"480-1000k-video":   EncoderParams{height: 480, width: -2, videoBitrate: 1000000},
+	"720-5000k-video":   EncoderParams{height: 720, width: -2, videoBitrate: 5000000},
+	"1080-10000k-video": EncoderParams{height: 1080, width: -2, videoBitrate: 10000000},
+	"64k-audio":         EncoderParams{audioBitrate: 64000},
+	"128k-audio":        EncoderParams{audioBitrate: 128000},
 }
 
 // NewTranscodingSession starts a new transcoding session.
@@ -87,7 +95,6 @@ var EncoderPresets = map[string]EncoderParams{
 func NewTranscodingSession(
 	inputPath string,
 	outputDirBase string,
-	startDuration time.Duration,
 	segmentOffset int,
 	transcodingParams EncoderParams) (*TranscodingSession, error) {
 
@@ -96,30 +103,86 @@ func NewTranscodingSession(
 		return nil, err
 	}
 
-	cmd := exec.Command("ffmpeg",
+	audio := transcodingParams.audioBitrate != 0
+	video := transcodingParams.videoBitrate != 0
+
+	var minSegDuration time.Duration
+	if audio {
+		minSegDuration = 4992 * time.Millisecond
+	} else {
+		minSegDuration = 5000 * time.Millisecond
+	}
+
+	startDuration := minSegDuration * time.Duration(segmentOffset)
+
+	var runDuration time.Duration
+	var runStartSeconds float64
+	var startNumber int64
+	if audio {
+		runDuration = segmentsPerSession*minSegDuration + minSegDuration
+		runStartSeconds = float64(startDuration-minSegDuration) / float64(time.Second)
+		startNumber = int64(startDuration/minSegDuration) - 1
+
+		if runStartSeconds < 0 {
+			runStartSeconds = 0
+		}
+		if startNumber < 0 {
+			startNumber = 0
+		}
+	} else {
+		runDuration = segmentsPerSession * minSegDuration
+		runStartSeconds = float64(startDuration) / float64(time.Second)
+		startNumber = int64(startDuration / minSegDuration)
+	}
+
+	args := []string{
 		// -ss being before -i is important for fast seeking
-		"-ss", strconv.FormatInt(int64(startDuration/time.Second), 10),
+		"-ss", fmt.Sprintf("%.3f", runStartSeconds),
 		"-i", inputPath,
-		"-to", strconv.FormatInt(int64((startDuration+segmentsPerSession*MinSegDuration)/time.Second), 10),
+		"-to", fmt.Sprintf("%.3f", float64(startDuration+runDuration)/float64(time.Second)),
 		"-copyts",
-		"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
-		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%d)", MinSegDuration/time.Second),
-		"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
-		"-vf", fmt.Sprintf("scale=%d:%d", transcodingParams.width, transcodingParams.height),
+	}
+	if video {
+		args = append(args, []string{
+			"-c:v", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate), "-preset:v", "veryfast",
+			"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", float64(minSegDuration)/float64(time.Second)),
+			"-vf", fmt.Sprintf("scale=%d:%d", transcodingParams.width, transcodingParams.height),
+		}...)
+	} else {
+		args = append(args, "-vn")
+	}
+
+	if audio {
+		args = append(
+			args,
+			"-c:a", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate))
+	} else {
+		args = append(args, "-an")
+	}
+	args = append(args, []string{
+		"-sn",
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", strconv.FormatInt(int64(startDuration/MinSegDuration), 10),
-		"-hls_time", strconv.FormatInt(int64(MinSegDuration/time.Second), 10),
+		"-start_number", fmt.Sprintf("%d", startNumber),
+		"-hls_time", fmt.Sprintf("%.3f", float64(minSegDuration)/float64(time.Second)),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u"))
-	log.Println("ffmpeg started with", cmd.Args)
+		path.Join(outputDir, "generated_by_ffmpeg.m3u")}...)
+
+	cmd := exec.Command("ffmpeg", args...)
+	log.Println("ffmpeg initialized with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
 
-	return &TranscodingSession{cmd: cmd, InputPath: inputPath, outputDir: outputDir, firstSegmentId: segmentOffset}, nil
+	return &TranscodingSession{
+		cmd:            cmd,
+		InputPath:      inputPath,
+		outputDir:      outputDir,
+		firstSegmentId: segmentOffset,
+		streamType:     "video",
+	}, nil
 }
 
 func (s *TranscodingSession) Start() error {
@@ -144,14 +207,14 @@ func (s *TranscodingSession) Destroy() error {
 
 // GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
 // It will block for at most deadline.
-func (s *TranscodingSession) GetSegment(streamId string, segmentId int, deadline time.Duration) (string, error) {
+func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (string, error) {
 
-	if !s.IsProjectedAvailable(streamId, segmentId, deadline) {
+	if !s.IsProjectedAvailable(segmentId, deadline) {
 		return "", fmt.Errorf("Segment not projected to be available within deadline %s", deadline)
 	}
 
 	for {
-		availableSegments, _ := s.AvailableSegments(streamId)
+		availableSegments, _ := s.AvailableSegments()
 		if path, ok := availableSegments[segmentId]; ok {
 			return path, nil
 		}
@@ -160,16 +223,16 @@ func (s *TranscodingSession) GetSegment(streamId string, segmentId int, deadline
 	}
 }
 
-func (s *TranscodingSession) IsProjectedAvailable(streamId string, segmentId int, deadline time.Duration) bool {
+func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
 	// For transmuxed content we currently just spew out the whole file and serve it.
-	if s.RepresentationIdBase == "direct-stream" {
+	if s.RepresentationId == "direct-stream-video" {
 		return true
 	}
 
 	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+segmentsPerSession
 }
 
-func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string, error) {
+func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	res := make(map[int]string)
 
 	files, err := ioutil.ReadDir(s.outputDir)
@@ -177,17 +240,7 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 		return nil, err
 	}
 
-	var streamFilenamePrefix string
-
-	if streamId == "video" {
-		streamFilenamePrefix = "stream0"
-	} else if streamId == "audio" {
-		streamFilenamePrefix = "stream1"
-	} else {
-		return nil, fmt.Errorf("Invalid stream ID %s", streamId)
-	}
-
-	r := regexp.MustCompile(streamFilenamePrefix + "_(?P<number>\\d+).m4s")
+	r := regexp.MustCompile("stream0_(?P<number>\\d+).m4s")
 
 	for _, f := range files {
 		match := r.FindString(f.Name())
@@ -203,14 +256,8 @@ func (s *TranscodingSession) AvailableSegments(streamId string) (map[int]string,
 
 // InitialSegment returns the path of the initial segment for the given stream
 // or error if no initial segment is available for the given stream.
-func (s *TranscodingSession) InitialSegment(streamId string) (string, error) {
-	if streamId == "video" {
-		return filepath.Join(s.outputDir, "init.mp4"), nil
-	}
-	if streamId == "audio" {
-		return filepath.Join(s.outputDir, "init-stream1.m4s"), nil
-	}
-	return "", fmt.Errorf("No initial segment for the given stream \"%s\"", streamId)
+func (s *TranscodingSession) InitialSegment() string {
+	return filepath.Join(s.outputDir, "init.mp4")
 }
 
 func GuessSegmentDurations(keyframeTimestamps []time.Duration, totalDuration time.Duration, minSegDuration time.Duration) []time.Duration {
