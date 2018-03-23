@@ -58,7 +58,12 @@ func main() {
 	//TODO: (Maran) This is probably not serving subfolders yet
 	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
 
-	srv := &http.Server{Addr: ":8080", Handler: handlers.LoggingHandler(os.Stdout, cors.AllowAll().Handler(r))}
+	var handler http.Handler
+	handler = r
+	handler = cors.AllowAll().Handler(handler)
+	handler = handlers.LoggingHandler(os.Stdout, handler)
+
+	srv := &http.Server{Addr: ":8080", Handler: handler}
 	go srv.ListenAndServe()
 
 	// Wait for termination signal

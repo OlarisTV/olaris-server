@@ -8,12 +8,16 @@ import (
 	"time"
 )
 
-const transmuxingManifestTemplate = `
-#EXTM3U
-#EXT-X-PLAYLIST-TYPE:VOD
-#EXT-X-TARGETDURATION:5
+/*
+EXT-X-TARGETDURATION must be larger than every segment duration specified in EXTINF,
+otherwise iOS won't even bother trying to play the stream.
+*/
+const transmuxingMasterPlaylistTemplate = `#EXTM3U
 #EXT-X-VERSION:7
-#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-TARGETDURATION:100
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-INDEPENDENT-SEGMENTS
 #EXT-X-MAP:URI="direct-stream-video/init.mp4"
 {{ range $index, $duration := .segmentDurations }}
 #EXTINF:{{ $duration }},
@@ -51,7 +55,7 @@ func BuildTransmuxingManifestFromFile(filePath string) string {
 	}
 
 	buf := bytes.Buffer{}
-	t := template.Must(template.New("manifest").Parse(transmuxingManifestTemplate))
+	t := template.Must(template.New("manifest").Parse(transmuxingMasterPlaylistTemplate))
 	t.Execute(&buf, templateData)
 	return buf.String()
 }
