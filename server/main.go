@@ -52,6 +52,8 @@ func main() {
 	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
+	r.HandleFunc("/{filename}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	r.HandleFunc("/{filename}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
 	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
 
@@ -119,7 +121,7 @@ func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
-	manifest := hls.BuildTransmuxingManifestFromFile(mediaFilePath)
+	manifest := hls.BuildTransmuxingMasterPlaylistFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
 }
 
@@ -129,6 +131,25 @@ func serveTranscodingManifest(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
 	manifest := dash.BuildTranscodingManifestFromFile(mediaFilePath)
+	w.Write([]byte(manifest))
+}
+
+func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
+	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
+	// https://golang.org/src/net/http/fs.go to see how they prevent that.
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
+
+	manifest := hls.BuildTranscodingMasterPlaylistFromFile(mediaFilePath)
+	w.Write([]byte(manifest))
+}
+
+func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
+	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
+	// https://golang.org/src/net/http/fs.go to see how they prevent that.
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
+	representationId := mux.Vars(r)["representationId"]
+
+	manifest := hls.BuildTranscodingMediaPlaylistFromFile(mediaFilePath, representationId)
 	w.Write([]byte(manifest))
 }
 
@@ -203,10 +224,13 @@ func getOrStartTranscodingSession(filename string, representationId string, segm
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	filename := mux.Vars(r)["filename"]
-
 	representationId := mux.Vars(r)["representationId"]
 
-	s, _ := getOrStartTranscodingSession(filename, representationId, 0)
+	s, err := getOrStartTranscodingSession(filename, representationId, 0)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	for {
 		initPath := s.InitialSegment()
