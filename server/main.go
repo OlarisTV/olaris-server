@@ -56,9 +56,9 @@ func main() {
 	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
 	r.HandleFunc("/{filename}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
-	r.HandleFunc("/{filename}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
-	r.HandleFunc("/{filename}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
-	r.HandleFunc("/{filename}/{representationId}/init.mp4", serveInit)
+	r.HandleFunc("/{filename}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
+	r.HandleFunc("/{filename}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	r.HandleFunc("/{filename}/{streamId}/{representationId}/init.mp4", serveInit)
 
 	//TODO: (Maran) This is probably not serving subfolders yet
 	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
@@ -156,7 +156,8 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
-	manifest := hls.BuildTranscodingMasterPlaylistFromFile(mediaFilePath)
+	offeredStreams, _ := ffmpeg.GetOfferedTranscodedStreams(mediaFilePath)
+	manifest := hls.BuildTranscodingMasterPlaylistFromFile(offeredStreams)
 	w.Write([]byte(manifest))
 }
 
@@ -164,15 +165,20 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
+	streamId, _ := strconv.Atoi(mux.Vars(r)["streamId"])
 	representationId := mux.Vars(r)["representationId"]
 
-	manifest := hls.BuildTranscodingMediaPlaylistFromFile(mediaFilePath, representationId)
+	offeredStreams, _ := ffmpeg.GetOfferedTranscodedStreams(mediaFilePath)
+	s, _ := ffmpeg.GetOfferedStream(&offeredStreams, int64(streamId), representationId)
+
+	manifest := hls.BuildTranscodingMediaPlaylistFromFile(mediaFilePath, s)
 	w.Write([]byte(manifest))
 }
 
 func serveSegment(w http.ResponseWriter, r *http.Request) {
 	//sessionId := mux.Vars(r)["sessionId"]
 	filename := mux.Vars(r)["filename"]
+	streamId, _ := strconv.Atoi(mux.Vars(r)["streamId"])
 	representationId := mux.Vars(r)["representationId"]
 
 	segmentId, err := strconv.Atoi(mux.Vars(r)["segmentId"])
@@ -180,13 +186,13 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	s, _ := getOrStartTranscodingSession(filename, representationId, segmentId)
+	s, _ := getOrStartTranscodingSession(filename, int64(streamId), representationId, int64(segmentId))
 
-	segmentPath, err := s.GetSegment(segmentId, 20*time.Second)
+	segmentPath, err := s.GetSegment(int64(segmentId), 20*time.Second)
 	http.ServeFile(w, r, segmentPath)
 }
 
-func getSessions(filename string, representationId string) []*ffmpeg.TranscodingSession {
+func getSessions(filename string, streamId int64, representationId string) []*ffmpeg.TranscodingSession {
 	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(*mediaFilesDir, filename)
@@ -194,20 +200,20 @@ func getSessions(filename string, representationId string) []*ffmpeg.Transcoding
 	matching := []*ffmpeg.TranscodingSession{}
 
 	for _, s := range sessions {
-		if s.InputPath == mediaFilePath && s.RepresentationId == representationId {
+		if s.InputPath == mediaFilePath && s.StreamId == streamId && s.RepresentationId == representationId {
 			matching = append(matching, s)
 		}
 	}
 	return matching
 }
 
-func getOrStartTranscodingSession(filename string, representationId string, segmentId int) (*ffmpeg.TranscodingSession, error) {
+func getOrStartTranscodingSession(filename string, streamId int64, representationId string, segmentId int64) (*ffmpeg.TranscodingSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
 	var s *ffmpeg.TranscodingSession
 
-	matchingSessions := getSessions(filename, representationId)
+	matchingSessions := getSessions(filename, streamId, representationId)
 	for _, matchingSession := range matchingSessions {
 		if matchingSession.IsProjectedAvailable(segmentId, 20*time.Second) {
 			s = matchingSession
@@ -220,16 +226,33 @@ func getOrStartTranscodingSession(filename string, representationId string, segm
 		// https://golang.org/src/net/http/fs.go to see how they prevent that.
 		mediaFilePath := path.Join(*mediaFilesDir, filename)
 
+		var err error
 		if representationId == "direct-stream-video" {
-			s, _ = ffmpeg.NewTransmuxingSession(mediaFilePath, os.TempDir(), segmentId)
+			s, err = ffmpeg.NewTransmuxingSession(mediaFilePath, os.TempDir(), segmentId)
 		} else {
-			if encoderParams, ok := ffmpeg.EncoderPresets[representationId]; ok {
-				s, _ = ffmpeg.NewTranscodingSession(mediaFilePath, os.TempDir(), segmentId, encoderParams)
-			} else {
-				return nil, fmt.Errorf("No such encoder preset", representationId)
+			if strings.Contains(representationId, "video") {
+				if encoderParams, ok := ffmpeg.VideoEncoderPresets[representationId]; ok {
+					s, err = ffmpeg.NewVideoTranscodingSession(
+						mediaFilePath, streamId, os.TempDir(), segmentId, encoderParams)
+				} else {
+					return nil, fmt.Errorf("No such encoder preset %s", representationId)
+				}
+			}
+			if strings.Contains(representationId, "audio") {
+				if encoderParams, ok := ffmpeg.AudioEncoderPresets[representationId]; ok {
+					s, err = ffmpeg.NewAudioTranscodingSession(
+						mediaFilePath, streamId, os.TempDir(), segmentId, encoderParams)
+				} else {
+					return nil, fmt.Errorf("No such encoder preset %s", representationId)
+				}
+
 			}
 
 		}
+		if err != nil {
+			return nil, err
+		}
+
 		s.RepresentationId = representationId
 		sessions = append(sessions, s)
 		s.Start()
@@ -241,9 +264,10 @@ func getOrStartTranscodingSession(filename string, representationId string, segm
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	filename := mux.Vars(r)["filename"]
+	streamId, _ := strconv.Atoi(mux.Vars(r)["streamId"])
 	representationId := mux.Vars(r)["representationId"]
 
-	s, err := getOrStartTranscodingSession(filename, representationId, 0)
+	s, err := getOrStartTranscodingSession(filename, int64(streamId), representationId, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
