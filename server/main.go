@@ -138,7 +138,8 @@ func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	// https://golang.org/src/net/http/fs.go to see how they prevent that.
 	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 
-	manifest := hls.BuildTransmuxingMasterPlaylistFromFile(mediaFilePath)
+	offeredStreams, _ := ffmpeg.GetOfferedTransmuxedStreams(mediaFilePath)
+	manifest := hls.BuildTransmuxingMasterPlaylistFromFile(offeredStreams)
 	w.Write([]byte(manifest))
 }
 

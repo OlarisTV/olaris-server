@@ -3,9 +3,7 @@ package hls
 import (
 	"bytes"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
-	"log"
 	"text/template"
-	"time"
 )
 
 /*
@@ -17,10 +15,10 @@ const transmuxingMasterPlaylistTemplate = `#EXTM3U
 #EXT-X-TARGETDURATION:100
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-INDEPENDENT-SEGMENTS
-#EXT-X-MAP:URI="0/direct-stream-video/init.mp4"
+#EXT-X-MAP:URI="{{.s.StreamId}}/{{.s.RepresentationId}}/init.mp4"
 {{ range $index, $duration := .segmentDurations }}
 #EXTINF:{{ $duration }},
-0/direct-stream-video/{{ $index }}.m4s{{ end }}
+{{$.s.StreamId}}/{{$.s.RepresentationId}}/{{ $index }}.m4s{{ end }}
 #EXT-X-ENDLIST
 `
 
@@ -44,14 +42,6 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 {{ end }}
 `
 
-/*
-,AUDIO="64k"
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=5000000,CODECS="avc1.64001f"
-720-5000k-video/media.m3u8
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=10000000,CODECS="avc1.640028"
-1080-10000k-video/media.m3u8
-*/
-
 const transcodingMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-VERSION:7
 #EXT-X-TARGETDURATION:5
@@ -64,32 +54,19 @@ const transcodingMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-ENDLIST
 `
 
-func BuildTransmuxingMasterPlaylistFromFile(filePath string) string {
-	probeData, err := ffmpeg.Probe(filePath)
-	if err != nil {
-		log.Fatal("Failed to ffprobe", filePath)
-	}
+func BuildTransmuxingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) string {
+	stream := streams[0]
 
-	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
-
-	keyframes, err := ffmpeg.ProbeKeyframes(filePath)
-	if err != nil {
-		log.Fatal("Failed to ffprobe", filePath)
-	}
-	segmentDurations := ffmpeg.GuessSegmentDurations(keyframes, totalDuration, ffmpeg.MinTransmuxedSegDuration)
-
+	segmentDurations, _ := stream.GetSegmentDurations()
 	// Segment durations in ms
-	segmentDurationsSeconds := []float32{}
+	segmentDurationsSeconds := []float64{}
 	for _, d := range segmentDurations {
-		segmentDurationsSeconds = append(segmentDurationsSeconds, float32(d.Seconds()))
+		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
 
 	}
 
 	templateData := map[string]interface{}{
-		"videoBitRate":     probeData.Streams[0].BitRate,
-		"videoWidth":       probeData.Streams[0].Width,
-		"videoHeight":      probeData.Streams[0].Height,
-		"videoCodecSpecs":  probeData.Streams[0].GetMime(),
+		"s":                stream,
 		"segmentDurations": segmentDurationsSeconds,
 	}
 
@@ -140,8 +117,10 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 }
 
 func BuildTranscodingMediaPlaylistFromFile(filePath string, stream ffmpeg.OfferedStream) string {
+	segmentDurations, _ := stream.GetSegmentDurations()
+
 	segmentDurationsSeconds := []float64{}
-	for _, d := range stream.GetSegmentDurations() {
+	for _, d := range segmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
 	}
 

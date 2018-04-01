@@ -87,11 +87,11 @@ func BuildTransmuxingManifestFromFile(filePath string) string {
 
 	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
 
-	keyframes, err := ffmpeg.ProbeKeyframes(filePath)
-	if err != nil {
-		log.Fatal("Failed to ffprobe", filePath)
-	}
-	segmentDurations := ffmpeg.GuessSegmentDurations(keyframes, totalDuration, minSegDuration)
+	//keyframes, err := ffmpeg.ProbeKeyframes(filePath)
+	//if err != nil {
+	//	log.Fatal("Failed to ffprobe", filePath)
+	//}
+	segmentDurations := []time.Duration{} // ffmpeg.GuessTransmuxedSegmentDurations(keyframes, totalDuration, minSegDuration)
 	durationXml := toXmlDuration(totalDuration)
 
 	// Segment durations in ms

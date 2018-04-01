@@ -26,6 +26,7 @@ type TranscodingSession struct {
 }
 
 type OfferedStream struct {
+	mediaFilePath string
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
 	StreamId         int64
@@ -180,9 +181,14 @@ func (s *TranscodingSession) InitialSegment() string {
 	return filepath.Join(s.outputDir, "init.mp4")
 }
 
-func GuessSegmentDurations(keyframeTimestamps []time.Duration, totalDuration time.Duration, minSegDuration time.Duration) []time.Duration {
+func GuessTransmuxedSegmentDurations(s *OfferedStream) ([]time.Duration, error) {
+	keyframeTimestamps, err := ProbeKeyframes(s.mediaFilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	// Insert dummy keyframe timestamp at the end so that the last segment duration is correctly reported
-	keyframeTimestamps = append(keyframeTimestamps, totalDuration)
+	keyframeTimestamps = append(keyframeTimestamps, s.TotalDuration)
 
 	segmentDurations := []time.Duration{}
 	lastKeyframe := 0
@@ -191,13 +197,13 @@ func GuessSegmentDurations(keyframeTimestamps []time.Duration, totalDuration tim
 			continue
 		}
 		d := keyframe - keyframeTimestamps[lastKeyframe]
-		if d > minSegDuration {
+		if d > MinTransmuxedSegDuration {
 			segmentDurations = append(segmentDurations, d)
 			lastKeyframe = i
 		}
 	}
 
-	return segmentDurations
+	return segmentDurations, nil
 }
 
 func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) {
@@ -207,9 +213,49 @@ func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) 
 
 	}
 
-	return append(
+	streams := append(
 		GetOfferedTranscodedVideoStreams(*container),
-		GetOfferedTranscodedAudioStreams(*container)...), nil
+		GetOfferedTranscodedAudioStreams(*container)...)
+	for _, s := range streams {
+		s.mediaFilePath = mediaFilePath
+	}
+
+	return streams, nil
+}
+
+func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) {
+	container, err := Probe(mediaFilePath)
+	if err != nil {
+		return nil, err
+
+	}
+
+	var videoStream ProbeStream
+	var audioStream ProbeStream
+
+	for _, s := range container.Streams {
+		if s.CodecType == "audio" {
+			audioStream = s
+		} else if s.CodecType == "video" {
+			videoStream = s
+		}
+	}
+
+	videoBitrate, _ := strconv.Atoi(videoStream.BitRate)
+	audioBitrate, _ := strconv.Atoi(audioStream.BitRate)
+
+	return []OfferedStream{
+		{
+			mediaFilePath:    mediaFilePath,
+			StreamId:         0,
+			RepresentationId: "direct-stream-video",
+			Codecs:           fmt.Sprint("%s,%s", videoStream.GetMime(), audioStream.GetMime()),
+			BitRate:          int64(videoBitrate + audioBitrate),
+			TotalDuration:    container.Format.Duration(),
+			StreamType:       "video",
+			transmuxed:       true,
+		},
+	}, nil
 }
 
 func GetOfferedStream(streams *[]OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
@@ -221,7 +267,11 @@ func GetOfferedStream(streams *[]OfferedStream, streamId int64, representationId
 	return OfferedStream{}, false
 }
 
-func (s *OfferedStream) GetSegmentDurations() []time.Duration {
+func (s *OfferedStream) GetSegmentDurations() ([]time.Duration, error) {
+	if s.transmuxed {
+		return GuessTransmuxedSegmentDurations(s)
+	}
+
 	var segmentDuration time.Duration
 	if s.StreamType == "audio" {
 		segmentDuration = transcodedAudioSegmentDuration
@@ -238,5 +288,5 @@ func (s *OfferedStream) GetSegmentDurations() []time.Duration {
 		segmentDurations = append(segmentDurations, segmentDuration)
 	}
 
-	return segmentDurations
+	return segmentDurations, nil
 }
