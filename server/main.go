@@ -1,9 +1,11 @@
 package main
 
-//go:generate go-bindata-assetfs -pkg $GOPACKAGE static/
+//go:generate go-bindata-assetfs -pkg $GOPACKAGE static/...
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -81,7 +83,17 @@ func main() {
 
 type MediaFile struct {
 	Ext             string `json:"ext"`
-	TranscodingPath string `json:"path"`
+	Name            string `json:"name"`
+	Key             string `json:"key"`
+	Size            int64  `json:"size"`
+	TranscodingPath string `json:"transcodePath"`
+	TransmuxingPath string `json:"transmuxPath"`
+}
+
+func MD5Ify(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func serveFileIndex(w http.ResponseWriter, r *http.Request) {
@@ -92,9 +104,13 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 		}
 		if supportedExtensions[filepath.Ext(path)] {
 			relPath := strings.SplitAfter(path, *mediaFilesDir)
+			fileInfo, err := os.Stat(path)
 
-			files = append(files, MediaFile{TranscodingPath: relPath[1] + "/transcoding-manifest.mpd"})
-			files = append(files, MediaFile{TranscodingPath: relPath[1] + "/transmuxing-manifest.mpd"})
+			if err != nil {
+				return err
+			}
+
+			files = append(files, MediaFile{Key: MD5Ify(path), Name: fileInfo.Name(), Size: fileInfo.Size(), TranscodingPath: relPath[1] + "/transcoding-manifest.mpd", TransmuxingPath: relPath[1] + "/transmuxing-manifest.mpd"})
 		}
 
 		return nil
