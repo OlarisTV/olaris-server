@@ -1,5 +1,6 @@
 import React from 'react';
 import videojs from 'video.js'
+import videojschromecastjs from 'videojs-chromecast'
 import videojscontribhls from "videojs-contrib-hls"
 
 class VideoPlayer extends React.Component {

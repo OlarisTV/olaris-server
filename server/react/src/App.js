@@ -1,6 +1,5 @@
 import React from 'react';
 import './App.css';
-import './styles/css/videojs.skin.css';
 import FileList from './FileList.js'
 import VideoPlayer from './VideoJS.js'
 import Grid from 'material-ui/Grid';
@@ -10,24 +9,24 @@ class App extends React.Component {
     state = {
       videoJsOptions:{
         autoplay: false,
-        controls: false,
+        controls: true,
       }
     }
   playMovie = (name) => {
     this.setState({videoJsOptions: {
         autoplay: true,
+        controls: true,
         sources: [{
           src: 'http://localhost:8080/'+name+'/hls-transcoding-manifest.m3u8',
-          type: 'application/x-mpegURL'
-        }]}})
+          type: 'application/x-mpegURL',
+        }], chromecast:{
+          appId:'2A952047'
+        }}})
   }
 
   render() {
     return (
        <React.Fragment>
-        <link href="//vjs.zencdn.net/6.7/video-js.min.css" rel="stylesheet" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
         <CssBaseline />
         <div className="App">
           <header className="App-header">

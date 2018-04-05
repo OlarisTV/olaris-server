@@ -31,6 +31,7 @@ var supportedExtensions = map[string]bool{
 	".mp4": true,
 	".mkv": true,
 	".mov": true,
+	".avi": true,
 }
 
 var mediaFilesDir = flag.String("media_files_dir", "", "Path to the media files to be served")

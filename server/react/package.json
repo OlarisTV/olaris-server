@@ -11,6 +11,7 @@
     "react-scripts": "1.1.4",
     "video.js": "^6.7.3",
     "videojs": "^1.0.0",
+    "videojs-chromecast": "^2.0.8",
     "videojs-contrib-hls": "^5.14.1"
   },
   "scripts": {
