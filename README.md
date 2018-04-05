@@ -9,6 +9,21 @@
 
 	go generate ./... && go run server/bindata.go server/main.go --media_files_dir ~/Videos
 
+## Buliding React
+
+  Install prereqs
+
+  `npm install create-react-app`
+  `cd server/react && yarn install`
+  `yarn start` and `yarn sass:watch`
+
+  Development on http://localhost:3000/ once done you can build it so
+  the golang app can serve it with `yarn build` and then restarting the
+  go app.
+
+  TODO: There is probably a better way to serve and deal with this
+
+
 ## Custom ffmpeg
 
 Bytesized Streaming Server currently requires a patched version of ffmpeg to
