@@ -1,7 +1,5 @@
 import React from 'react';
 import videojs from 'video.js'
-import videojschromecastjs from 'videojs-chromecast'
-import videojscontribhls from "videojs-contrib-hls"
 
 class VideoPlayer extends React.Component {
 
@@ -9,14 +7,15 @@ class VideoPlayer extends React.Component {
     this.player = videojs(this.videoNode)
     this.player.src(this.props.sources)
     this.player.play()
+    window.player = this.player
   }
 
   componentDidMount() {
     window.VIDEOJS_NO_DYNAMIC_STYLE = true
-    // instantiate Video.js
     this.player = videojs(this.videoNode, this.props, function onPlayerReady() {
       console.log("videojs loaded")
     });
+
   }
 
   // destroy player on unmount

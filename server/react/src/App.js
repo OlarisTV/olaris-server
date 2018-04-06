@@ -4,20 +4,30 @@ import FileList from './FileList.js'
 import VideoPlayer from './VideoJS.js'
 import Grid from 'material-ui/Grid';
 import CssBaseline from 'material-ui/CssBaseline';
+import chromecast from 'videojs-chromecast'
+import videojshls from "videojs-contrib-hls"
 
 class App extends React.Component {
     state = {
       videoJsOptions:{
         autoplay: false,
         controls: true,
+        chromecast: {
+          appId:'2A952047',
+          metadata:{
+            title:'Title display on tech wrapper',
+            subtitle:'Synopsis display on tech wrapper',
+         }
+        }
       }
     }
-  playMovie = (name) => {
+
+  playMovie = (name, streamType = "hls-transcoding") => {
     this.setState({videoJsOptions: {
         autoplay: true,
         controls: true,
         sources: [{
-          src: 'http://localhost:8080/'+name+'/hls-transcoding-manifest.m3u8',
+          src: `http://localhost:8080/${name}/${streamType}-manifest.m3u8`,
           type: 'application/x-mpegURL',
         }], chromecast:{
           appId:'2A952047'

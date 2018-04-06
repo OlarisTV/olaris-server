@@ -13,8 +13,8 @@ class FileList extends Component {
     })
   }
 
-  handleClick = (url) => {
-    this.props.onClickMethod(url)
+  handleClick = (url, streamType) => {
+    this.props.onClickMethod(url, streamType)
   };
 
 
@@ -37,6 +37,7 @@ class FileList extends Component {
               <TableCell>{file.name}</TableCell>
               <TableCell>{file.size}</TableCell>
               <TableCell><a onClick={ ()=>{ this.handleClick(file.name) }} href="#">HLS Transcode</a></TableCell>
+              <TableCell><a onClick={ ()=>{ this.handleClick(file.name, 'hls-transmuxing') }} href="#">HLS Transmux</a></TableCell>
             </TableRow>
           )}
         </TableBody>
