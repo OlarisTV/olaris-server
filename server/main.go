@@ -170,15 +170,14 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 	representationId := mux.Vars(r)["representationId"]
 
 	offeredStreams, _ := ffmpeg.GetOfferedTranscodedStreams(mediaFilePath)
-	s, _ := ffmpeg.GetOfferedStream(&offeredStreams, int64(streamId), representationId)
+	s, _ := ffmpeg.FindStream(&offeredStreams, int64(streamId), representationId)
 
 	manifest := hls.BuildTranscodingMediaPlaylistFromFile(mediaFilePath, s)
 	w.Write([]byte(manifest))
 }
 
 func serveSegment(w http.ResponseWriter, r *http.Request) {
-	//sessionId := mux.Vars(r)["sessionId"]
-	filename := mux.Vars(r)["filename"]
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 	streamId, _ := strconv.Atoi(mux.Vars(r)["streamId"])
 	representationId := mux.Vars(r)["representationId"]
 
@@ -187,34 +186,32 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	s, _ := getOrStartTranscodingSession(filename, int64(streamId), representationId, int64(segmentId))
+	offeredStreams, _ := ffmpeg.GetOfferedStreams(mediaFilePath)
+	stream, _ := ffmpeg.FindStream(&offeredStreams, int64(streamId), representationId)
+	session, _ := getOrStartTranscodingSession(stream, int64(segmentId))
 
-	segmentPath, err := s.GetSegment(int64(segmentId), 20*time.Second)
+	segmentPath, err := session.GetSegment(int64(segmentId), 20*time.Second)
 	http.ServeFile(w, r, segmentPath)
 }
 
-func getSessions(filename string, streamId int64, representationId string) []*ffmpeg.TranscodingSession {
-	// TODO(Leon Handreke): This probably allows escaping from the directory, look at
-	// https://golang.org/src/net/http/fs.go to see how they prevent that.
-	mediaFilePath := path.Join(*mediaFilesDir, filename)
-
+func getSessions(stream ffmpeg.OfferedStream) []*ffmpeg.TranscodingSession {
 	matching := []*ffmpeg.TranscodingSession{}
 
 	for _, s := range sessions {
-		if s.InputPath == mediaFilePath && s.StreamId == streamId && s.RepresentationId == representationId {
+		if s.Stream.Equals(stream) {
 			matching = append(matching, s)
 		}
 	}
 	return matching
 }
 
-func getOrStartTranscodingSession(filename string, streamId int64, representationId string, segmentId int64) (*ffmpeg.TranscodingSession, error) {
+func getOrStartTranscodingSession(stream ffmpeg.OfferedStream, segmentId int64) (*ffmpeg.TranscodingSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
 	var s *ffmpeg.TranscodingSession
 
-	matchingSessions := getSessions(filename, streamId, representationId)
+	matchingSessions := getSessions(stream)
 	for _, matchingSession := range matchingSessions {
 		if matchingSession.IsProjectedAvailable(segmentId, 20*time.Second) {
 			s = matchingSession
@@ -222,19 +219,17 @@ func getOrStartTranscodingSession(filename string, streamId int64, representatio
 		}
 	}
 
-	if s == nil {
-		// TODO(Leon Handreke): This probably allows escaping from the directory, look at
-		// https://golang.org/src/net/http/fs.go to see how they prevent that.
-		mediaFilePath := path.Join(*mediaFilesDir, filename)
+	representationId := stream.RepresentationId
 
+	if s == nil {
 		var err error
-		if representationId == "direct-stream-video" {
-			s, err = ffmpeg.NewTransmuxingSession(mediaFilePath, os.TempDir(), segmentId)
+		if stream.RepresentationId == "direct-stream-video" {
+			s, err = ffmpeg.NewTransmuxingSession(stream, os.TempDir(), segmentId)
 		} else {
-			if strings.Contains(representationId, "video") {
+			if strings.Contains(stream.RepresentationId, "video") {
 				if encoderParams, ok := ffmpeg.VideoEncoderPresets[representationId]; ok {
 					s, err = ffmpeg.NewVideoTranscodingSession(
-						mediaFilePath, streamId, os.TempDir(), segmentId, encoderParams)
+						stream, os.TempDir(), segmentId, encoderParams)
 				} else {
 					return nil, fmt.Errorf("No such encoder preset %s", representationId)
 				}
@@ -242,7 +237,7 @@ func getOrStartTranscodingSession(filename string, streamId int64, representatio
 			if strings.Contains(representationId, "audio") {
 				if encoderParams, ok := ffmpeg.AudioEncoderPresets[representationId]; ok {
 					s, err = ffmpeg.NewAudioTranscodingSession(
-						mediaFilePath, streamId, os.TempDir(), segmentId, encoderParams)
+						stream, os.TempDir(), segmentId, encoderParams)
 				} else {
 					return nil, fmt.Errorf("No such encoder preset %s", representationId)
 				}
@@ -254,7 +249,6 @@ func getOrStartTranscodingSession(filename string, streamId int64, representatio
 			return nil, err
 		}
 
-		s.RepresentationId = representationId
 		sessions = append(sessions, s)
 		s.Start()
 		time.Sleep(2 * time.Second)
@@ -264,18 +258,21 @@ func getOrStartTranscodingSession(filename string, streamId int64, representatio
 }
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
-	filename := mux.Vars(r)["filename"]
+	mediaFilePath := path.Join(*mediaFilesDir, mux.Vars(r)["filename"])
 	streamId, _ := strconv.Atoi(mux.Vars(r)["streamId"])
 	representationId := mux.Vars(r)["representationId"]
 
-	s, err := getOrStartTranscodingSession(filename, int64(streamId), representationId, 0)
+	offeredStreams, _ := ffmpeg.GetOfferedStreams(mediaFilePath)
+	stream, _ := ffmpeg.FindStream(&offeredStreams, int64(streamId), representationId)
+	session, err := getOrStartTranscodingSession(stream, 0)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	for {
-		initPath := s.InitialSegment()
+		initPath := session.InitialSegment()
 		if _, err := os.Stat(initPath); err == nil {
 			http.ServeFile(w, r, initPath)
 			return

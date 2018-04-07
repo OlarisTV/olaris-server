@@ -21,8 +21,7 @@ var AudioEncoderPresets = map[string]EncoderParams{
 const transcodedAudioSegmentDuration = 4992 * time.Millisecond
 
 func NewAudioTranscodingSession(
-	inputPath string,
-	streamId int64,
+	stream OfferedStream,
 	outputDirBase string,
 	segmentOffset int64,
 	transcodingParams EncoderParams) (*TranscodingSession, error) {
@@ -49,10 +48,10 @@ func NewAudioTranscodingSession(
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", inputPath,
+		"-i", stream.MediaFilePath,
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
-		"-map", fmt.Sprintf("0:%d", streamId),
+		"-map", fmt.Sprintf("0:%d", stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
 		"-threads", "2",
 		"-f", "hls",
@@ -72,8 +71,7 @@ func NewAudioTranscodingSession(
 
 	return &TranscodingSession{
 		cmd:            cmd,
-		InputPath:      inputPath,
-		StreamId:       streamId,
+		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
 	}, nil

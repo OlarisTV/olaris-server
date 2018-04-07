@@ -17,22 +17,22 @@ import (
 )
 
 type TranscodingSession struct {
-	cmd              *exec.Cmd
-	InputPath        string
-	outputDir        string
-	firstSegmentId   int64
-	StreamId         int64
-	RepresentationId string
+	cmd            *exec.Cmd
+	Stream         OfferedStream
+	outputDir      string
+	firstSegmentId int64
 }
 
 type OfferedStream struct {
-	mediaFilePath string
+	MediaFilePath string
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
 	StreamId         int64
 	RepresentationId string
 
 	// The rest is just metadata for display
+	// TODO(Leon Handreke): Should probably pull this "primary key"
+	// out into a StreamKey struct or something
 
 	BitRate       int64
 	TotalDuration time.Duration
@@ -52,6 +52,12 @@ type OfferedStream struct {
 	transmuxed bool
 }
 
+func (s *OfferedStream) Equals(other OfferedStream) bool {
+	return (s.MediaFilePath == other.MediaFilePath) &&
+		(s.RepresentationId == other.RepresentationId) &&
+		(s.StreamId == other.StreamId)
+}
+
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
 // force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
@@ -64,7 +70,7 @@ const MinTransmuxedSegDuration = 5000 * time.Millisecond
 const segmentsPerSession = 12
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
-func NewTransmuxingSession(inputPath string, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
+func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -76,7 +82,7 @@ func NewTransmuxingSession(inputPath string, outputDirBase string, segmentOffset
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", inputPath,
+		"-i", stream.MediaFilePath,
 		"-c:v", "copy",
 		"-c:a", "copy",
 		"-threads", "2",
@@ -94,7 +100,7 @@ func NewTransmuxingSession(inputPath string, outputDirBase string, segmentOffset
 
 	return &TranscodingSession{
 		cmd:            cmd,
-		InputPath:      inputPath,
+		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
 	}, nil
@@ -148,7 +154,7 @@ func (s *TranscodingSession) GetSegment(segmentId int64, deadline time.Duration)
 
 func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time.Duration) bool {
 	// For transmuxed content we currently just spew out the whole file and serve it.
-	if s.RepresentationId == "direct-stream-video" {
+	if s.Stream.RepresentationId == "direct-stream-video" {
 		return true
 	}
 
@@ -219,7 +225,7 @@ func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) 
 		GetOfferedTranscodedVideoStreams(*container),
 		GetOfferedTranscodedAudioStreams(*container)...)
 	for _, s := range streams {
-		s.mediaFilePath = mediaFilePath
+		s.MediaFilePath = mediaFilePath
 	}
 
 	return streams, nil
@@ -249,7 +255,7 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 
 	return []OfferedStream{
 		{
-			mediaFilePath:    mediaFilePath,
+			MediaFilePath:    mediaFilePath,
 			StreamId:         0,
 			RepresentationId: "direct-stream-video",
 			Codecs:           fmt.Sprint("%s,%s", videoStream.GetMime(), audioStream.GetMime()),
@@ -262,7 +268,20 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	}, nil
 }
 
-func GetOfferedStream(streams *[]OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
+func GetOfferedStreams(mediaFilePath string) ([]OfferedStream, error) {
+	transcoded, err := GetOfferedTranscodedStreams(mediaFilePath)
+	if err != nil {
+		return []OfferedStream{}, err
+	}
+	transmuxed, err := GetOfferedTransmuxedStreams(mediaFilePath)
+	if err != nil {
+		return []OfferedStream{}, err
+	}
+
+	return append(transcoded, transmuxed...), nil
+}
+
+func FindStream(streams *[]OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
 	for _, s := range *streams {
 		if s.StreamId == streamId && s.RepresentationId == representationId {
 			return s, true

@@ -21,8 +21,7 @@ var VideoEncoderPresets = map[string]EncoderParams{
 const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 
 func NewVideoTranscodingSession(
-	inputPath string,
-	streamId int64,
+	stream OfferedStream,
 	outputDirBase string,
 	segmentOffset int64,
 	transcodingParams EncoderParams) (*TranscodingSession, error) {
@@ -38,10 +37,10 @@ func NewVideoTranscodingSession(
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", inputPath,
+		"-i", stream.MediaFilePath,
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
-		"-map", fmt.Sprintf("0:%d", streamId),
+		"-map", fmt.Sprintf("0:%d", stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate),
 		"-preset:0", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", transcodedVideoSegmentDuration.Seconds()),
@@ -64,8 +63,7 @@ func NewVideoTranscodingSession(
 
 	return &TranscodingSession{
 		cmd:            cmd,
-		InputPath:      inputPath,
-		StreamId:       streamId,
+		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
 	}, nil
