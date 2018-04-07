@@ -16,8 +16,8 @@ class FileList extends Component {
     })
   }
 
-  handleClick = (url, streamType) => {
-    this.props.onClickMethod(url, streamType)
+  handleClick = (url) => {
+    this.props.onClickMethod(url)
   };
 
   updateFilter = (event) => {
@@ -49,8 +49,8 @@ class FileList extends Component {
             <TableRow key={file.key}>
               <TableCell>{file.name}</TableCell>
               <TableCell>{file.size}</TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(file.name) }} href="#">HLS Transcode</a></TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(file.name, 'hls-transmuxing') }} href="#">HLS Transmux</a></TableCell>
+              <TableCell><a onClick={ ()=>{ this.handleClick(file.hlsTranscodingManifest) }} href="#">HLS Transcode</a></TableCell>
+              <TableCell><a onClick={ ()=>{ this.handleClick(file.hlsTransmuxingManifest) }} href="#">HLS Transmux</a></TableCell>
             </TableRow>
           )}
         </TableBody>

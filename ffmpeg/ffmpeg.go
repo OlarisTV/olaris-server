@@ -224,8 +224,8 @@ func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	streams := append(
 		GetOfferedTranscodedVideoStreams(*container),
 		GetOfferedTranscodedAudioStreams(*container)...)
-	for _, s := range streams {
-		s.MediaFilePath = mediaFilePath
+	for i, _ := range streams {
+		streams[i].MediaFilePath = mediaFilePath
 	}
 
 	return streams, nil

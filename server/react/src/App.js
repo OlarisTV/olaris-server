@@ -22,12 +22,12 @@ class App extends React.Component {
       }
     }
 
-  playMovie = (name, streamType = "hls-transcoding") => {
+  playMovie = (src) => {
     this.setState({videoJsOptions: {
         autoplay: true,
         controls: true,
         sources: [{
-          src: `http://localhost:8080/${name}/${streamType}-manifest.m3u8`,
+          src: src, //`http://localhost:8080/${name}/${streamType}-manifest.m3u8`,
           type: 'application/x-mpegURL',
         }], chromecast:{
           appId:'2A952047'

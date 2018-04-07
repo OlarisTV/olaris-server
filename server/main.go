@@ -52,13 +52,13 @@ func main() {
 	// segments.
 	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", serveFileIndex)
-	r.HandleFunc("/{filename}/transmuxing-manifest.mpd", serveTransmuxingManifest)
-	r.HandleFunc("/{filename}/transcoding-manifest.mpd", serveTranscodingManifest)
-	r.HandleFunc("/{filename}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
-	r.HandleFunc("/{filename}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
-	r.HandleFunc("/{filename}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
-	r.HandleFunc("/{filename}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
-	r.HandleFunc("/{filename}/{streamId}/{representationId}/init.mp4", serveInit)
+	r.HandleFunc("/{filename:.*}/transmuxing-manifest.mpd", serveTransmuxingManifest)
+	r.HandleFunc("/{filename:.*}/transcoding-manifest.mpd", serveTranscodingManifest)
+	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
+	r.HandleFunc("/{filename:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
+	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/init.mp4", serveInit)
 
 	//TODO: (Maran) This is probably not serving subfolders yet
 	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
@@ -83,12 +83,12 @@ func main() {
 }
 
 type MediaFile struct {
-	Ext             string `json:"ext"`
-	Name            string `json:"name"`
-	Key             string `json:"key"`
-	Size            int64  `json:"size"`
-	TranscodingPath string `json:"transcodePath"`
-	TransmuxingPath string `json:"transmuxPath"`
+	Ext                    string `json:"ext"`
+	Name                   string `json:"name"`
+	Key                    string `json:"key"`
+	Size                   int64  `json:"size"`
+	HlsTranscodingManifest string `json:"hlsTranscodingManifest"`
+	HlsTransmuxingManifest string `json:"hlsTransmuxingManifest"`
 }
 
 func MD5Ify(text string) string {
@@ -111,7 +111,12 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 
-			files = append(files, MediaFile{Key: MD5Ify(path), Name: fileInfo.Name(), Size: fileInfo.Size(), TranscodingPath: relPath[1] + "/transcoding-manifest.mpd", TransmuxingPath: relPath[1] + "/transmuxing-manifest.mpd"})
+			files = append(files, MediaFile{
+				Key:  MD5Ify(path),
+				Name: fileInfo.Name(),
+				Size: fileInfo.Size(),
+				HlsTranscodingManifest: "http://127.0.0.1:8080" + relPath[1] + "/hls-transcoding-manifest.m3u8",
+				HlsTransmuxingManifest: "http://127.0.0.1:8080" + relPath[1] + "/hls-transmuxing-manifest.m3u8"})
 		}
 
 		return nil
