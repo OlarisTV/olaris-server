@@ -81,6 +81,15 @@ func NewAudioTranscodingSession(
 
 func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream {
 	offeredStreams := []OfferedStream{}
+
+	numFullSegments := container.Format.Duration() / transcodedAudioSegmentDuration
+	segmentDurations := []time.Duration{}
+	// We want one more segment to cover the end. For the moment we don't
+	// care that it's a bit longer in the manifest, the client will play till EOF
+	for i := 0; i < int(numFullSegments)+1; i++ {
+		segmentDurations = append(segmentDurations, transcodedAudioSegmentDuration)
+	}
+
 	for _, probeStream := range container.Streams {
 		if probeStream.CodecType != "audio" {
 			continue
@@ -96,8 +105,9 @@ func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream 
 				StreamType:       "audio",
 				Language:         probeStream.Tags["language"],
 				// TODO(Leon Handreke): Pick up the "title" field or render a user-presentable language string.
-				Title:      probeStream.Tags["language"],
-				transcoded: true,
+				Title:            probeStream.Tags["language"],
+				transcoded:       true,
+				SegmentDurations: segmentDurations,
 			})
 		}
 	}

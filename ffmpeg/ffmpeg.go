@@ -45,6 +45,8 @@ type OfferedStream struct {
 	// User-visible string for this audio or subtitle track
 	Title string
 
+	SegmentDurations []time.Duration
+
 	// Mutually exclusive
 	transcoded bool
 	transmuxed bool
@@ -181,14 +183,14 @@ func (s *TranscodingSession) InitialSegment() string {
 	return filepath.Join(s.outputDir, "init.mp4")
 }
 
-func GuessTransmuxedSegmentDurations(s *OfferedStream) ([]time.Duration, error) {
-	keyframeTimestamps, err := ProbeKeyframes(s.mediaFilePath)
+func GuessTransmuxedSegmentDurations(filename string, totalDuration time.Duration) ([]time.Duration, error) {
+	keyframeTimestamps, err := ProbeKeyframes(filename)
 	if err != nil {
 		return nil, err
 	}
 
 	// Insert dummy keyframe timestamp at the end so that the last segment duration is correctly reported
-	keyframeTimestamps = append(keyframeTimestamps, s.TotalDuration)
+	keyframeTimestamps = append(keyframeTimestamps, totalDuration)
 
 	segmentDurations := []time.Duration{}
 	lastKeyframe := 0
@@ -243,6 +245,7 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 
 	videoBitrate, _ := strconv.Atoi(videoStream.BitRate)
 	audioBitrate, _ := strconv.Atoi(audioStream.BitRate)
+	segmentDurations, _ := GuessTransmuxedSegmentDurations(mediaFilePath, container.Format.Duration())
 
 	return []OfferedStream{
 		{
@@ -254,6 +257,7 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 			TotalDuration:    container.Format.Duration(),
 			StreamType:       "video",
 			transmuxed:       true,
+			SegmentDurations: segmentDurations,
 		},
 	}, nil
 }
@@ -265,28 +269,4 @@ func GetOfferedStream(streams *[]OfferedStream, streamId int64, representationId
 		}
 	}
 	return OfferedStream{}, false
-}
-
-func (s *OfferedStream) GetSegmentDurations() ([]time.Duration, error) {
-	if s.transmuxed {
-		return GuessTransmuxedSegmentDurations(s)
-	}
-
-	var segmentDuration time.Duration
-	if s.StreamType == "audio" {
-		segmentDuration = transcodedAudioSegmentDuration
-	}
-	// if s.StreamType == "video"
-	segmentDuration = transcodedVideoSegmentDuration
-
-	numFullSegments := s.TotalDuration / segmentDuration
-
-	segmentDurations := []time.Duration{}
-	// We want one more segment to cover the end. For the moment we don't
-	// care that it's a bit longer in the manifest, the client will play till EOF
-	for i := 0; i < int(numFullSegments)+1; i++ {
-		segmentDurations = append(segmentDurations, segmentDuration)
-	}
-
-	return segmentDurations, nil
 }

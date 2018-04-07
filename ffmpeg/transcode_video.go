@@ -73,6 +73,15 @@ func NewVideoTranscodingSession(
 
 func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream {
 	offeredStreams := []OfferedStream{}
+
+	numFullSegments := container.Format.Duration() / transcodedVideoSegmentDuration
+	segmentDurations := []time.Duration{}
+	// We want one more segment to cover the end. For the moment we don't
+	// care that it's a bit longer in the manifest, the client will play till EOF
+	for i := 0; i < int(numFullSegments)+1; i++ {
+		segmentDurations = append(segmentDurations, transcodedVideoSegmentDuration)
+	}
+
 	for _, probeStream := range container.Streams {
 		if probeStream.CodecType != "video" {
 			continue
@@ -99,6 +108,7 @@ func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream 
 				Codecs:           codecsString,
 				StreamType:       "video",
 				transcoded:       true,
+				SegmentDurations: segmentDurations,
 			})
 		}
 	}

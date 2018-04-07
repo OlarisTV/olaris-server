@@ -57,10 +57,9 @@ const transcodingMediaPlaylistTemplate = `#EXTM3U
 func BuildTransmuxingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) string {
 	stream := streams[0]
 
-	segmentDurations, _ := stream.GetSegmentDurations()
 	// Segment durations in ms
 	segmentDurationsSeconds := []float64{}
-	for _, d := range segmentDurations {
+	for _, d := range stream.SegmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
 
 	}
@@ -117,10 +116,9 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 }
 
 func BuildTranscodingMediaPlaylistFromFile(filePath string, stream ffmpeg.OfferedStream) string {
-	segmentDurations, _ := stream.GetSegmentDurations()
 
 	segmentDurationsSeconds := []float64{}
-	for _, d := range segmentDurations {
+	for _, d := range stream.SegmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
 	}
 
