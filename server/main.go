@@ -113,7 +113,7 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 
 			files = append(files, MediaFile{
 				Key:  MD5Ify(path),
-				Name: fileInfo.Name(),
+				Name: relPath[1],
 				Size: fileInfo.Size(),
 				HlsTranscodingManifest: "http://127.0.0.1:8080" + relPath[1] + "/hls-transcoding-manifest.m3u8",
 				HlsTransmuxingManifest: "http://127.0.0.1:8080" + relPath[1] + "/hls-transmuxing-manifest.m3u8"})
