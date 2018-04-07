@@ -24,7 +24,7 @@ class FileList extends Component {
     if(event.target.value == "") {
       this.setState({name: event.target.value, files: this.state.allFiles})
     }else{
-      let result = this.state.files.filter(file => ( file.name.toLowerCase().indexOf(event.target.value.toLowerCase()) > -1));
+      let result = this.state.allFiles.filter(file => ( file.name.toLowerCase().indexOf(event.target.value.toLowerCase()) > -1));
       this.setState({name: event.target.value, files: result})
     }
   }
