@@ -1,4 +1,4 @@
-FROM phusion/baseimage
+FROM phusion/baseimage as base
 
 WORKDIR     /tmp/workdir
 
@@ -9,7 +9,7 @@ RUN     apt-get -yqq update && \
 
 RUN git clone -b bytesized-streaming https://ndreke.de/~leon/dump/ffmpeg
 
-#FROM base as build
+FROM base as build
 
 ARG        PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
 ARG        LD_LIBRARY_PATH=/opt/ffmpeg/lib
@@ -322,6 +322,7 @@ RUN  \
         --extra-cflags="-I${PREFIX}/include" \
         --extra-ldflags="-L${PREFIX}/lib" \
         --extra-libs=-ldl \
+        --enable-static \
         --prefix="${PREFIX}" && \
         make && \
         make install && \
@@ -338,11 +339,13 @@ RUN \
         cp -r ${PREFIX}/share/ffmpeg /usr/local/share/ && \
         LD_LIBRARY_PATH=/usr/local/lib ffmpeg -buildconf
 
-#FROM        base AS release
+FROM        base AS release
 MAINTAINER  Julien Rottenberg <julien@rottenberg.info>
 
-CMD         ["--help"]
-ENTRYPOINT  ["ffmpeg"]
+#CMD         ["--help"]
+#ENTRYPOINT  ["ffmpeg"]
 ENV         LD_LIBRARY_PATH=/usr/local/lib
+
+VOLUME /mnt
 
 COPY --from=build /usr/local /usr/local/
