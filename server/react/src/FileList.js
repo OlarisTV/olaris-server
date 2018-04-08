@@ -11,7 +11,7 @@ class FileList extends Component {
   state = { files: [], name: '' }
 
   componentDidMount() {
-    axios.get("http://localhost:8080/api/v1/files").then(response => {
+    axios.get("/api/v1/files").then(response => {
       this.setState({files: response.data, allFiles: response.data})
     })
   }
