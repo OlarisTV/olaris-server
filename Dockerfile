@@ -14,7 +14,7 @@ FROM base as build
 ARG        PKG_CONFIG_PATH=/opt/ffmpeg/lib/pkgconfig
 ARG        LD_LIBRARY_PATH=/opt/ffmpeg/lib
 ARG        PREFIX=/opt/ffmpeg
-ARG        MAKEFLAGS="-j2"
+ARG        MAKEFLAGS="-j4"
 
 ENV         FFMPEG_VERSION=3.4.2     \
             FDKAAC_VERSION=0.1.5      \
@@ -76,7 +76,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://kent.dl.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-${OPENCOREAMR_VERSION}.tar.gz | \
         tar -zx --strip-components=1 && \
-        ./configure --prefix="${PREFIX}" --enable-shared  && \
+        ./configure --prefix="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -87,7 +87,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | \
         tar -jx --strip-components=1 && \
-        ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
+        ./configure --prefix="${PREFIX}" --disabled-shared --enable-static --enable-pic --disable-cli && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -112,7 +112,7 @@ RUN \
         curl -sLO http://downloads.xiph.org/releases/ogg/libogg-${OGG_VERSION}.tar.gz && \
         echo ${OGG_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f libogg-${OGG_VERSION}.tar.gz && \
-        ./configure --prefix="${PREFIX}" --enable-shared  && \
+        ./configure --prefix="${PREFIX}" --enable-static  && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -125,7 +125,7 @@ RUN \
         echo ${OPUS_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f opus-${OPUS_VERSION}.tar.gz && \
         autoreconf -fiv && \
-        ./configure --prefix="${PREFIX}" --enable-shared && \
+        ./configure --prefix="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -137,7 +137,7 @@ RUN \
         curl -sLO http://downloads.xiph.org/releases/vorbis/libvorbis-${VORBIS_VERSION}.tar.gz && \
         echo ${VORBIS_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f libvorbis-${VORBIS_VERSION}.tar.gz && \
-        ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-shared && \
+        ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -149,7 +149,7 @@ RUN \
         curl -sLO http://downloads.xiph.org/releases/theora/libtheora-${THEORA_VERSION}.tar.gz && \
         echo ${THEORA_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f libtheora-${THEORA_VERSION}.tar.gz && \
-        ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-shared && \
+        ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -160,7 +160,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | \
         tar -zx --strip-components=1 && \
-        ./configure --prefix="${PREFIX}" --enable-vp8 --enable-vp9 --enable-pic --enable-shared \
+        ./configure --prefix="${PREFIX}" --enable-vp8 --enable-vp9 --enable-pic --enable-static \
         --disable-debug --disable-examples --disable-docs --disable-install-bins  && \
         make && \
         make install && \
@@ -172,7 +172,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://kent.dl.sourceforge.net/project/lame/lame/$(echo ${LAME_VERSION} | sed -e 's/[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)/\1.\2/')/lame-${LAME_VERSION}.tar.gz | \
         tar -zx --strip-components=1 && \
-        ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --enable-shared --enable-nasm --enable-pic --disable-frontend && \
+        ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --enable-nasm --enable-pic --disable-frontend && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -185,7 +185,7 @@ RUN \
         echo ${XVID_SHA256SUM} | sha256sum --check && \
         tar -zx -f xvidcore-${XVID_VERSION}.tar.gz && \
         cd xvidcore/build/generic && \
-        ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --datadir="${DIR}" --enable-shared --enable-shared && \
+        ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --datadir="${DIR}" && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -197,7 +197,7 @@ RUN \
         curl -sL https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | \
         tar -zx --strip-components=1 && \
         autoreconf -fiv && \
-        ./configure --prefix="${PREFIX}" --enable-shared --datadir="${DIR}" && \
+        ./configure --prefix="${PREFIX}" --datadir="${DIR}" && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -208,7 +208,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz | \
         tar -zx --strip-components=1 && \
-        cmake -DBUILD_THIRDPARTY:BOOL=ON -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
+        cmake -DBUILD_THIRDPARTY:BOOL=ON -DBUILD_SHARED_LIBS:bool=off -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -220,7 +220,7 @@ RUN  \
         curl -sLO http://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.gz && \
         echo ${FREETYPE_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f freetype-${FREETYPE_VERSION}.tar.gz && \
-        ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
+        ./configure --prefix="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -232,6 +232,7 @@ RUN  \
         curl -sLO https://github.com/georgmartius/vid.stab/archive/v${LIBVIDSTAB_VERSION}.tar.gz &&\
         echo ${LIBVIDSTAB_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f v${LIBVIDSTAB_VERSION}.tar.gz && \
+        sed -i "s/vidstab SHARED/vidstab STATIC/" ./CMakeLists.txt && \
         cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
         make && \
         make install && \
@@ -247,7 +248,7 @@ RUN  \
         tar -zx --strip-components=1 -f ${FRIBIDI_VERSION}.tar.gz && \
         sed -i 's/^SUBDIRS =.*/SUBDIRS=gen.tab charset lib/' Makefile.am && \
         ./bootstrap --no-config && \
-        ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
+        ./configure -prefix="${PREFIX}" --enable-static && \
         make -j 1 && \
         make install && \
         rm -rf ${DIR}
@@ -258,7 +259,7 @@ RUN  \
         cd ${DIR} && \
         curl -sLO https://www.freedesktop.org/software/fontconfig/release/fontconfig-${FONTCONFIG_VERSION}.tar.bz2 &&\
         tar -jx --strip-components=1 -f fontconfig-${FONTCONFIG_VERSION}.tar.bz2 && \
-        ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
+        ./configure -prefix="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
@@ -271,10 +272,11 @@ RUN  \
         echo ${LIBASS_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f ${LIBASS_VERSION}.tar.gz && \
         ./autogen.sh && \
-        ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
+        ./configure -prefix="${PREFIX}" --enable-static --disabled-shared && \
         make && \
         make install && \
         rm -rf ${DIR}
+
 ## kvazaar https://github.com/ultravideo/kvazaar
 RUN \
         DIR=/tmp/kvazaar && \
@@ -283,11 +285,10 @@ RUN \
         curl -sLO https://github.com/ultravideo/kvazaar/archive/v${KVAZAAR_VERSION}.tar.gz &&\
         tar -zx --strip-components=1 -f v${KVAZAAR_VERSION}.tar.gz && \
         ./autogen.sh && \
-        ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
+        ./configure -prefix="${PREFIX}" --enable-static && \
         make && \
         make install && \
         rm -rf ${DIR}
-
 ## ffmpeg https://ffmpeg.org/
 RUN  \
         cd ffmpeg && \
@@ -295,7 +296,7 @@ RUN  \
         --disable-debug \
         --disable-doc \
         --disable-ffplay \
-        --enable-shared \
+        --disable-shared \
         --enable-avresample \
         --enable-libopencore-amrnb \
         --enable-libopencore-amrwb \
@@ -318,11 +319,13 @@ RUN  \
         --enable-libkvazaar \
         --enable-postproc \
         --enable-small \
+        --enable-static \
         --enable-version3 \
         --extra-cflags="-I${PREFIX}/include" \
         --extra-ldflags="-L${PREFIX}/lib" \
         --extra-libs=-ldl \
-        --enable-static \
+        --extra-ldexeflags="-static" \
+        --pkg-config-flags="--static" \
         --prefix="${PREFIX}" && \
         make && \
         make install && \
