@@ -281,8 +281,8 @@ func GetOfferedStreams(mediaFilePath string) ([]OfferedStream, error) {
 	return append(transcoded, transmuxed...), nil
 }
 
-func FindStream(streams *[]OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
-	for _, s := range *streams {
+func FindStream(streams []OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
+	for _, s := range streams {
 		if s.StreamId == streamId && s.RepresentationId == representationId {
 			return s, true
 		}

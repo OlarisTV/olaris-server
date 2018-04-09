@@ -115,8 +115,7 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 	return buf.String()
 }
 
-func BuildTranscodingMediaPlaylistFromFile(filePath string, stream ffmpeg.OfferedStream) string {
-
+func BuildTranscodingMediaPlaylistFromFile(stream ffmpeg.OfferedStream) string {
 	segmentDurationsSeconds := []float64{}
 	for _, d := range stream.SegmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
