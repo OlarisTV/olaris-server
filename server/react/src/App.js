@@ -33,15 +33,6 @@ class App extends React.Component {
 	state = {
 		serverAddress: "",
 		videoJsOptions:{
-			autoplay: false,
-			controls: true,
-			chromecast: {
-				appId:'2A952047',
-				metadata:{
-					title:'Title display on tech wrapper',
-					subtitle:'Synopsis display on tech wrapper',
-				}
-			}
 		}
 	}
 
@@ -53,15 +44,13 @@ class App extends React.Component {
     this.setState({videoJsOptions: {
         autoplay: true,
         controls: true,
+	enableLowInitialPlaylist: true,
         sources: [{
-          src: src, //`http://localhost:8080/${name}/${streamType}-manifest.m3u8`,
+          src: src,
           type: 'application/x-mpegURL',
-        }], chromecast:{
-          appId:'2A952047'
-        }}})
+        }]}})
   }
   mainContainer = () => {
-	  console.log("main container")
 	  if(this.state.connected == true){
 		  return (
 		  <Grid container spacing={24}>

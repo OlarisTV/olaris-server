@@ -1,7 +1,8 @@
 import React from 'react';
 import videojs from 'video.js'
-import chromecast from 'videojs-chromecast'
+//import chromecast from 'videojs-chromecast'
 import videojshls from "videojs-contrib-hls"
+import videojsflash from "videojs-flash"
 
 class VideoPlayer extends React.Component {
 
@@ -34,7 +35,7 @@ class VideoPlayer extends React.Component {
     return (
       <div>
         <div data-vjs-player>
-          <video ref={ node => this.videoNode = node } className="video-js"></video>
+          <video ref={ node => this.videoNode = node } className="video-js vjs-default-skin" controls></video>
         </div>
       </div>
     )

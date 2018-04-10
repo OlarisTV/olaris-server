@@ -12,7 +12,8 @@
     "video.js": "^6.7.3",
     "videojs": "^1.0.0",
     "videojs-chromecast": "^2.0.8",
-    "videojs-contrib-hls": "^5.14.1"
+    "videojs-contrib-hls": "^5.14.1",
+    "videojs-flash": "^2.1.0"
   },
   "scripts": {
     "sass:watch": "node-sass -w src/styles/scss -o src/styles/css",
