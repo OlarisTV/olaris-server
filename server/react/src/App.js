@@ -4,23 +4,50 @@ import FileList from './FileList.js'
 import VideoPlayer from './VideoJS.js'
 import Grid from 'material-ui/Grid';
 import CssBaseline from 'material-ui/CssBaseline';
-import chromecast from 'videojs-chromecast'
-import videojshls from "videojs-contrib-hls"
+
+class ServerInput extends React.Component {
+	state = {serverAddress: "http://localhost:8080/", connected: false}
+
+	onChange = (event) => {
+		this.setState({serverAddress: event.target.value})
+	}
+
+	onSubmit = (event) => {
+	  event.preventDefault();
+	  console.log("Submit server:",this.state.serverAddress)
+	  this.props.onSubmitFunction(this.state.serverAddress)
+	}
+
+	render() {
+		return (
+			<form onSubmit={this.onSubmit}>
+				<input type="text" placeholder="Server address" onChange={this.onChange} value={this.state.serverAddress} />
+				<button type="submit">Login to server</button>
+			</form>
+		)
+	}
+}
+
 
 class App extends React.Component {
-    state = {
-      videoJsOptions:{
-        autoplay: false,
-        controls: true,
-        chromecast: {
-          appId:'2A952047',
-          metadata:{
-            title:'Title display on tech wrapper',
-            subtitle:'Synopsis display on tech wrapper',
-         }
-        }
-      }
-    }
+	state = {
+		serverAddress: "",
+		videoJsOptions:{
+			autoplay: false,
+			controls: true,
+			chromecast: {
+				appId:'2A952047',
+				metadata:{
+					title:'Title display on tech wrapper',
+					subtitle:'Synopsis display on tech wrapper',
+				}
+			}
+		}
+	}
+
+  updateServerAddress = (src) => {
+	  this.setState({serverAddress: src, connected: true})
+  }
 
   playMovie = (src) => {
     this.setState({videoJsOptions: {
@@ -33,6 +60,23 @@ class App extends React.Component {
           appId:'2A952047'
         }}})
   }
+  mainContainer = () => {
+	  console.log("main container")
+	  if(this.state.connected == true){
+		  return (
+		  <Grid container spacing={24}>
+		    <Grid item xs>
+		      <FileList serverAddress={this.state.serverAddress} onClickMethod={this.playMovie}/>
+		    </Grid>
+		    <Grid item xs>
+		      <VideoPlayer {...this.state.videoJsOptions} />
+		    </Grid>
+		  </Grid>
+		  )
+	  }else{
+		  console.log('not connected')
+	  }
+  }
 
   render() {
     return (
@@ -42,14 +86,12 @@ class App extends React.Component {
           <header className="App-header">
             <h1 className="App-title">Bytesized Streaming</h1>
           </header>
-          <Grid container spacing={24}>
+	  <Grid container spacing={24}>
             <Grid item xs>
-              <FileList onClickMethod={this.playMovie}/>
-            </Grid>
-            <Grid item xs>
-              <VideoPlayer {...this.state.videoJsOptions} />
-            </Grid>
-          </Grid>
+	      <ServerInput onSubmitFunction={this.updateServerAddress}/>
+	    </Grid>
+	    {this.mainContainer()}
+	  </Grid>
         </div>
        </React.Fragment>
     );

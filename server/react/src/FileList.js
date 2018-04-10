@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
 import axios from 'axios';
-import { withStyles } from 'material-ui/styles';
 import Table, { TableBody, TableCell, TableHead, TableRow } from 'material-ui/Table';
 import Paper from 'material-ui/Paper';
+
 class Filter extends Component {
   state = { filterBy: '' }
 }
@@ -11,7 +11,7 @@ class FileList extends Component {
   state = { files: [], name: '' }
 
   componentDidMount() {
-    axios.get("/api/v1/files").then(response => {
+    axios.get(`${this.props.serverAddress}/api/v1/files`).then(response => {
       this.setState({files: response.data, allFiles: response.data})
     })
   }
@@ -21,7 +21,7 @@ class FileList extends Component {
   };
 
   updateFilter = (event) => {
-    if(event.target.value == "") {
+    if(event.target.value === "") {
       this.setState({name: event.target.value, files: this.state.allFiles})
     }else{
       let result = this.state.allFiles.filter(file => ( file.name.toLowerCase().indexOf(event.target.value.toLowerCase()) > -1));
@@ -49,8 +49,8 @@ class FileList extends Component {
             <TableRow key={file.key}>
               <TableCell>{file.name}</TableCell>
               <TableCell>{file.size}</TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(file.hlsTranscodingManifest) }} href="#">HLS Transcode</a></TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(file.hlsTransmuxingManifest) }} href="#">HLS Transmux</a></TableCell>
+              <TableCell><a onClick={ ()=>{ this.handleClick(this.props.serverAddress+ file.hlsTranscodingManifest) }} href="#">HLS Transcode</a></TableCell>
+              <TableCell><a onClick={ ()=>{ this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest) }} href="#">HLS Transmux</a></TableCell>
             </TableRow>
           )}
         </TableBody>
