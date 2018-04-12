@@ -4,35 +4,25 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"gitlab.com/bytesized/bytesized-streaming/bssdb"
 	"gitlab.com/bytesized/bytesized-streaming/dash"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"gitlab.com/bytesized/bytesized-streaming/hls"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"os/user"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
-
-var supportedExtensions = map[string]bool{
-	".mp4": true,
-	".mkv": true,
-	".mov": true,
-	".avi": true,
-}
 
 var mediaFilesDir = flag.String("media_files_dir", "", "Path to the media files to be served")
 
@@ -44,6 +34,20 @@ var sessionsMutex = sync.Mutex{}
 func main() {
 	flag.Parse()
 
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Println("Can't get user's home folder.", err)
+	}
+
+	ldb, err := bssdb.NewDb(path.Join(usr.HomeDir, ".config", "bss", "db"))
+	ms := bssdb.NewMediaState(ldb, *mediaFilesDir)
+	defer ldb.Close()
+
+	if err != nil {
+		fmt.Println("can't open db", err)
+		os.Exit(1)
+	}
+
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -51,7 +55,8 @@ func main() {
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
 	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
-	r.HandleFunc("/api/v1/files", serveFileIndex)
+	r.HandleFunc("/api/v1/files", ms.ServeFileIndex)
+	r.HandleFunc("/api/v1/state", ms.Handler)
 	r.HandleFunc("/{filename:.*}/transmuxing-manifest.mpd", serveTransmuxingManifest)
 	r.HandleFunc("/{filename:.*}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
@@ -80,58 +85,6 @@ func main() {
 	for _, s := range sessions {
 		s.Destroy()
 	}
-}
-
-type MediaFile struct {
-	Ext                    string `json:"ext"`
-	Name                   string `json:"name"`
-	Key                    string `json:"key"`
-	Size                   int64  `json:"size"`
-	HlsTranscodingManifest string `json:"hlsTranscodingManifest"`
-	HlsTransmuxingManifest string `json:"hlsTransmuxingManifest"`
-}
-
-func MD5Ify(text string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(text))
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func serveFileIndex(w http.ResponseWriter, r *http.Request) {
-	files := []MediaFile{}
-	err := filepath.Walk(*mediaFilesDir, func(walkPath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if supportedExtensions[filepath.Ext(walkPath)] {
-			relPath := strings.SplitAfter(walkPath, *mediaFilesDir)
-			fileInfo, err := os.Stat(walkPath)
-
-			if err != nil {
-				// This catches broken symlinks
-				if _, ok := err.(*os.PathError); ok {
-					fmt.Println("Got an error while statting file:", err)
-					return nil
-				}
-				return err
-			}
-
-			files = append(files, MediaFile{
-				Key:  MD5Ify(walkPath),
-				Name: fileInfo.Name(),
-				Size: fileInfo.Size(),
-				HlsTranscodingManifest: path.Join(relPath[1], "hls-transcoding-manifest.m3u8"),
-				HlsTransmuxingManifest: path.Join(relPath[1], "/hls-transmuxing-manifest.m3u8")})
-		}
-
-		return nil
-	})
-	if err != nil {
-		io.WriteString(w, fmt.Sprintf(`{"error": true, "error_message": "%s"}`, err))
-		return
-	}
-
-	json.NewEncoder(w).Encode(files)
 }
 
 func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {

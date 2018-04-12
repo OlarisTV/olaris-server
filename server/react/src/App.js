@@ -32,6 +32,7 @@ class ServerInput extends React.Component {
 class App extends React.Component {
 	state = {
 		serverAddress: "",
+		playtime: 0,
 		videoJsOptions:{
 		}
 	}
@@ -40,15 +41,16 @@ class App extends React.Component {
 	  this.setState({serverAddress: src, connected: true})
   }
 
-  playMovie = (src) => {
-    this.setState({videoJsOptions: {
-        autoplay: true,
-        controls: true,
-	enableLowInitialPlaylist: true,
-        sources: [{
-          src: src,
-          type: 'application/x-mpegURL',
-        }]}})
+  playMovie = (src, name, playtime) => {
+    this.setState({playtime: playtime, videoJsOptions: {
+      autoplay: true,
+      controls: true,
+      enableLowInitialPlaylist: true,
+      sources: [{
+        src: src,
+        type: 'application/x-mpegURL',
+        name: name
+      }]}})
   }
   mainContainer = () => {
 	  if(this.state.connected == true){
@@ -58,7 +60,7 @@ class App extends React.Component {
 		      <FileList serverAddress={this.state.serverAddress} onClickMethod={this.playMovie}/>
 		    </Grid>
 		    <Grid item xs>
-		      <VideoPlayer {...this.state.videoJsOptions} />
+		      <VideoPlayer playtime={this.state.playtime} serverAddress={this.state.serverAddress} {...this.state.videoJsOptions} />
 		    </Grid>
 		  </Grid>
 		  )

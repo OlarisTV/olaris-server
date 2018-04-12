@@ -16,8 +16,8 @@ class FileList extends Component {
     })
   }
 
-  handleClick = (url) => {
-    this.props.onClickMethod(url)
+  handleClick = (url, name, playtime) => {
+    this.props.onClickMethod(url, name, playtime)
   };
 
   updateFilter = (event) => {
@@ -40,7 +40,7 @@ class FileList extends Component {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
-              <TableCell>FileSize</TableCell>
+              <TableCell>Playtime</TableCell>
               <TableCell>Links</TableCell>
             </TableRow>
           </TableHead>
@@ -48,9 +48,9 @@ class FileList extends Component {
           {this.state.files.map(file =>
             <TableRow key={file.key}>
               <TableCell>{file.name}</TableCell>
-              <TableCell>{file.size}</TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(this.props.serverAddress+ file.hlsTranscodingManifest) }} href="#">HLS Transcode</a></TableCell>
-              <TableCell><a onClick={ ()=>{ this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest) }} href="#">HLS Transmux</a></TableCell>
+              <TableCell>{file.playtime}</TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTranscodingManifest, file.name, file.playtime) }} href="#">HLS Transcode</a></TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest, file.name, file.playtime) }} href="#">HLS Transmux</a></TableCell>
             </TableRow>
           )}
         </TableBody>
