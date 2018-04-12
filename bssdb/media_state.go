@@ -65,13 +65,13 @@ func (ms *MediaState) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("checking", rtime, "against", msu.Playtime)
 
-	if rtime < msu.Playtime {
-		fmt.Println("udpating")
-		err = ms.db.Put([]byte(msu.Filename), []byte(strconv.Itoa(msu.Playtime)))
-		if err != nil {
-			fmt.Println("error")
-		}
+	//	if rtime < msu.Playtime {
+	fmt.Println("Updating")
+	err = ms.db.Put([]byte(msu.Filename), []byte(strconv.Itoa(msu.Playtime)))
+	if err != nil {
+		fmt.Println("error")
 	}
+	//	}
 
 }
 
