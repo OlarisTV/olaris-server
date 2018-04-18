@@ -53,12 +53,6 @@ type OfferedStream struct {
 	transmuxed bool
 }
 
-func (s *OfferedStream) Equals(other OfferedStream) bool {
-	return (s.MediaFilePath == other.MediaFilePath) &&
-		(s.RepresentationId == other.RepresentationId) &&
-		(s.StreamId == other.StreamId)
-}
-
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
 // force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the

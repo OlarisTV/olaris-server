@@ -149,11 +149,11 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, segmentPath)
 }
 
-func getSessions(stream ffmpeg.OfferedStream) []*ffmpeg.TranscodingSession {
+func getSessions(streamKey ffmpeg.StreamKey) []*ffmpeg.TranscodingSession {
 	matching := []*ffmpeg.TranscodingSession{}
 
 	for _, s := range sessions {
-		if s.Stream.Equals(stream) {
+		if s.Stream.StreamKey == streamKey {
 			matching = append(matching, s)
 		}
 	}
@@ -166,7 +166,7 @@ func getOrStartTranscodingSession(stream ffmpeg.OfferedStream, segmentId int64) 
 
 	var s *ffmpeg.TranscodingSession
 
-	matchingSessions := getSessions(stream)
+	matchingSessions := getSessions(stream.StreamKey)
 	for _, matchingSession := range matchingSessions {
 		if matchingSession.IsProjectedAvailable(segmentId, 20*time.Second) {
 			s = matchingSession
