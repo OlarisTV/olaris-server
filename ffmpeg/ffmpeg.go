@@ -23,17 +23,18 @@ type TranscodingSession struct {
 	firstSegmentId int64
 }
 
-type OfferedStream struct {
+type StreamKey struct {
 	MediaFilePath string
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
 	StreamId         int64
 	RepresentationId string
+}
+
+type OfferedStream struct {
+	StreamKey
 
 	// The rest is just metadata for display
-	// TODO(Leon Handreke): Should probably pull this "primary key"
-	// out into a StreamKey struct or something
-
 	BitRate       int64
 	TotalDuration time.Duration
 	// codecs string ready for DASH/HLS serving
@@ -255,9 +256,11 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 
 	return []OfferedStream{
 		{
-			MediaFilePath:    mediaFilePath,
-			StreamId:         0,
-			RepresentationId: "direct-stream-video",
+			StreamKey: StreamKey{
+				MediaFilePath:    mediaFilePath,
+				StreamId:         0,
+				RepresentationId: "direct-stream-video",
+			},
 			Codecs:           fmt.Sprint("%s,%s", videoStream.GetMime(), audioStream.GetMime()),
 			BitRate:          int64(videoBitrate + audioBitrate),
 			TotalDuration:    container.Format.Duration(),

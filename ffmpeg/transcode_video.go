@@ -99,8 +99,10 @@ func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream 
 			}
 
 			offeredStreams = append(offeredStreams, OfferedStream{
-				StreamId:         int64(probeStream.Index),
-				RepresentationId: representationId,
+				StreamKey: StreamKey{
+					StreamId:         int64(probeStream.Index),
+					RepresentationId: representationId,
+				},
 				BitRate:          int64(encoderParams.videoBitrate),
 				TotalDuration:    container.Format.Duration(),
 				Codecs:           codecsString,
