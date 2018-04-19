@@ -33,12 +33,16 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 #EXT-X-INDEPENDENT-SEGMENTS
 
 {{ range $index, $c := .streamCombinations }}
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={{ $c.Video.BitRate }},CODECS="{{$c.Video.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroup}}"
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={{ $c.Video.BitRate }},CODECS="{{$c.Video.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroup}}",SUBTITLES="webvtt"
 {{$c.Video.StreamId}}/{{$c.Video.RepresentationId}}/media.m3u8
 {{ end }}
 
 {{ range $index, $s := .audioStreams }}
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{{$s.RepresentationId}}",NAME="{{$s.Title}}",CHANNELS="2",URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+{{ end }}
+
+{{ range $index, $s := .subtitleStreams }}
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Title}}",LANGUAGE={{$s.Language}},URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
 {{ end }}
 `
 
@@ -48,6 +52,16 @@ const transcodingMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-PLAYLIST-TYPE:VOD
 #EXT-X-INDEPENDENT-SEGMENTS
 #EXT-X-MAP:URI="init.mp4"
+{{ range $index, $duration := .segmentDurations }}
+#EXTINF:{{ $duration }},
+{{ $index }}.m4s{{ end }}
+#EXT-X-ENDLIST
+`
+
+const subtitleMediaPlaylistTemplate = `#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-TARGETDURATION:60
+#EXT-X-PLAYLIST-TYPE:VOD
 {{ range $index, $duration := .segmentDurations }}
 #EXTINF:{{ $duration }},
 {{ $index }}.m4s{{ end }}
@@ -81,11 +95,14 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 
 	audioStreams := []ffmpeg.OfferedStream{}
 	videoStreams := []ffmpeg.OfferedStream{}
+	subtitleStreams := []ffmpeg.OfferedStream{}
 	for _, stream := range streams {
 		if stream.StreamType == "audio" {
 			audioStreams = append(audioStreams, stream)
 		} else if stream.StreamType == "video" {
 			videoStreams = append(videoStreams, stream)
+		} else if stream.StreamType == "subtitle" {
+			subtitleStreams = append(subtitleStreams, stream)
 		}
 	}
 	// TODO(Leon Handreke): Have some smart heuristic here to match audio and video streams.
@@ -110,6 +127,7 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 	t.Execute(&buf, map[string]interface{}{
 		"videoStreams":       videoStreams,
 		"audioStreams":       audioStreams,
+		"subtitleStreams":    subtitleStreams,
 		"streamCombinations": streamCombinations,
 	})
 	return buf.String()
@@ -125,8 +143,13 @@ func BuildTranscodingMediaPlaylistFromFile(stream ffmpeg.OfferedStream) string {
 		"segmentDurations": segmentDurationsSeconds,
 	}
 
+	tmpl := transcodingMediaPlaylistTemplate
+	if stream.StreamType == "subtitle" {
+		tmpl = subtitleMediaPlaylistTemplate
+	}
+
 	buf := bytes.Buffer{}
-	t := template.Must(template.New("manifest").Parse(transcodingMediaPlaylistTemplate))
+	t := template.Must(template.New("manifest").Parse(tmpl))
 	t.Execute(&buf, templateData)
 	return buf.String()
 }

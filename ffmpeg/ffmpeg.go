@@ -163,6 +163,9 @@ func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time
 	if s.Stream.RepresentationId == "direct-stream-video" {
 		return true
 	}
+	if s.Stream.RepresentationId == "webvtt" {
+		return true
+	}
 
 	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+segmentsPerSession
 }
@@ -230,6 +233,8 @@ func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	streams := append(
 		GetOfferedTranscodedVideoStreams(*container),
 		GetOfferedTranscodedAudioStreams(*container)...)
+	streams = append(streams, GetOfferedSubtitleStreams(*container)...)
+
 	for i, _ := range streams {
 		streams[i].MediaFilePath = mediaFilePath
 	}
@@ -259,8 +264,8 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	audioBitrate, _ := strconv.Atoi(audioStream.BitRate)
 	segmentDurations, _ := GuessTransmuxedSegmentDurations(mediaFilePath, container.Format.Duration())
 
-	return []OfferedStream{
-		{
+	offeredStreams := append(
+		[]OfferedStream{{
 			StreamKey: StreamKey{
 				MediaFilePath:    mediaFilePath,
 				StreamId:         0,
@@ -272,8 +277,9 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 			StreamType:       "video",
 			transmuxed:       true,
 			SegmentDurations: segmentDurations,
-		},
-	}, nil
+		}},
+		GetOfferedSubtitleStreams(*container)...)
+	return offeredStreams, nil
 }
 
 func GetOfferedStreams(mediaFilePath string) ([]OfferedStream, error) {

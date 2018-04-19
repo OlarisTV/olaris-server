@@ -196,7 +196,9 @@ func getOrStartTranscodingSession(stream ffmpeg.OfferedStream, segmentId int64) 
 				} else {
 					return nil, fmt.Errorf("No such encoder preset %s", representationId)
 				}
-
+			}
+			if strings.Contains(representationId, "webvtt") {
+				s, err = ffmpeg.NewSubtitleSession(stream, os.TempDir())
 			}
 
 		}
