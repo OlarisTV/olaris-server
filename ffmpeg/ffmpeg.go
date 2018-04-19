@@ -64,6 +64,14 @@ const MinTransmuxedSegDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
+func sum(input ...time.Duration) time.Duration {
+	var sum time.Duration
+	for _, i := range input {
+		sum += i
+	}
+	return sum
+}
+
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
 func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
 
@@ -72,12 +80,15 @@ func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOf
 		return nil, err
 	}
 
-	startDuration := time.Duration(int64(MinTransmuxedSegDuration) * segmentOffset)
+	startDuration := sum(stream.SegmentDurations[:segmentOffset]...)
+	endDuration := sum(stream.SegmentDurations[:segmentOffset+segmentsPerSession]...)
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
 		"-i", stream.MediaFilePath,
+		"-copyts",
+		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
 		"-c:v", "copy",
 		"-c:a", "copy",
 		"-threads", "2",

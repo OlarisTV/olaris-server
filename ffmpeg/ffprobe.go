@@ -105,7 +105,9 @@ func Probe(filename string) (*ProbeContainer, error) {
 func ProbeKeyframes(filename string) ([]time.Duration, error) {
 	cmd := exec.Command("ffprobe",
 		"-select_streams", "v",
-		"-show_entries", "packet=pts_time,flags",
+		// Use dts_time here because ffmpeg seeking works by DTS,
+		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
+		"-show_entries", "packet=dts_time,flags",
 		"-v", "quiet",
 		"-of", "csv",
 		filename)
