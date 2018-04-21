@@ -32,15 +32,25 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 #EXT-X-VERSION:7
 #EXT-X-INDEPENDENT-SEGMENTS
 
-{{ range $index, $s := .audioStreams }}
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{{$s.RepresentationId}}",NAME="{{$s.Title}}",CHANNELS="2",URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8",AUTOSELECT=YES,DEFAULT=NO
+{{ range $index, $s := .audioStreams -}}
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{{$s.RepresentationId}}",NAME="{{$s.Title}}",CHANNELS="2",URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8",AUTOSELECT=YES
+{{- if $s.EnabledByDefault -}}
+,DEFAULT=YES
+{{ else -}}
+,DEFAULT=NO
+{{ end -}}
 {{ end }}
 
-{{ range $index, $s := .subtitleStreams }}
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Title}}",LANGUAGE="{{$s.Language}}",AUTOSELECT=YES,DEFAULT=NO,URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+{{ range $index, $s := .subtitleStreams -}}
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Title}}",LANGUAGE="{{$s.Language}}",AUTOSELECT=YES,URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+{{- if $s.EnabledByDefault -}}
+,DEFAULT=YES
+{{ else -}}
+,DEFAULT=NO
+{{ end -}}
 {{ end }}
 
-{{ range $index, $c := .streamCombinations }}
+{{ range $index, $c := .streamCombinations -}}
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={{ $c.Video.BitRate }},CODECS="{{$c.Video.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroup}}",SUBTITLES="webvtt"
 {{$c.Video.StreamId}}/{{$c.Video.RepresentationId}}/media.m3u8
 {{ end }}

@@ -87,16 +87,16 @@ func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream 
 			time.Duration(i*int64(transcodedAudioSegmentDuration)))
 	}
 
-	for _, probeStream := range container.Streams {
-		if probeStream.CodecType != "audio" {
+	for _, stream := range container.Streams {
+		if stream.CodecType != "audio" {
 			continue
 		}
 
-		language := probeStream.Tags["language"]
+		language := stream.Tags["language"]
 		if language == "" {
 			language = "unk"
 		}
-		title := probeStream.Tags["title"]
+		title := stream.Tags["title"]
 		if title == "" {
 			title = language
 		}
@@ -105,15 +105,16 @@ func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream 
 		for representationId, encoderParams := range AudioEncoderPresets {
 			offeredStreams = append(offeredStreams, OfferedStream{
 				StreamKey: StreamKey{
-					StreamId:         int64(probeStream.Index),
+					StreamId:         int64(stream.Index),
 					RepresentationId: representationId,
 				},
 				BitRate:                int64(encoderParams.audioBitrate),
 				TotalDuration:          container.Format.Duration(),
 				Codecs:                 "mp4a.40.2",
 				StreamType:             "audio",
-				Language:               GetLanguageTag(probeStream),
-				Title:                  GetTitleOrHumanizedLanguage(probeStream),
+				Language:               GetLanguageTag(stream),
+				Title:                  GetTitleOrHumanizedLanguage(stream),
+				EnabledByDefault:       stream.Disposition["default"] != 0,
 				transcoded:             true,
 				SegmentStartTimestamps: segmentStartTimestamps,
 			})

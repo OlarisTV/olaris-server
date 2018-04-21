@@ -70,21 +70,22 @@ func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
 			time.Duration(i*int64(subtitleSegmentDuration)))
 	}
 
-	for _, probeStream := range container.Streams {
-		if probeStream.CodecType != "subtitle" {
+	for _, stream := range container.Streams {
+		if stream.CodecType != "subtitle" {
 			continue
 		}
 
 		offeredStreams = append(offeredStreams, OfferedStream{
 			StreamKey: StreamKey{
 				MediaFilePath:    mediaFilePath,
-				StreamId:         int64(probeStream.Index),
+				StreamId:         int64(stream.Index),
 				RepresentationId: "webvtt",
 			},
-			TotalDuration: container.Format.Duration(),
-			StreamType:    "subtitle",
-			Language:      GetLanguageTag(probeStream),
-			Title:         GetTitleOrHumanizedLanguage(probeStream),
+			TotalDuration:          container.Format.Duration(),
+			StreamType:             "subtitle",
+			Language:               GetLanguageTag(stream),
+			Title:                  GetTitleOrHumanizedLanguage(stream),
+			EnabledByDefault:       stream.Disposition["default"] != 0,
 			SegmentStartTimestamps: segmentStartTimestamps,
 		})
 	}

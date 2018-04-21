@@ -44,7 +44,8 @@ type OfferedStream struct {
 	// Only relevant for audio and subtitles. Language code.
 	Language string
 	// User-visible string for this audio or subtitle track
-	Title string
+	Title            string
+	EnabledByDefault bool
 
 	SegmentStartTimestamps []time.Duration
 
@@ -262,25 +263,26 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	segmentStartTimestamps := GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
 
 	offeredStreams := []OfferedStream{}
-	for _, s := range container.Streams {
-		if s.CodecType != "audio" && s.CodecType != "video" {
+	for _, stream := range container.Streams {
+		if stream.CodecType != "audio" && stream.CodecType != "video" {
 			continue
 		}
-		bitrate, _ := strconv.Atoi(s.BitRate)
+		bitrate, _ := strconv.Atoi(stream.BitRate)
 
 		offeredStreams = append(offeredStreams,
 			OfferedStream{
 				StreamKey: StreamKey{
 					MediaFilePath:    mediaFilePath,
-					StreamId:         int64(s.Index),
+					StreamId:         int64(stream.Index),
 					RepresentationId: "direct-stream",
 				},
-				Codecs:                 s.GetMime(),
+				Codecs:                 stream.GetMime(),
 				BitRate:                int64(bitrate),
 				TotalDuration:          container.Format.Duration(),
-				StreamType:             s.CodecType,
-				Language:               GetLanguageTag(s),
-				Title:                  GetTitleOrHumanizedLanguage(s),
+				StreamType:             stream.CodecType,
+				Language:               GetLanguageTag(stream),
+				Title:                  GetTitleOrHumanizedLanguage(stream),
+				EnabledByDefault:       stream.Disposition["default"] != 0,
 				transmuxed:             true,
 				SegmentStartTimestamps: segmentStartTimestamps,
 			})

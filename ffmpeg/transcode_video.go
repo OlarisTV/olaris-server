@@ -79,8 +79,8 @@ func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream 
 			time.Duration(i*int64(transcodedVideoSegmentDuration)))
 	}
 
-	for _, probeStream := range container.Streams {
-		if probeStream.CodecType != "video" {
+	for _, stream := range container.Streams {
+		if stream.CodecType != "video" {
 			continue
 		}
 
@@ -99,13 +99,14 @@ func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream 
 
 			offeredStreams = append(offeredStreams, OfferedStream{
 				StreamKey: StreamKey{
-					StreamId:         int64(probeStream.Index),
+					StreamId:         int64(stream.Index),
 					RepresentationId: representationId,
 				},
 				BitRate:                int64(encoderParams.videoBitrate),
 				TotalDuration:          container.Format.Duration(),
 				Codecs:                 codecsString,
 				StreamType:             "video",
+				EnabledByDefault:       stream.Disposition["default"] != 0,
 				transcoded:             true,
 				SegmentStartTimestamps: segmentStartTimestamps,
 			})

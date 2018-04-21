@@ -35,6 +35,7 @@ type ProbeStream struct {
 	Height        int               `json:"height"`
 	Extradata     string            `json:"extradata"`
 	Tags          map[string]string `json:"tags"`
+	Disposition   map[string]int    `json:"disposition"`
 }
 
 func (self *ProbeStream) GetMime() string {
