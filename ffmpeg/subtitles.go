@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-const subtitleSegmentDuration = 60 * time.Second
-
 func NewSubtitleSession(
 	stream OfferedStream,
 	outputDirBase string) (*TranscodingSession, error) {
@@ -26,29 +24,14 @@ func NewSubtitleSession(
 		"-map", fmt.Sprintf("0:%d", stream.StreamId),
 		"-threads", "2",
 		"-f", "webvtt",
-		"-")
+		"stream0_0.m4s")
 	extractSubtitlesCmd.Stderr, _ = os.Open(os.DevNull)
-	segmentSubtitlesCmd := exec.Command("ffmpeg",
-		// -ss being before -i is important for fast seeking
-		"-i", "pipe:0",
-		"-map", "0:0",
-		"-c:0", "copy",
-		"-f", "segment",
-		"-segment_format", "webvtt",
-		"-segment_time", "10",
-		// These are not actually MP4 fragments, but we hardcode the filenames elsewhere...
-		"stream0_%d.m4s")
-	segmentSubtitlesCmd.Stderr, _ = os.Open(os.DevNull)
-	segmentSubtitlesCmd.Dir = outputDir
-
-	segmentSubtitlesCmd.Stdin, _ = extractSubtitlesCmd.StdoutPipe()
+	extractSubtitlesCmd.Dir = outputDir
 
 	log.Println("ffmpeg initialized with", extractSubtitlesCmd.Args)
-	log.Println("ffmpeg initialized with", segmentSubtitlesCmd.Args)
-	extractSubtitlesCmd.Start()
 
 	return &TranscodingSession{
-		cmd:            segmentSubtitlesCmd,
+		cmd:            extractSubtitlesCmd,
 		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: 0,
@@ -62,13 +45,6 @@ func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
 	}
 
 	offeredStreams := []OfferedStream{}
-
-	numFullSegments := int64(container.Format.Duration() / subtitleSegmentDuration)
-	segmentStartTimestamps := []time.Duration{}
-	for i := int64(0); i < numFullSegments+1; i++ {
-		segmentStartTimestamps = append(segmentStartTimestamps,
-			time.Duration(i*int64(subtitleSegmentDuration)))
-	}
 
 	for _, stream := range container.Streams {
 		if stream.CodecType != "subtitle" {
@@ -86,7 +62,7 @@ func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
 			Language:               GetLanguageTag(stream),
 			Title:                  GetTitleOrHumanizedLanguage(stream),
 			EnabledByDefault:       stream.Disposition["default"] != 0,
-			SegmentStartTimestamps: segmentStartTimestamps,
+			SegmentStartTimestamps: []time.Duration{0},
 		})
 	}
 

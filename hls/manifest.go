@@ -68,9 +68,11 @@ const transcodingMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-ENDLIST
 `
 
+// The subtitle playlist only contains one "segment",
+// therefore the target duration equals the total duration
 const subtitleMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-VERSION:7
-#EXT-X-TARGETDURATION:60
+#EXT-X-TARGETDURATION:{{.s.TotalDuration.Seconds}}
 #EXT-X-PLAYLIST-TYPE:VOD
 {{ range $index, $duration := .segmentDurations }}
 #EXTINF:{{ $duration }},
@@ -141,6 +143,7 @@ func BuildTranscodingMediaPlaylistFromFile(stream ffmpeg.OfferedStream) string {
 	}
 
 	templateData := map[string]interface{}{
+		"s":                stream,
 		"segmentDurations": segmentDurationsSeconds,
 	}
 
