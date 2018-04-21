@@ -46,7 +46,7 @@ type OfferedStream struct {
 	// User-visible string for this audio or subtitle track
 	Title string
 
-	SegmentDurations []time.Duration
+	SegmentStartTimestamps []time.Duration
 
 	// Mutually exclusive
 	transcoded bool
@@ -80,17 +80,22 @@ func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOf
 		return nil, err
 	}
 
-	startDuration := sum(stream.SegmentDurations[:segmentOffset]...)
-	endDuration := sum(stream.SegmentDurations[:segmentOffset+segmentsPerSession]...)
+	startTimestamp := stream.SegmentStartTimestamps[segmentOffset]
+	var endTimestamp time.Duration
+	if segmentOffset+segmentsPerSession >= int64(len(stream.SegmentStartTimestamps)) {
+		endTimestamp = stream.TotalDuration
+	} else {
+		endTimestamp = stream.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
+	}
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
+		"-ss", fmt.Sprintf("%.3f", startTimestamp.Seconds()),
 		"-i", stream.MediaFilePath,
 		"-copyts",
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
-		"-c:v", "copy",
-		"-c:a", "copy",
+		"-to", fmt.Sprintf("%.3f", endTimestamp.Seconds()),
+		"-map", fmt.Sprintf("0:%d", stream.StreamId),
+		"-c:0", "copy",
 		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentOffset),
@@ -159,10 +164,6 @@ func (s *TranscodingSession) GetSegment(segmentId int64, deadline time.Duration)
 }
 
 func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time.Duration) bool {
-	// For transmuxed content we currently just spew out the whole file and serve it.
-	if s.Stream.RepresentationId == "direct-stream-video" {
-		return true
-	}
 	if s.Stream.RepresentationId == "webvtt" {
 		return true
 	}
@@ -198,29 +199,36 @@ func (s *TranscodingSession) InitialSegment() string {
 	return filepath.Join(s.outputDir, "init.mp4")
 }
 
-func GuessTransmuxedSegmentDurations(filename string, totalDuration time.Duration) ([]time.Duration, error) {
-	keyframeTimestamps, err := ProbeKeyframes(filename)
-	if err != nil {
-		return nil, err
+func GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps []time.Duration) []time.Duration {
+	segmentTimestamps := []time.Duration{
+		// First keyframe should equal first frame, but who knows, video is weird...
+		keyframeTimestamps[0],
 	}
+	for _, keyframe := range keyframeTimestamps {
+		d := keyframe - segmentTimestamps[len(segmentTimestamps)-1]
+		if d > MinTransmuxedSegDuration {
+			segmentTimestamps = append(segmentTimestamps, keyframe)
+		}
+	}
+
+	return segmentTimestamps
+}
+
+func ComputeSegmentDurations(
+	segmentStartTimestamps []time.Duration,
+	totalDuration time.Duration) []time.Duration {
 
 	// Insert dummy keyframe timestamp at the end so that the last segment duration is correctly reported
-	keyframeTimestamps = append(keyframeTimestamps, totalDuration)
+	segmentStartTimestamps = append(segmentStartTimestamps, totalDuration)
 
 	segmentDurations := []time.Duration{}
-	lastKeyframe := 0
-	for i, keyframe := range keyframeTimestamps {
-		if i == 0 {
-			continue
-		}
-		d := keyframe - keyframeTimestamps[lastKeyframe]
-		if d > MinTransmuxedSegDuration {
-			segmentDurations = append(segmentDurations, d)
-			lastKeyframe = i
-		}
+
+	for i := 1; i < len(segmentStartTimestamps); i++ {
+		segmentDurations = append(segmentDurations,
+			segmentStartTimestamps[i]-segmentStartTimestamps[i-1])
 	}
 
-	return segmentDurations, nil
+	return segmentDurations
 }
 
 func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) {
@@ -233,7 +241,6 @@ func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	streams := append(
 		GetOfferedTranscodedVideoStreams(*container),
 		GetOfferedTranscodedAudioStreams(*container)...)
-	streams = append(streams, GetOfferedSubtitleStreams(*container)...)
 
 	for i, _ := range streams {
 		streams[i].MediaFilePath = mediaFilePath
@@ -246,39 +253,38 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	container, err := Probe(mediaFilePath)
 	if err != nil {
 		return nil, err
-
 	}
 
-	var videoStream ProbeStream
-	var audioStream ProbeStream
+	keyframeTimestamps, err := ProbeKeyframes(mediaFilePath)
+	if err != nil {
+		return []OfferedStream{}, err
+	}
+	segmentStartTimestamps := GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
 
+	offeredStreams := []OfferedStream{}
 	for _, s := range container.Streams {
-		if s.CodecType == "audio" {
-			audioStream = s
-		} else if s.CodecType == "video" {
-			videoStream = s
+		if s.CodecType != "audio" && s.CodecType != "video" {
+			continue
 		}
+		bitrate, _ := strconv.Atoi(s.BitRate)
+
+		offeredStreams = append(offeredStreams,
+			OfferedStream{
+				StreamKey: StreamKey{
+					MediaFilePath:    mediaFilePath,
+					StreamId:         int64(s.Index),
+					RepresentationId: "direct-stream",
+				},
+				Codecs:                 s.GetMime(),
+				BitRate:                int64(bitrate),
+				TotalDuration:          container.Format.Duration(),
+				StreamType:             s.CodecType,
+				Title:                  fmt.Sprintf("transmuxed%d", s.Index),
+				transmuxed:             true,
+				SegmentStartTimestamps: segmentStartTimestamps,
+			})
 	}
 
-	videoBitrate, _ := strconv.Atoi(videoStream.BitRate)
-	audioBitrate, _ := strconv.Atoi(audioStream.BitRate)
-	segmentDurations, _ := GuessTransmuxedSegmentDurations(mediaFilePath, container.Format.Duration())
-
-	offeredStreams := append(
-		[]OfferedStream{{
-			StreamKey: StreamKey{
-				MediaFilePath:    mediaFilePath,
-				StreamId:         0,
-				RepresentationId: "direct-stream-video",
-			},
-			Codecs:           fmt.Sprint("%s,%s", videoStream.GetMime(), audioStream.GetMime()),
-			BitRate:          int64(videoBitrate + audioBitrate),
-			TotalDuration:    container.Format.Duration(),
-			StreamType:       "video",
-			transmuxed:       true,
-			SegmentDurations: segmentDurations,
-		}},
-		GetOfferedSubtitleStreams(*container)...)
 	return offeredStreams, nil
 }
 
@@ -292,7 +298,12 @@ func GetOfferedStreams(mediaFilePath string) ([]OfferedStream, error) {
 		return []OfferedStream{}, err
 	}
 
-	return append(transcoded, transmuxed...), nil
+	subtitles, err := GetOfferedSubtitleStreams(mediaFilePath)
+	if err != nil {
+		return []OfferedStream{}, err
+	}
+
+	return append(transcoded, append(transmuxed, subtitles...)...), nil
 }
 
 func FindStream(streams []OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {

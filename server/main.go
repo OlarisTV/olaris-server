@@ -97,8 +97,10 @@ func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
-	offeredStreams, _ := ffmpeg.GetOfferedTransmuxedStreams(mediaFilePath)
-	manifest := hls.BuildTransmuxingMasterPlaylistFromFile(offeredStreams)
+	transmuxedStreams, _ := ffmpeg.GetOfferedTransmuxedStreams(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetOfferedSubtitleStreams(mediaFilePath)
+	offeredStreams := append(transmuxedStreams, subtitleStreams...)
+	manifest := hls.BuildTranscodingMasterPlaylistFromFile(offeredStreams)
 	w.Write([]byte(manifest))
 }
 
@@ -112,7 +114,9 @@ func serveTranscodingManifest(w http.ResponseWriter, r *http.Request) {
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
-	offeredStreams, _ := ffmpeg.GetOfferedTranscodedStreams(mediaFilePath)
+	transcodedStreams, _ := ffmpeg.GetOfferedTranscodedStreams(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetOfferedSubtitleStreams(mediaFilePath)
+	offeredStreams := append(transcodedStreams, subtitleStreams...)
 	manifest := hls.BuildTranscodingMasterPlaylistFromFile(offeredStreams)
 	w.Write([]byte(manifest))
 }
@@ -178,7 +182,7 @@ func getOrStartTranscodingSession(stream ffmpeg.OfferedStream, segmentId int64) 
 
 	if s == nil {
 		var err error
-		if stream.RepresentationId == "direct-stream-video" {
+		if stream.RepresentationId == "direct-stream" {
 			s, err = ffmpeg.NewTransmuxingSession(stream, os.TempDir(), segmentId)
 		} else {
 			if strings.Contains(stream.RepresentationId, "video") {

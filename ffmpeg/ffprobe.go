@@ -44,6 +44,10 @@ func (self *ProbeStream) GetMime() string {
 			return fmt.Sprintf("avc1.%s%s", res[0][1], res[0][2])
 		}
 	}
+	// TODO(Leon Handreke): I think this belongs somewhere else, codec vs container...
+	if self.CodecName == "aac" {
+		return fmt.Sprintf("mp4a.40.2")
+	}
 	return ""
 }
 
@@ -128,6 +132,10 @@ func ProbeKeyframes(filename string) ([]time.Duration, error) {
 	for scanner.Scan() {
 		// Each line has the format "packet,4.223000,K_"
 		line := strings.Split(scanner.Text(), ",")
+		// Sometimes packets have no timestamp - whatever they are, we don't care about them.
+		if line[1] == "N/A" {
+			continue
+		}
 		if line[2][0] == 'K' {
 			pts, err := strconv.ParseFloat(line[1], 64)
 			if err != nil {

@@ -32,17 +32,17 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 #EXT-X-VERSION:7
 #EXT-X-INDEPENDENT-SEGMENTS
 
-{{ range $index, $c := .streamCombinations }}
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={{ $c.Video.BitRate }},CODECS="{{$c.Video.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroup}}",SUBTITLES="webvtt"
-{{$c.Video.StreamId}}/{{$c.Video.RepresentationId}}/media.m3u8
-{{ end }}
-
 {{ range $index, $s := .audioStreams }}
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{{$s.RepresentationId}}",NAME="{{$s.Title}}",CHANNELS="2",URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{{$s.RepresentationId}}",NAME="{{$s.Title}}",CHANNELS="2",URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8",AUTOSELECT=YES,DEFAULT=NO
 {{ end }}
 
 {{ range $index, $s := .subtitleStreams }}
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Title}}",LANGUAGE={{$s.Language}},URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Title}}",LANGUAGE="{{$s.Language}}",AUTOSELECT=YES,DEFAULT=NO,URI="{{$s.StreamId}}/{{$s.RepresentationId}}/media.m3u8"
+{{ end }}
+
+{{ range $index, $c := .streamCombinations }}
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={{ $c.Video.BitRate }},CODECS="{{$c.Video.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroup}}",SUBTITLES="webvtt"
+{{$c.Video.StreamId}}/{{$c.Video.RepresentationId}}/media.m3u8
 {{ end }}
 `
 
@@ -71,11 +71,10 @@ const subtitleMediaPlaylistTemplate = `#EXTM3U
 func BuildTransmuxingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) string {
 	stream := streams[0]
 
-	// Segment durations in ms
+	segmentDurations := ffmpeg.ComputeSegmentDurations(stream.SegmentStartTimestamps, stream.TotalDuration)
 	segmentDurationsSeconds := []float64{}
-	for _, d := range stream.SegmentDurations {
+	for _, d := range segmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
-
 	}
 
 	templateData := map[string]interface{}{
@@ -112,16 +111,6 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 			AudioCodecs: audioStreams[0].Codecs,
 			AudioGroup:  audioStreams[0].RepresentationId,
 		},
-		{
-			Video:       videoStreams[1],
-			AudioCodecs: audioStreams[0].Codecs,
-			AudioGroup:  audioStreams[0].RepresentationId,
-		},
-		{
-			Video:       videoStreams[2],
-			AudioCodecs: audioStreams[1].Codecs,
-			AudioGroup:  audioStreams[1].RepresentationId,
-		},
 	}
 
 	t.Execute(&buf, map[string]interface{}{
@@ -134,8 +123,10 @@ func BuildTranscodingMasterPlaylistFromFile(streams []ffmpeg.OfferedStream) stri
 }
 
 func BuildTranscodingMediaPlaylistFromFile(stream ffmpeg.OfferedStream) string {
+
+	segmentDurations := ffmpeg.ComputeSegmentDurations(stream.SegmentStartTimestamps, stream.TotalDuration)
 	segmentDurationsSeconds := []float64{}
-	for _, d := range stream.SegmentDurations {
+	for _, d := range segmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())
 	}
 

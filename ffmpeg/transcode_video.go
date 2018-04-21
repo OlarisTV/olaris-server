@@ -72,12 +72,11 @@ func NewVideoTranscodingSession(
 func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream {
 	offeredStreams := []OfferedStream{}
 
-	numFullSegments := container.Format.Duration() / transcodedVideoSegmentDuration
-	segmentDurations := []time.Duration{}
-	// We want one more segment to cover the end. For the moment we don't
-	// care that it's a bit longer in the manifest, the client will play till EOF
-	for i := 0; i < int(numFullSegments)+1; i++ {
-		segmentDurations = append(segmentDurations, transcodedVideoSegmentDuration)
+	numFullSegments := int64(container.Format.Duration() / transcodedVideoSegmentDuration)
+	segmentStartTimestamps := []time.Duration{}
+	for i := int64(0); i < numFullSegments+1; i++ {
+		segmentStartTimestamps = append(segmentStartTimestamps,
+			time.Duration(i*int64(transcodedVideoSegmentDuration)))
 	}
 
 	for _, probeStream := range container.Streams {
@@ -103,12 +102,12 @@ func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream 
 					StreamId:         int64(probeStream.Index),
 					RepresentationId: representationId,
 				},
-				BitRate:          int64(encoderParams.videoBitrate),
-				TotalDuration:    container.Format.Duration(),
-				Codecs:           codecsString,
-				StreamType:       "video",
-				transcoded:       true,
-				SegmentDurations: segmentDurations,
+				BitRate:                int64(encoderParams.videoBitrate),
+				TotalDuration:          container.Format.Duration(),
+				Codecs:                 codecsString,
+				StreamType:             "video",
+				transcoded:             true,
+				SegmentStartTimestamps: segmentStartTimestamps,
 			})
 		}
 	}

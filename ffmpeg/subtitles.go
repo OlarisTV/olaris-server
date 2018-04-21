@@ -3,6 +3,7 @@ package ffmpeg
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -42,6 +43,8 @@ func NewSubtitleSession(
 
 	segmentSubtitlesCmd.Stdin, _ = extractSubtitlesCmd.StdoutPipe()
 
+	log.Println("ffmpeg initialized with", extractSubtitlesCmd.Args)
+	log.Println("ffmpeg initialized with", segmentSubtitlesCmd.Args)
 	extractSubtitlesCmd.Start()
 
 	return &TranscodingSession{
@@ -52,15 +55,19 @@ func NewSubtitleSession(
 	}, nil
 }
 
-func GetOfferedSubtitleStreams(container ProbeContainer) []OfferedStream {
+func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
+	container, err := Probe(mediaFilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	offeredStreams := []OfferedStream{}
 
-	numFullSegments := container.Format.Duration() / subtitleSegmentDuration
-	segmentDurations := []time.Duration{}
-	// We want one more segment to cover the end. For the moment we don't
-	// care that it's a bit longer in the manifest, the client will play till EOF
-	for i := 0; i < int(numFullSegments)+1; i++ {
-		segmentDurations = append(segmentDurations, subtitleSegmentDuration)
+	numFullSegments := int64(container.Format.Duration() / subtitleSegmentDuration)
+	segmentStartTimestamps := []time.Duration{}
+	for i := int64(0); i < numFullSegments+1; i++ {
+		segmentStartTimestamps = append(segmentStartTimestamps,
+			time.Duration(i*int64(subtitleSegmentDuration)))
 	}
 
 	for _, probeStream := range container.Streams {
@@ -68,19 +75,29 @@ func GetOfferedSubtitleStreams(container ProbeContainer) []OfferedStream {
 			continue
 		}
 
+		language := probeStream.Tags["language"]
+		if language == "" {
+			language = "unk"
+		}
+		title := probeStream.Tags["title"]
+		if title == "" {
+			title = language
+		}
+		// TODO(Leon Handreke): Render a user-presentable language string.
+
 		offeredStreams = append(offeredStreams, OfferedStream{
 			StreamKey: StreamKey{
+				MediaFilePath:    mediaFilePath,
 				StreamId:         int64(probeStream.Index),
 				RepresentationId: "webvtt",
 			},
 			TotalDuration: container.Format.Duration(),
 			StreamType:    "subtitle",
-			Language:      probeStream.Tags["language"],
-			// TODO(Leon Handreke): Pick up the "title" field or render a user-presentable language string.
-			Title:            probeStream.Tags["language"],
-			SegmentDurations: segmentDurations,
+			Language:      language,
+			Title:         title,
+			SegmentStartTimestamps: segmentStartTimestamps,
 		})
 	}
 
-	return offeredStreams
+	return offeredStreams, nil
 }
