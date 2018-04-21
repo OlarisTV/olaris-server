@@ -75,16 +75,6 @@ func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
 			continue
 		}
 
-		language := probeStream.Tags["language"]
-		if language == "" {
-			language = "unk"
-		}
-		title := probeStream.Tags["title"]
-		if title == "" {
-			title = language
-		}
-		// TODO(Leon Handreke): Render a user-presentable language string.
-
 		offeredStreams = append(offeredStreams, OfferedStream{
 			StreamKey: StreamKey{
 				MediaFilePath:    mediaFilePath,
@@ -93,8 +83,8 @@ func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
 			},
 			TotalDuration: container.Format.Duration(),
 			StreamType:    "subtitle",
-			Language:      language,
-			Title:         title,
+			Language:      GetLanguageTag(probeStream),
+			Title:         GetTitleOrHumanizedLanguage(probeStream),
 			SegmentStartTimestamps: segmentStartTimestamps,
 		})
 	}

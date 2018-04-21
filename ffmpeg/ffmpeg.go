@@ -279,7 +279,8 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 				BitRate:                int64(bitrate),
 				TotalDuration:          container.Format.Duration(),
 				StreamType:             s.CodecType,
-				Title:                  fmt.Sprintf("transmuxed%d", s.Index),
+				Language:               GetLanguageTag(s),
+				Title:                  GetTitleOrHumanizedLanguage(s),
 				transmuxed:             true,
 				SegmentStartTimestamps: segmentStartTimestamps,
 			})

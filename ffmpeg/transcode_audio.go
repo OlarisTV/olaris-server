@@ -92,19 +92,28 @@ func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream 
 			continue
 		}
 
+		language := probeStream.Tags["language"]
+		if language == "" {
+			language = "unk"
+		}
+		title := probeStream.Tags["title"]
+		if title == "" {
+			title = language
+		}
+		// TODO(Leon Handreke): Render a user-presentable language string.
+
 		for representationId, encoderParams := range AudioEncoderPresets {
 			offeredStreams = append(offeredStreams, OfferedStream{
 				StreamKey: StreamKey{
 					StreamId:         int64(probeStream.Index),
 					RepresentationId: representationId,
 				},
-				BitRate:       int64(encoderParams.audioBitrate),
-				TotalDuration: container.Format.Duration(),
-				Codecs:        "mp4a.40.2",
-				StreamType:    "audio",
-				Language:      probeStream.Tags["language"],
-				// TODO(Leon Handreke): Pick up the "title" field or render a user-presentable language string.
-				Title:                  probeStream.Tags["language"],
+				BitRate:                int64(encoderParams.audioBitrate),
+				TotalDuration:          container.Format.Duration(),
+				Codecs:                 "mp4a.40.2",
+				StreamType:             "audio",
+				Language:               GetLanguageTag(probeStream),
+				Title:                  GetTitleOrHumanizedLanguage(probeStream),
 				transcoded:             true,
 				SegmentStartTimestamps: segmentStartTimestamps,
 			})
