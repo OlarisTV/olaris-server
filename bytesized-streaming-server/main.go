@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/bssdb"
-	"gitlab.com/bytesized/bytesized-streaming/dash"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"gitlab.com/bytesized/bytesized-streaming/hls"
 	"net/http"
@@ -57,8 +56,6 @@ func main() {
 	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", ms.ServeFileIndex)
 	r.HandleFunc("/api/v1/state", ms.Handler)
-	r.HandleFunc("/{filename:.*}/transmuxing-manifest.mpd", serveTransmuxingManifest)
-	r.HandleFunc("/{filename:.*}/transcoding-manifest.mpd", serveTranscodingManifest)
 	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
 	r.HandleFunc("/{filename:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
@@ -87,13 +84,6 @@ func main() {
 	}
 }
 
-func serveTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
-	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
-
-	manifest := dash.BuildTransmuxingManifestFromFile(mediaFilePath)
-	w.Write([]byte(manifest))
-}
-
 func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
@@ -101,13 +91,6 @@ func serveHlsTransmuxingManifest(w http.ResponseWriter, r *http.Request) {
 	subtitleStreams, _ := ffmpeg.GetOfferedSubtitleStreams(mediaFilePath)
 	offeredStreams := append(transmuxedStreams, subtitleStreams...)
 	manifest := hls.BuildTranscodingMasterPlaylistFromFile(offeredStreams)
-	w.Write([]byte(manifest))
-}
-
-func serveTranscodingManifest(w http.ResponseWriter, r *http.Request) {
-	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
-
-	manifest := dash.BuildTranscodingManifestFromFile(mediaFilePath)
 	w.Write([]byte(manifest))
 }
 
