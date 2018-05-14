@@ -1,6 +1,6 @@
-FROM phusion/baseimage as base
+FROM ubuntu as base
 
-FROM base as build
+FROM base as ffmpeg-build
 
 WORKDIR     /tmp/workdir
 
@@ -70,9 +70,9 @@ RUN \
         make && \
         make install
 
-FROM        base AS release
+FROM        base AS ffmpeg-release
 
-COPY --from=build /opt/ffmpeg /opt/ffmpeg
+COPY --from=ffmpeg-build /opt/ffmpeg /opt/ffmpeg
 env PATH /opt/ffmpeg/bin:$PATH
 
 # Install ffmpeg dependencies
@@ -83,3 +83,25 @@ RUN     apt-get -y update && \
 # To test
 RUN ffmpeg --help
 
+RUN apt-get -y install software-properties-common
+RUN add-apt-repository ppa:gophers/archive
+RUN apt-get update
+RUN apt-get -y install golang-1.10-go git
+
+ENV GOPATH="/go"
+ENV PATH="/usr/lib/go-1.10/bin:${GOPATH}/bin:${PATH}"
+
+ADD . /go/src/gitlab.com/bytesized/bytesized-streaming
+RUN mkdir /var/media
+
+WORKDIR /go/src/gitlab.com/bytesized/bytesized-streaming/bytesized-streaming-server
+
+RUN go get github.com/jteeuwen/go-bindata/...
+RUN go get github.com/elazarl/go-bindata-assetfs/...
+RUN go generate -x ./...
+
+RUN go get github.com/codegangsta/gin
+
+EXPOSE 8080
+ENTRYPOINT gin --port 8080 run
+ 

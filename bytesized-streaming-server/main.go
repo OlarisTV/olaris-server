@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-var mediaFilesDir = flag.String("media_files_dir", "", "Path to the media files to be served")
+var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path to the media files to be served")
 
 var sessions = []*ffmpeg.TranscodingSession{}
 
@@ -70,7 +70,12 @@ func main() {
 	handler = cors.AllowAll().Handler(handler)
 	handler = handlers.LoggingHandler(os.Stdout, handler)
 
-	srv := &http.Server{Addr: ":8080", Handler: handler}
+	var port = os.Getenv("PORT")
+	// Set a default port if there is nothing in the environment
+	if port == "" {
+		port = "8080"
+	}
+	srv := &http.Server{Addr: ":" + port, Handler: handler}
 	go srv.ListenAndServe()
 
 	// Wait for termination signal
@@ -81,6 +86,7 @@ func main() {
 
 	for _, s := range sessions {
 		s.Destroy()
+
 	}
 }
 

@@ -1,11 +1,24 @@
 # Bytesized Streaming Server
 
-## Dependencies
+
+## Running with Docker
+
+    docker build -t bytesized-streaming .
+    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/bytesized/bytesized-streaming -v ~/Videos:/var/media -t bytesized-streaming
+
+
+This mounts your local development directory inside the Docker container, allowing you to make changes to the application without rebuilding the container. The container features auto-reload functionality - just save a file, wait a few seconds and reload in your browser!
+
+Use your own media directory to mount at `/var/media` obviously.
+
+## Running manually
+
+### Dependencies
 
 	go get github.com/jteeuwen/go-bindata/...
 	go get github.com/elazarl/go-bindata-assetfs/...
 
-## Running
+### Running
 
 	go generate ./... && go run server/bindata.go server/main.go --media_files_dir ~/Videos
 
