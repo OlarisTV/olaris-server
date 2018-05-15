@@ -1,4 +1,4 @@
-FROM ubuntu as base
+FROM ubuntu:xenial as base
 
 FROM base as ffmpeg-build
 
