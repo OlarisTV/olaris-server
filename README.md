@@ -4,7 +4,7 @@
 ## Running with Docker
 
     docker build -t bytesized-streaming .
-    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/bytesized/bytesized-streaming -v ~/Videos:/var/media -t bytesized-streaming
+    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/bytesized/bytesized-streaming -v ~/Videos:/var/media -v ~/.config/bss:/root/.config/bss -t bytesized-streaming
 
 
 This mounts your local development directory inside the Docker container, allowing you to make changes to the application without rebuilding the container. The container features auto-reload functionality - just save a file, wait a few seconds and reload in your browser!

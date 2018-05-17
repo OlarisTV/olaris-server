@@ -4,6 +4,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	"gitlab.com/bytesized/bytesized-streaming/db"
 	"io/ioutil"
 	"log"
@@ -268,6 +269,7 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 	keyframeTimestamps := []time.Duration{}
 
 	if keyframeCache != nil {
+		glog.Infof("Reading keyframes for %s from cache", mediaFilePath)
 		for v := range keyframeCache.KeyframeTimestamps {
 			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
 		}
