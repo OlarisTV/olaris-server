@@ -19,7 +19,7 @@ func handleSetMediaPlaybackState(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	err = dbc.InsertOrUpdateMediaPlaybackState(
+	err = db.GetSharedDB().InsertOrUpdateMediaPlaybackState(
 		db.MediaPlaybackState{Filename: req.Filename, Playtime: req.Playtime})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

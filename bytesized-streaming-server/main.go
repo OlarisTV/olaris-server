@@ -8,44 +8,31 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/peak6/envflag"
 	"github.com/rs/cors"
-	"gitlab.com/bytesized/bytesized-streaming/db"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"gitlab.com/bytesized/bytesized-streaming/hls"
 	"net/http"
 	"os"
 	"os/signal"
-	"os/user"
 	"path"
 	"strconv"
 	"strings"
 	"sync"
+
 	"time"
 )
 
 var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path to the media files to be served")
 
 var sessions = []*ffmpeg.TranscodingSession{}
-var dbc *db.DB
 
 // Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
 var sessionsMutex = sync.Mutex{}
 
 func main() {
 	flag.Parse()
-
-	usr, err := user.Current()
-	if err != nil {
-		fmt.Println("Can't get user's home folder.", err)
-	}
-
-	dbc, err = db.NewDb(path.Join(usr.HomeDir, ".config", "bss", "db"))
-	defer dbc.Close()
-
-	if err != nil {
-		fmt.Println("can't open db", err)
-		os.Exit(1)
-	}
+	envflag.Parse()
 
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)

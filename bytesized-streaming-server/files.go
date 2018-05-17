@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/bytesized/bytesized-streaming/db"
 	"net/http"
 	"os"
 	"path"
@@ -38,7 +39,7 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 
-			mediaPlaybackState, err := dbc.GetMediaPlaybackState(relPath)
+			mediaPlaybackState, err := db.GetSharedDB().GetMediaPlaybackState(relPath)
 			if err != nil {
 				return err
 			}

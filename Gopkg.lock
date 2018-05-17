@@ -15,6 +15,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/golang/glog"
+  packages = ["."]
+  revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+
+[[projects]]
+  branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
   revision = "553a641470496b2327abcac10b36396bd98e45c9"
@@ -36,6 +42,12 @@
   packages = ["."]
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/peak6/envflag"
+  packages = ["."]
+  revision = "39b5f0b7ebaa59e1258b2a3cefccceac3f49afa5"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -77,6 +89,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "85bdd6eaca5ab0e5f3a26a376e97717803c6748362648a045df1dcb80bdf6ec8"
+  inputs-digest = "b7b963291d7554ea29d6bf595e268dc40821d8e30cc0d92d6e7a2e8fae75427e"
   solver-name = "gps-cdcl"
   solver-version = 1

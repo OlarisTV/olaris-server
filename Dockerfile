@@ -103,5 +103,8 @@ RUN go generate -x ./...
 RUN go get github.com/codegangsta/gin
 
 EXPOSE 8080
+
+ENV LOGTOSTDERR=1
+ENV V=4
 ENTRYPOINT gin --port 8080 run
  

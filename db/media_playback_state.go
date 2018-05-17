@@ -14,11 +14,11 @@ func (db *DB) InsertOrUpdateMediaPlaybackState(m MediaPlaybackState) error {
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("playback-state-"+m.Filename), val)
+	return db.db.Put([]byte("playback-state-"+m.Filename), val, nil)
 }
 
 func (db *DB) GetMediaPlaybackState(filename string) (*MediaPlaybackState, error) {
-	val, err := db.Get([]byte("playback-state-" + filename))
+	val, err := db.db.Get([]byte("playback-state-"+filename), nil)
 	if val == nil {
 		return nil, nil
 	}

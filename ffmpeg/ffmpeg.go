@@ -4,6 +4,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"gitlab.com/bytesized/bytesized-streaming/db"
 	"io/ioutil"
 	"log"
 	"os"
@@ -256,9 +257,31 @@ func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) 
 		return nil, err
 	}
 
-	keyframeTimestamps, err := ProbeKeyframes(mediaFilePath)
+	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
+	// sometimes just a name. We need some other good descriptor for files,
+	// preferably including a checksum
+	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(mediaFilePath)
 	if err != nil {
 		return []OfferedStream{}, err
+	}
+
+	keyframeTimestamps := []time.Duration{}
+
+	if keyframeCache != nil {
+		for v := range keyframeCache.KeyframeTimestamps {
+			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
+		}
+	} else {
+		keyframeTimestamps, err = ProbeKeyframes(mediaFilePath)
+		if err != nil {
+			return []OfferedStream{}, err
+		}
+
+		keyframeCache := db.KeyframeCache{Filename: mediaFilePath}
+		for v := range keyframeTimestamps {
+			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
+		}
+		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
 	}
 	segmentStartTimestamps := GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
 
