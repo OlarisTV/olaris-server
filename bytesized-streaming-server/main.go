@@ -38,7 +38,7 @@ func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 	r := mux.NewRouter()
-	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
+	r.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
