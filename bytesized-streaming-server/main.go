@@ -38,11 +38,11 @@ func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 	r := mux.NewRouter()
-	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
-	// segments.
 	r.PathPrefix("/player/").Handler(http.StripPrefix("/player/", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
+	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
+	// segments.
 	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingManifest)
 	r.HandleFunc("/{filename:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)

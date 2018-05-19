@@ -7,7 +7,7 @@ import (
 )
 
 type SetMediaPlaybackStateRequest struct {
-	Filename string `jsone:"filename"`
+	Filename string `json:"filename"`
 	Playtime int    `json:"playtime"`
 }
 
@@ -24,5 +24,4 @@ func handleSetMediaPlaybackState(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-
 }
