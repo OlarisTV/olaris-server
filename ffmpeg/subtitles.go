@@ -10,7 +10,7 @@ import (
 )
 
 func NewSubtitleSession(
-	stream OfferedStream,
+	stream StreamRepresentation,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "subtitle-session-")
@@ -20,8 +20,8 @@ func NewSubtitleSession(
 
 	extractSubtitlesCmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
-		"-i", stream.MediaFilePath,
-		"-map", fmt.Sprintf("0:%d", stream.StreamId),
+		"-i", stream.Stream.MediaFilePath,
+		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-threads", "2",
 		"-f", "webvtt",
 		"stream0_0.m4s")
@@ -38,33 +38,38 @@ func NewSubtitleSession(
 	}, nil
 }
 
-func GetOfferedSubtitleStreams(mediaFilePath string) ([]OfferedStream, error) {
+func GetSubtitleStreamRepresentations(mediaFilePath string) ([]StreamRepresentation, error) {
 	container, err := Probe(mediaFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	offeredStreams := []OfferedStream{}
+	representations := []StreamRepresentation{}
 
 	for _, stream := range container.Streams {
 		if stream.CodecType != "subtitle" {
 			continue
 		}
 
-		offeredStreams = append(offeredStreams, OfferedStream{
+		stream := Stream{
 			StreamKey: StreamKey{
-				MediaFilePath:    mediaFilePath,
-				StreamId:         int64(stream.Index),
+				MediaFilePath: mediaFilePath,
+				StreamId:      int64(stream.Index),
+			},
+			TotalDuration:    container.Format.Duration(),
+			StreamType:       "subtitle",
+			Language:         GetLanguageTag(stream),
+			Title:            GetTitleOrHumanizedLanguage(stream),
+			EnabledByDefault: stream.Disposition["default"] != 0,
+		}
+		representations = append(representations, StreamRepresentation{
+			Stream: stream,
+			Representation: Representation{
 				RepresentationId: "webvtt",
 			},
-			TotalDuration:          container.Format.Duration(),
-			StreamType:             "subtitle",
-			Language:               GetLanguageTag(stream),
-			Title:                  GetTitleOrHumanizedLanguage(stream),
-			EnabledByDefault:       stream.Disposition["default"] != 0,
 			SegmentStartTimestamps: []time.Duration{0},
 		})
 	}
 
-	return offeredStreams, nil
+	return representations, nil
 }

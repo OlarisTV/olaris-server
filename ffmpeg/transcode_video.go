@@ -21,7 +21,7 @@ var VideoEncoderPresets = map[string]EncoderParams{
 const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 
 func NewVideoTranscodingSession(
-	stream OfferedStream,
+	stream StreamRepresentation,
 	outputDirBase string,
 	segmentOffset int64,
 	transcodingParams EncoderParams) (*TranscodingSession, error) {
@@ -37,10 +37,10 @@ func NewVideoTranscodingSession(
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.MediaFilePath,
+		"-i", stream.Stream.MediaFilePath,
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
-		"-map", fmt.Sprintf("0:%d", stream.StreamId),
+		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate),
 		"-preset:0", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", transcodedVideoSegmentDuration.Seconds()),
@@ -69,49 +69,40 @@ func NewVideoTranscodingSession(
 	}, nil
 }
 
-func GetOfferedTranscodedVideoStreams(container ProbeContainer) []OfferedStream {
-	offeredStreams := []OfferedStream{}
+func GetTranscodedVideoRepresentations(stream Stream) []StreamRepresentation {
+	representations := []StreamRepresentation{}
 
-	numFullSegments := int64(container.Format.Duration() / transcodedVideoSegmentDuration)
+	numFullSegments := int64(stream.TotalDuration / transcodedVideoSegmentDuration)
 	segmentStartTimestamps := []time.Duration{}
 	for i := int64(0); i < numFullSegments+1; i++ {
 		segmentStartTimestamps = append(segmentStartTimestamps,
 			time.Duration(i*int64(transcodedVideoSegmentDuration)))
 	}
 
-	for _, stream := range container.Streams {
-		if stream.CodecType != "video" {
-			continue
+	for representationId, encoderParams := range VideoEncoderPresets {
+		codecsString := "avc1.64001e"
+		if representationId == "480-1000k-video" {
+			codecsString = "avc1.64001e"
+		}
+		if representationId == "720-5000k-video" {
+			codecsString = "avc1.64001f"
+		}
+		if representationId == "1080-10000k-video" {
+			codecsString = "avc1.640028"
 		}
 
-		for representationId, encoderParams := range VideoEncoderPresets {
-			// TODO(Leon Handreke): Figure out a better place to put this
-			codecsString := "avc1.64001e"
-			if representationId == "480-1000k-video" {
-				codecsString = "avc1.64001e"
-			}
-			if representationId == "720-5000k-video" {
-				codecsString = "avc1.64001f"
-			}
-			if representationId == "1080-10000k-video" {
-				codecsString = "avc1.640028"
-			}
-
-			offeredStreams = append(offeredStreams, OfferedStream{
-				StreamKey: StreamKey{
-					StreamId:         int64(stream.Index),
-					RepresentationId: representationId,
-				},
-				BitRate:                int64(encoderParams.videoBitrate),
-				TotalDuration:          container.Format.Duration(),
-				Codecs:                 codecsString,
-				StreamType:             "video",
-				EnabledByDefault:       stream.Disposition["default"] != 0,
-				transcoded:             true,
-				SegmentStartTimestamps: segmentStartTimestamps,
-			})
-		}
+		representations = append(representations, StreamRepresentation{
+			Stream: stream,
+			Representation: Representation{
+				RepresentationId: representationId,
+				BitRate:          int64(encoderParams.audioBitrate),
+				// TODO(Leon Handreke): Container/Codecs belongs in encoderParams
+				Container:  "video/mp4",
+				Codecs:     codecsString,
+				transcoded: true,
+			},
+			SegmentStartTimestamps: segmentStartTimestamps,
+		})
 	}
-
-	return offeredStreams
+	return representations
 }

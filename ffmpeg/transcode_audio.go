@@ -21,7 +21,7 @@ var AudioEncoderPresets = map[string]EncoderParams{
 const transcodedAudioSegmentDuration = 4992 * time.Millisecond
 
 func NewAudioTranscodingSession(
-	stream OfferedStream,
+	stream StreamRepresentation,
 	outputDirBase string,
 	segmentOffset int64,
 	transcodingParams EncoderParams) (*TranscodingSession, error) {
@@ -48,10 +48,10 @@ func NewAudioTranscodingSession(
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.MediaFilePath,
+		"-i", stream.Stream.MediaFilePath,
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
-		"-map", fmt.Sprintf("0:%d", stream.StreamId),
+		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
 		"-threads", "2",
 		"-f", "hls",
@@ -77,49 +77,29 @@ func NewAudioTranscodingSession(
 	}, nil
 }
 
-func GetOfferedTranscodedAudioStreams(container ProbeContainer) []OfferedStream {
-	offeredStreams := []OfferedStream{}
+func GetTranscodedAudioRepresentations(stream Stream) []StreamRepresentation {
+	representations := []StreamRepresentation{}
 
-	numFullSegments := int64(container.Format.Duration() / transcodedAudioSegmentDuration)
+	numFullSegments := int64(stream.TotalDuration / transcodedAudioSegmentDuration)
 	segmentStartTimestamps := []time.Duration{}
 	for i := int64(0); i < numFullSegments+1; i++ {
 		segmentStartTimestamps = append(segmentStartTimestamps,
 			time.Duration(i*int64(transcodedAudioSegmentDuration)))
 	}
 
-	for _, stream := range container.Streams {
-		if stream.CodecType != "audio" {
-			continue
-		}
-
-		language := stream.Tags["language"]
-		if language == "" {
-			language = "unk"
-		}
-		title := stream.Tags["title"]
-		if title == "" {
-			title = language
-		}
-		// TODO(Leon Handreke): Render a user-presentable language string.
-
-		for representationId, encoderParams := range AudioEncoderPresets {
-			offeredStreams = append(offeredStreams, OfferedStream{
-				StreamKey: StreamKey{
-					StreamId:         int64(stream.Index),
-					RepresentationId: representationId,
-				},
-				BitRate:                int64(encoderParams.audioBitrate),
-				TotalDuration:          container.Format.Duration(),
-				Codecs:                 "mp4a.40.2",
-				StreamType:             "audio",
-				Language:               GetLanguageTag(stream),
-				Title:                  GetTitleOrHumanizedLanguage(stream),
-				EnabledByDefault:       stream.Disposition["default"] != 0,
-				transcoded:             true,
-				SegmentStartTimestamps: segmentStartTimestamps,
-			})
-		}
+	for representationId, encoderParams := range AudioEncoderPresets {
+		representations = append(representations, StreamRepresentation{
+			Stream: stream,
+			Representation: Representation{
+				RepresentationId: representationId,
+				BitRate:          int64(encoderParams.audioBitrate),
+				// TODO(Leon Handreke): Container/Codecs belongs in encoderParams
+				Container:  "audio/mp4",
+				Codecs:     "mp4a.40.2",
+				transcoded: true,
+			},
+			SegmentStartTimestamps: segmentStartTimestamps,
+		})
 	}
-
-	return offeredStreams
+	return representations
 }

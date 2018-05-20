@@ -4,7 +4,6 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	"gitlab.com/bytesized/bytesized-streaming/db"
 	"io/ioutil"
 	"log"
@@ -20,7 +19,7 @@ import (
 
 type TranscodingSession struct {
 	cmd            *exec.Cmd
-	Stream         OfferedStream
+	Stream         StreamRepresentation
 	outputDir      string
 	firstSegmentId int64
 }
@@ -29,18 +28,17 @@ type StreamKey struct {
 	MediaFilePath string
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
-	StreamId         int64
-	RepresentationId string
+	StreamId int64
 }
 
-type OfferedStream struct {
+type Stream struct {
 	StreamKey
 
-	// The rest is just metadata for display
-	BitRate       int64
 	TotalDuration time.Duration
 	// codecs string ready for DASH/HLS serving
-	Codecs string
+	Codecs  string
+	BitRate int64
+
 	// "audio", "video", "subtitle"
 	StreamType string
 	// Only relevant for audio and subtitles. Language code.
@@ -48,12 +46,28 @@ type OfferedStream struct {
 	// User-visible string for this audio or subtitle track
 	Title            string
 	EnabledByDefault bool
+}
 
-	SegmentStartTimestamps []time.Duration
+type Representation struct {
+	RepresentationId string
+
+	// The rest is just metadata for display
+	BitRate int64
+	// e.g. "video/mp4"
+	Container string
+	// codecs string ready for DASH/HLS serving
+	Codecs string
 
 	// Mutually exclusive
 	transcoded bool
 	transmuxed bool
+}
+
+type StreamRepresentation struct {
+	Stream         Stream
+	Representation Representation
+
+	SegmentStartTimestamps []time.Duration
 }
 
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
@@ -76,28 +90,28 @@ func sum(input ...time.Duration) time.Duration {
 }
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
-func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
+func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	startTimestamp := stream.SegmentStartTimestamps[segmentOffset]
+	startTimestamp := streamRepresentation.SegmentStartTimestamps[segmentOffset]
 	var endTimestamp time.Duration
-	if segmentOffset+segmentsPerSession >= int64(len(stream.SegmentStartTimestamps)) {
-		endTimestamp = stream.TotalDuration
+	if segmentOffset+segmentsPerSession >= int64(len(streamRepresentation.SegmentStartTimestamps)) {
+		endTimestamp = streamRepresentation.Stream.TotalDuration
 	} else {
-		endTimestamp = stream.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
+		endTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
 	}
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startTimestamp.Seconds()),
-		"-i", stream.MediaFilePath,
+		"-i", streamRepresentation.Stream.MediaFilePath,
 		"-copyts",
 		"-to", fmt.Sprintf("%.3f", endTimestamp.Seconds()),
-		"-map", fmt.Sprintf("0:%d", stream.StreamId),
+		"-map", fmt.Sprintf("0:%d", streamRepresentation.Stream.StreamId),
 		"-c:0", "copy",
 		"-threads", "2",
 		"-f", "hls",
@@ -114,7 +128,7 @@ func NewTransmuxingSession(stream OfferedStream, outputDirBase string, segmentOf
 
 	return &TranscodingSession{
 		cmd:            cmd,
-		Stream:         stream,
+		Stream:         streamRepresentation,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
 	}, nil
@@ -167,7 +181,7 @@ func (s *TranscodingSession) GetSegment(segmentId int64, deadline time.Duration)
 }
 
 func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time.Duration) bool {
-	if s.Stream.RepresentationId == "webvtt" {
+	if s.Stream.Representation.RepresentationId == "webvtt" {
 		return true
 	}
 
@@ -234,111 +248,109 @@ func ComputeSegmentDurations(
 	return segmentDurations
 }
 
-func GetOfferedTranscodedStreams(mediaFilePath string) ([]OfferedStream, error) {
+func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
+	representation := StreamRepresentation{
+		Stream: stream,
+		Representation: Representation{
+			RepresentationId: "direct",
+			Container:        "video/mp4",
+			Codecs:           stream.Codecs,
+			BitRate:          stream.BitRate,
+			transmuxed:       true,
+		},
+	}
+
+	if stream.StreamType == "video" || stream.StreamType == "audio" {
+		// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
+		// sometimes just a name. We need some other good descriptor for files,
+		// preferably including a checksum
+		keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFilePath)
+		if err != nil {
+			return StreamRepresentation{}, err
+		}
+
+		keyframeTimestamps := []time.Duration{}
+
+		if keyframeCache != nil {
+			//glog.Infof("Reading keyframes for %s from cache", stream.MediaFilePath)
+			for _, v := range keyframeCache.KeyframeTimestamps {
+				keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
+			}
+		} else {
+			keyframeTimestamps, err = ProbeKeyframes(stream.MediaFilePath)
+			if err != nil {
+				return StreamRepresentation{}, err
+			}
+
+			keyframeCache := db.KeyframeCache{Filename: stream.MediaFilePath}
+			for _, v := range keyframeTimestamps {
+				keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
+			}
+			db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
+		}
+		representation.SegmentStartTimestamps = GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
+	}
+
+	return representation, nil
+}
+
+func GetAudioStreams(mediaFilePath string) ([]Stream, error) {
+	streams := []Stream{}
 	container, err := Probe(mediaFilePath)
 	if err != nil {
 		return nil, err
-
 	}
 
-	streams := append(
-		GetOfferedTranscodedVideoStreams(*container),
-		GetOfferedTranscodedAudioStreams(*container)...)
+	for _, stream := range container.Streams {
+		if stream.CodecType != "audio" {
+			continue
+		}
+		bitrate, _ := strconv.Atoi(stream.BitRate)
 
-	for i, _ := range streams {
-		streams[i].MediaFilePath = mediaFilePath
+		streams = append(streams,
+			Stream{
+				StreamKey: StreamKey{
+					MediaFilePath: mediaFilePath,
+					StreamId:      int64(stream.Index),
+				},
+				Codecs:           stream.GetMime(),
+				BitRate:          int64(bitrate),
+				TotalDuration:    container.Format.Duration(),
+				StreamType:       stream.CodecType,
+				Language:         GetLanguageTag(stream),
+				Title:            GetTitleOrHumanizedLanguage(stream),
+				EnabledByDefault: stream.Disposition["default"] != 0,
+			})
 	}
 
 	return streams, nil
 }
 
-func GetOfferedTransmuxedStreams(mediaFilePath string) ([]OfferedStream, error) {
+func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
+	streams := []Stream{}
 	container, err := Probe(mediaFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
-	// sometimes just a name. We need some other good descriptor for files,
-	// preferably including a checksum
-	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(mediaFilePath)
-	if err != nil {
-		return []OfferedStream{}, err
-	}
-
-	keyframeTimestamps := []time.Duration{}
-
-	if keyframeCache != nil {
-		glog.Infof("Reading keyframes for %s from cache", mediaFilePath)
-		for v := range keyframeCache.KeyframeTimestamps {
-			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
-		}
-	} else {
-		keyframeTimestamps, err = ProbeKeyframes(mediaFilePath)
-		if err != nil {
-			return []OfferedStream{}, err
-		}
-
-		keyframeCache := db.KeyframeCache{Filename: mediaFilePath}
-		for v := range keyframeTimestamps {
-			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
-		}
-		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
-	}
-	segmentStartTimestamps := GuessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
-
-	offeredStreams := []OfferedStream{}
 	for _, stream := range container.Streams {
-		if stream.CodecType != "audio" && stream.CodecType != "video" {
+		if stream.CodecType != "video" {
 			continue
 		}
 		bitrate, _ := strconv.Atoi(stream.BitRate)
 
-		offeredStreams = append(offeredStreams,
-			OfferedStream{
+		streams = append(streams,
+			Stream{
 				StreamKey: StreamKey{
-					MediaFilePath:    mediaFilePath,
-					StreamId:         int64(stream.Index),
-					RepresentationId: "direct-stream",
+					MediaFilePath: mediaFilePath,
+					StreamId:      int64(stream.Index),
 				},
-				Codecs:                 stream.GetMime(),
-				BitRate:                int64(bitrate),
-				TotalDuration:          container.Format.Duration(),
-				StreamType:             stream.CodecType,
-				Language:               GetLanguageTag(stream),
-				Title:                  GetTitleOrHumanizedLanguage(stream),
-				EnabledByDefault:       stream.Disposition["default"] != 0,
-				transmuxed:             true,
-				SegmentStartTimestamps: segmentStartTimestamps,
+				Codecs:        stream.GetMime(),
+				BitRate:       int64(bitrate),
+				TotalDuration: container.Format.Duration(),
+				StreamType:    stream.CodecType,
 			})
 	}
 
-	return offeredStreams, nil
-}
-
-func GetOfferedStreams(mediaFilePath string) ([]OfferedStream, error) {
-	transcoded, err := GetOfferedTranscodedStreams(mediaFilePath)
-	if err != nil {
-		return []OfferedStream{}, err
-	}
-	transmuxed, err := GetOfferedTransmuxedStreams(mediaFilePath)
-	if err != nil {
-		return []OfferedStream{}, err
-	}
-
-	subtitles, err := GetOfferedSubtitleStreams(mediaFilePath)
-	if err != nil {
-		return []OfferedStream{}, err
-	}
-
-	return append(transcoded, append(transmuxed, subtitles...)...), nil
-}
-
-func FindStream(streams []OfferedStream, streamId int64, representationId string) (OfferedStream, bool) {
-	for _, s := range streams {
-		if s.StreamId == streamId && s.RepresentationId == representationId {
-			return s, true
-		}
-	}
-	return OfferedStream{}, false
+	return streams, nil
 }

@@ -5,6 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -14,6 +15,9 @@ import (
 )
 
 var extraDataRegex = regexp.MustCompile(`0{8}: \d{2}(.{2})\s(.{4})`)
+
+// TODO(Leon Handreke): Really hacky way to just cache stdout in memory
+var probeCache = map[string][]byte{}
 
 type ProbeContainer struct {
 	Streams []ProbeStream `json:"streams"`
@@ -36,6 +40,16 @@ type ProbeStream struct {
 	Extradata     string            `json:"extradata"`
 	Tags          map[string]string `json:"tags"`
 	Disposition   map[string]int    `json:"disposition"`
+}
+
+func FilterProbeStreamByCodecType(streams []ProbeStream, codecType string) []ProbeStream {
+	res := []ProbeStream{}
+	for _, s := range streams {
+		if s.CodecType == codecType {
+			res = append(res, s)
+		}
+	}
+	return res
 }
 
 func (self *ProbeStream) GetMime() string {
@@ -79,26 +93,33 @@ type ProbeData struct {
 }
 
 func Probe(filename string) (*ProbeContainer, error) {
-	cmd := exec.Command("ffprobe", "-show_data", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
-	cmd.Stderr = os.Stderr
+	cmdOut, inCache := probeCache[filename]
 
-	r, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
+	if !inCache {
+		cmd := exec.Command("ffprobe", "-show_data", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
+		cmd.Stderr = os.Stderr
 
-	err = cmd.Start()
-	if err != nil {
-		return nil, err
+		r, err := cmd.StdoutPipe()
+		if err != nil {
+			return nil, err
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			return nil, err
+		}
+
+		cmdOut, err = ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+		probeCache[filename] = cmdOut
+
+		err = cmd.Wait()
 	}
 
 	var v ProbeContainer
-	err = json.NewDecoder(r).Decode(&v)
-	if err != nil {
-		return nil, err
-	}
-
-	err = cmd.Wait()
+	err := json.Unmarshal(cmdOut, &v)
 	if err != nil {
 		return nil, err
 	}
