@@ -143,7 +143,14 @@ type EncoderParams struct {
 }
 
 func (s *TranscodingSession) Start() error {
-	return s.cmd.Start()
+	if err := s.cmd.Start(); err != nil {
+		return err
+	}
+	// Prevent zombies
+	go func() {
+		s.cmd.Wait()
+	}()
+	return nil
 }
 
 func (s *TranscodingSession) Destroy() error {

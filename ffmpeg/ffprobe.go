@@ -167,5 +167,6 @@ func ProbeKeyframes(filename string) ([]time.Duration, error) {
 		}
 	}
 
+	cmd.Wait()
 	return keyframes, nil
 }
