@@ -333,6 +333,19 @@ func GetAudioStreams(mediaFilePath string) ([]Stream, error) {
 	return streams, nil
 }
 
+func GetVideoStream(mediaFilePath string) (Stream, error) {
+	streams, err := GetVideoStreams(mediaFilePath)
+	if err != nil {
+		return Stream{}, err
+	}
+	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
+	if len(streams) != 1 {
+		return Stream{}, fmt.Errorf("File %s does not contain exactly one video stream", mediaFilePath)
+	}
+	return streams[0], nil
+
+}
+
 func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 	streams := []Stream{}
 	container, err := Probe(mediaFilePath)

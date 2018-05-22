@@ -80,17 +80,12 @@ func main() {
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
-	videoStreams, err := ffmpeg.GetVideoStreams(mediaFilePath)
+	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
 	if err != nil {
 		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
-	if len(videoStreams) != 1 {
-		http.Error(w, "File does not contain exactly one video stream", http.StatusInternalServerError)
-		return
-	}
-	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(videoStreams[0])
+	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(videoStream)
 
 	audioStreams, err := ffmpeg.GetAudioStreams(mediaFilePath)
 	if err != nil {
@@ -110,7 +105,6 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	subtitleStreamRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
 
-	// TODO(Leon Handreke): This is a bit fucked up and will break down with multiple
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
 			{
@@ -128,16 +122,15 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
-	videoStreams, _ := ffmpeg.GetVideoStreams(mediaFilePath)
 	audioStreams, _ := ffmpeg.GetAudioStreams(mediaFilePath)
 	subtitleRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
 
-	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
-	if len(videoStreams) != 1 {
-		http.Error(w, "File does not contain exactly one video stream", http.StatusInternalServerError)
+	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
+	if err != nil {
+		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	videoRepresentations := ffmpeg.GetTranscodedVideoRepresentations(videoStreams[0])
+	videoRepresentations := ffmpeg.GetTranscodedVideoRepresentations(videoStream)
 
 	representationCombinations := []hls.RepresentationCombination{}
 	for i, r := range videoRepresentations {
