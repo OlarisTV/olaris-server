@@ -39,14 +39,6 @@ const MinTransmuxedSegDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
-func sum(input ...time.Duration) time.Duration {
-	var sum time.Duration
-	for _, i := range input {
-		sum += i
-	}
-	return sum
-}
-
 type EncoderParams struct {
 	// One of these may be -1 to keep aspect ratio
 	// TODO(Leon Handreke): Add note about -2
