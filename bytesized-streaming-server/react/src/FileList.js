@@ -18,7 +18,7 @@ class FileList extends Component {
   }
 
   handlePlay = (file) => {
-    let checkCodecs = Array.concat(file.codecs, file.transcodedCodecs)
+    let checkCodecs = file.codecs.concat(file.transcodedCodecs)
     let playableCodecs = checkCodecs.filter(isCodecCompatible)
     let queryParams = playableCodecs
       .map(c => "playableCodecs=" + encodeURIComponent(c))
