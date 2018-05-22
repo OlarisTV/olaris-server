@@ -85,13 +85,21 @@ func GetTransmuxedOrTranscodedRepresentation(
 		}
 	}
 	// TODO(Leon Handreke): Return an approximation of the original quality
+	representations := []StreamRepresentation{}
 	if stream.StreamType == "audio" {
 		// TODO(Leon Handreke): Ugly hardcode to 128k AAC
-		return GetTranscodedAudioRepresentations(stream)[1], nil
+		representations = GetTranscodedAudioRepresentations(stream)[1:]
 	}
 	if stream.StreamType == "video" {
 		// TODO(Leon Handreke): Ugly hardcode to 720p-5000k H264
-		return GetTranscodedVideoRepresentations(stream)[0], nil
+		representations = GetTranscodedVideoRepresentations(stream)[1:2]
+	}
+	for _, r := range representations {
+		for _, playableCodec := range capabilities.PlayableCodecs {
+			if playableCodec == r.Representation.Codecs {
+				return r, nil
+			}
+		}
 	}
 	return StreamRepresentation{},
 		fmt.Errorf("Could not find appropriate representation for stream %s", stream)

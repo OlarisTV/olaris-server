@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import axios from 'axios';
 import Table, { TableBody, TableCell, TableHead, TableRow } from 'material-ui/Table';
 import Paper from 'material-ui/Paper';
+import {isCodecCompatible} from './CheckCodecCompatibility'
 
 class Filter extends Component {
   state = { filterBy: '' }
@@ -16,8 +17,22 @@ class FileList extends Component {
     })
   }
 
-  handleClick = (url, name, playtime) => {
-    this.props.onClickMethod(url, name, playtime)
+  handlePlay = (file) => {
+    let checkCodecs = Array.concat(file.codecs, file.transcodedCodecs)
+    let playableCodecs = checkCodecs.filter(isCodecCompatible)
+    let queryParams = playableCodecs
+      .map(c => "playableCodecs=" + encodeURIComponent(c))
+      .join("&")
+
+    let url = this.props.serverAddress + file.hlsManifest + "?" + queryParams
+    this.props.onClickMethod(url, file.name, file.playtime)
+  };
+
+  handlePlayTransmuxed = (file) => {
+    this.props.onClickMethod(
+      this.props.serverAddress + file.hlsTransmuxingManifest,
+      file.name,
+      file.playtime)
   };
 
   updateFilter = (event) => {
@@ -49,8 +64,8 @@ class FileList extends Component {
             <TableRow key={file.key}>
               <TableCell>{file.name}</TableCell>
               <TableCell>{file.playtime}</TableCell>
-              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsManifest, file.name, file.playtime) }} href="#">Play</a></TableCell>
-              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest, file.name, file.playtime) }} href="#">Play Transmuxed</a></TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handlePlay(file) }} href="#">Play</a></TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handlePlayTransmuxed(file) }} href="#">Play Transmuxed</a></TableCell>
             </TableRow>
           )}
         </TableBody>

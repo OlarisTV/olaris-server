@@ -68,6 +68,7 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 				Size:                   fileInfo.Size(),
 				Playtime:               playtime,
 				Codecs:                 append(audioCodecs, videoStream.Codecs),
+				TranscodedCodecs:       []string{"mp4a.40.2", "avc1.64001e", "avc1.64001f", "avc1.640028"},
 				HlsManifest:            path.Join(relPath, "hls-manifest.m3u8"),
 				HlsTranscodingManifest: path.Join(relPath, "hls-transcoding-manifest.m3u8"),
 				HlsTransmuxingManifest: path.Join(relPath, "hls-transmuxing-manifest.m3u8")})
@@ -90,6 +91,7 @@ type MediaFile struct {
 	Size                   int64    `json:"size"`
 	Playtime               int      `json:"playtime"`
 	Codecs                 []string `json:"codecs"`
+	TranscodedCodecs       []string `json:"transcodedCodecs"`
 	HlsManifest            string   `json:"hlsManifest"`
 	HlsTranscodingManifest string   `json:"hlsTranscodingManifest"`
 	HlsTransmuxingManifest string   `json:"hlsTransmuxingManifest"`
