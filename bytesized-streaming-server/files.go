@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/db"
+	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"net/http"
 	"os"
 	"path"
@@ -29,6 +30,18 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			relPath := strings.SplitAfter(walkPath, *mediaFilesDir)[1]
 			fileInfo, err := os.Stat(walkPath)
+
+			videoStream, _ := ffmpeg.GetVideoStream(walkPath)
+			audioStreams, _ := ffmpeg.GetAudioStreams(walkPath)
+			// Golang doesn't have a set, so use this hack
+			audioCodecsSet := map[string]struct{}{}
+			for _, s := range audioStreams {
+				audioCodecsSet[s.Codecs] = struct{}{}
+			}
+			audioCodecs := []string{}
+			for codec, _ := range audioCodecsSet {
+				audioCodecs = append(audioCodecs, codec)
+			}
 
 			if err != nil {
 				// This catches broken symlinks
@@ -54,6 +67,8 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 				Name:                   fileInfo.Name(),
 				Size:                   fileInfo.Size(),
 				Playtime:               playtime,
+				Codecs:                 append(audioCodecs, videoStream.Codecs),
+				HlsManifest:            path.Join(relPath, "hls-manifest.m3u8"),
 				HlsTranscodingManifest: path.Join(relPath, "hls-transcoding-manifest.m3u8"),
 				HlsTransmuxingManifest: path.Join(relPath, "hls-transmuxing-manifest.m3u8")})
 		}
@@ -69,13 +84,15 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 type MediaFile struct {
-	Ext                    string `json:"ext"`
-	Name                   string `json:"name"`
-	Key                    string `json:"key"`
-	Size                   int64  `json:"size"`
-	Playtime               int    `json:"playtime"`
-	HlsTranscodingManifest string `json:"hlsTranscodingManifest"`
-	HlsTransmuxingManifest string `json:"hlsTransmuxingManifest"`
+	Ext                    string   `json:"ext"`
+	Name                   string   `json:"name"`
+	Key                    string   `json:"key"`
+	Size                   int64    `json:"size"`
+	Playtime               int      `json:"playtime"`
+	Codecs                 []string `json:"codecs"`
+	HlsManifest            string   `json:"hlsManifest"`
+	HlsTranscodingManifest string   `json:"hlsTranscodingManifest"`
+	HlsTransmuxingManifest string   `json:"hlsTransmuxingManifest"`
 }
 
 func MD5Ify(text string) string {

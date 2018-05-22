@@ -63,7 +63,7 @@ func (self *ProbeStream) GetMime() string {
 	if self.CodecName == "aac" {
 		return fmt.Sprintf("mp4a.40.2")
 	}
-	return ""
+	return self.CodecName
 }
 
 type ProbeFormat struct {
@@ -96,7 +96,10 @@ func Probe(filename string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[filename]
 
 	if !inCache {
-		cmd := exec.Command("ffprobe", "-show_data", "-show_format", "-show_streams", filename, "-print_format", "json", "-v", "quiet")
+		cmd := exec.Command("ffprobe",
+			"-show_data",
+			"-show_format",
+			"-show_streams", filename, "-print_format", "json", "-v", "quiet")
 		cmd.Stderr = os.Stderr
 
 		r, err := cmd.StdoutPipe()

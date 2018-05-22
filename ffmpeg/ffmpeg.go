@@ -3,6 +3,7 @@
 package ffmpeg
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -63,4 +64,35 @@ func ComputeSegmentDurations(
 	}
 
 	return segmentDurations
+}
+
+type ClientCodecCapabilities struct {
+	PlayableCodecs []string `json:"playableCodecs"`
+}
+
+func GetTransmuxedOrTranscodedRepresentation(
+	stream Stream,
+	capabilities ClientCodecCapabilities) (StreamRepresentation, error) {
+
+	// We interpret emtpy PlayableCodecs as no preference
+	if len(capabilities.PlayableCodecs) == 0 {
+		return GetTransmuxedRepresentation(stream)
+	}
+
+	for _, playableCodec := range capabilities.PlayableCodecs {
+		if playableCodec == stream.Codecs {
+			return GetTransmuxedRepresentation(stream)
+		}
+	}
+	// TODO(Leon Handreke): Return an approximation of the original quality
+	if stream.StreamType == "audio" {
+		// TODO(Leon Handreke): Ugly hardcode to 128k AAC
+		return GetTranscodedAudioRepresentations(stream)[1], nil
+	}
+	if stream.StreamType == "video" {
+		// TODO(Leon Handreke): Ugly hardcode to 720p-5000k H264
+		return GetTranscodedVideoRepresentations(stream)[0], nil
+	}
+	return StreamRepresentation{},
+		fmt.Errorf("Could not find appropriate representation for stream %s", stream)
 }

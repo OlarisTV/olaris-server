@@ -49,8 +49,8 @@ class FileList extends Component {
             <TableRow key={file.key}>
               <TableCell>{file.name}</TableCell>
               <TableCell>{file.playtime}</TableCell>
-              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTranscodingManifest, file.name, file.playtime) }} href="#">HLS Transcode</a></TableCell>
-              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest, file.name, file.playtime) }} href="#">HLS Transmux</a></TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsManifest, file.name, file.playtime) }} href="#">Play</a></TableCell>
+              <TableCell><a onClick={ (e)=>{ e.preventDefault(); this.handleClick(this.props.serverAddress+ file.hlsTransmuxingManifest, file.name, file.playtime) }} href="#">Play Transmuxed</a></TableCell>
             </TableRow>
           )}
         </TableBody>

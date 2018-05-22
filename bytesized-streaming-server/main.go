@@ -45,6 +45,7 @@ func main() {
 	// segments.
 	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	r.HandleFunc("/{filename:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	r.HandleFunc("/{filename:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/init.mp4", serveInit)
@@ -75,6 +76,53 @@ func main() {
 		s.Destroy()
 
 	}
+}
+
+func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
+	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
+
+	// TODO(Leon Handreke): Get this from the client
+	capabilities := ffmpeg.ClientCodecCapabilities{
+		PlayableCodecs: []string{"mp4a.40.2", "avc1.4d401f", "avc1.640028"},
+	}
+
+	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
+	if err != nil {
+		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	videoRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(videoStream, capabilities)
+
+	audioStreams, err := ffmpeg.GetAudioStreams(mediaFilePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	audioStreamRepresentations := []ffmpeg.StreamRepresentation{}
+	for _, s := range audioStreams {
+		r, err := ffmpeg.GetTransmuxedOrTranscodedRepresentation(s, capabilities)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		audioStreamRepresentations = append(audioStreamRepresentations, r)
+	}
+
+	subtitleStreamRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
+
+	manifest := hls.BuildMasterPlaylistFromFile(
+		[]hls.RepresentationCombination{
+			{
+				VideoStream:    videoRepresentation,
+				AudioStreams:   audioStreamRepresentations,
+				AudioGroupName: "audio",
+				// TODO(Leon Handreke): Fill this from the audio codecs.
+				AudioCodecs: "mp4a.40.2",
+			},
+		},
+		subtitleStreamRepresentations)
+	w.Write([]byte(manifest))
 }
 
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
