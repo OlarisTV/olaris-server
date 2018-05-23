@@ -309,7 +309,6 @@ func getOrStartTranscodingSession(stream ffmpeg.StreamRepresentation, segmentId 
 
 		sessions = append(sessions, s)
 		s.Start()
-		time.Sleep(2 * time.Second)
 	}
 
 	return s, nil

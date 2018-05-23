@@ -97,5 +97,13 @@ func (s *TranscodingSession) AvailableSegments() (map[int64]string, error) {
 // InitialSegment returns the path of the initial segment for the given stream
 // or error if no initial segment is available for the given stream.
 func (s *TranscodingSession) InitialSegment() string {
-	return filepath.Join(s.outputDir, "init.mp4")
+	segmentPath := filepath.Join(s.outputDir, "init.mp4")
+
+	for {
+		if _, err := os.Stat(segmentPath); err == nil {
+			return segmentPath
+		}
+		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
+		time.Sleep(500 * time.Millisecond)
+	}
 }
