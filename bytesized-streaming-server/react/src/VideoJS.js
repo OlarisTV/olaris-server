@@ -18,13 +18,24 @@ class VideoPlayer extends React.Component {
 
   componentDidMount() {
     window.VIDEOJS_NO_DYNAMIC_STYLE = true
-    this.player = videojs(this.videoNode, this.props, function onPlayerReady() {
-      console.log("videojs loaded")
-    });
+    let videoJsOptions = Object.assign({},
+      this.props,
+      {
+        html5: {
+          nativeAudioTracks: false,
+          nativeVideoTracks: false,
+          hls: {overrideNative: true}
+        }
+      });
+    console.log(videoJsOptions);
+    this.player = videojs(this.videoNode, videoJsOptions,
+      function onPlayerReady() {
+        console.log("videojs loaded")
+      });
     this.player.on("timeupdate", (e) => {
 	    let playtime = e.target.player.currentTime()
 	    if((Math.round(playtime % 5)) === 0){
-		    axios.post(`${this.props.serverAddress}api/v1/state`, {playtime: Math.floor(playtime), filename: e.target.player.currentSource().name}).then(response => {
+		    axios.post(`${this.props.serverAddress}/api/v1/state`, {playtime: Math.floor(playtime), filename: e.target.player.currentSource().name}).then(response => {
 			    console.log("Successful state update")
 		    }).catch(error => {
 			    console.log("Error pushing state", error);
