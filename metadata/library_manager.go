@@ -2,8 +2,6 @@ package metadata
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"github.com/ryanbradynd05/go-tmdb"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,12 +10,11 @@ import (
 )
 
 type LibraryManager struct {
-	db   *gorm.DB
-	tmdb *tmdb.TMDb
+	ctx *MetadataContext
 }
 
-func NewLibraryManager(db *gorm.DB, tmdb *tmdb.TMDb) *LibraryManager {
-	return &LibraryManager{db: db, tmdb: tmdb}
+func NewLibraryManager(ctx *MetadataContext) *LibraryManager {
+	return &LibraryManager{ctx: ctx}
 }
 
 func (self *LibraryManager) UpdateMD(library *Library) {
@@ -30,14 +27,14 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 
 func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 	movies := []MovieItem{}
-	self.db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&movies)
+	self.ctx.Db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&movies)
 	for _, movie := range movies {
 		fmt.Printf("Attempting to fetch metadata for '%s'\n", movie.Title)
 		var options = make(map[string]string)
 		if movie.Year > 0 {
 			options["year"] = movie.YearAsString()
 		}
-		searchRes, err := self.tmdb.SearchMovie(movie.Title, options)
+		searchRes, err := self.ctx.Tmdb.SearchMovie(movie.Title, options)
 
 		if err != nil {
 			return err
@@ -46,7 +43,7 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 		if len(searchRes.Results) > 0 {
 			fmt.Println("Found movie that matches, using first result and doing deepscan.")
 			mov := searchRes.Results[0] // Take the first result for now
-			fullMov, err := self.tmdb.GetMovieInfo(mov.ID, nil)
+			fullMov, err := self.ctx.Tmdb.GetMovieInfo(mov.ID, nil)
 			if err == nil {
 				movie.Overview = fullMov.Overview
 				movie.ImdbID = fullMov.ImdbID
@@ -58,7 +55,7 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 			movie.OriginalTitle = mov.OriginalTitle
 			movie.BackdropPath = mov.BackdropPath
 			movie.PosterPath = mov.PosterPath
-			self.db.Save(movie)
+			self.ctx.Db.Save(movie)
 		}
 
 	}
@@ -82,7 +79,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 		}
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			count := 0
-			self.db.Where("file_path= ?", walkPath).Find(&MovieItem{}).Count(&count)
+			self.ctx.Db.Where("file_path= ?", walkPath).Find(&MovieItem{}).Count(&count)
 			if count == 0 {
 				fileInfo, err := os.Stat(walkPath)
 
@@ -132,7 +129,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 				}
 				movie := MovieItem{MediaItem: mi}
 				fmt.Println(movie.String())
-				self.db.Create(&movie)
+				self.ctx.Db.Create(&movie)
 			} else {
 				fmt.Printf("Path '%s' already exists in library.\n", walkPath)
 			}
@@ -149,14 +146,14 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 }
 func (self *LibraryManager) AllLibraries() []Library {
 	var libraries []Library
-	self.db.Find(&libraries)
+	self.ctx.Db.Find(&libraries)
 	return libraries
 }
 
 func (self *LibraryManager) AddLibrary(name string, filePath string) {
 	fmt.Printf("Add library '%s' with path '%s'", name, filePath)
 	lib := Library{Name: name, FilePath: filePath}
-	self.db.Create(&lib)
+	self.ctx.Db.Create(&lib)
 }
 
 func (self *LibraryManager) ActivateAll() {

@@ -1,9 +1,10 @@
 package metadata
 
 import (
-	"fmt"
 	"github.com/graph-gophers/graphql-go"
+	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/jinzhu/gorm"
+	"net/http"
 )
 
 var SchemaTxt = `
@@ -65,13 +66,14 @@ var SchemaTxt = `
 	}
 `
 
-func InitSchema(db *gorm.DB) *graphql.Schema {
-	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{db: db})
+func InitSchema(ctx *MetadataContext) *graphql.Schema {
+	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{db: ctx.Db, ctx: ctx})
 	return Schema
 }
 
 type Resolver struct {
-	db *gorm.DB
+	ctx *MetadataContext
+	db  *gorm.DB
 }
 
 func (r *Resolver) Libraries() []*libraryResolver {
@@ -102,7 +104,6 @@ func (r *Resolver) Movies() []*movieResolver {
 	for _, movie := range movies {
 		if movie.Title != "" {
 			mov := movieResolver{r: movie}
-			fmt.Println("Adding movie:", movie.Title)
 			l = append(l, &mov)
 		}
 	}
@@ -114,7 +115,6 @@ type movieResolver struct {
 }
 
 func (r *movieResolver) Title() string {
-	fmt.Println(r.r)
 	return r.r.Title
 }
 func (r *movieResolver) OriginalTitle() string {
@@ -170,6 +170,7 @@ func (r *Resolver) CreateLibrary(args *struct {
 		FilePath: args.FilePath,
 	}
 	r.db.Create(&library)
+	r.ctx.RefreshChan <- 1
 	libRes := LibRes{Error: &errorResolver{Error{hasError: false}}, Library: &libraryResolver{library}}
 	return &libResResolv{libRes}
 }
@@ -217,3 +218,12 @@ func (r *errorResolver) HasError() bool {
 //    }
 //  }
 //}
+
+func GraphiQLHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write(graphiQLpage)
+}
+
+func NewRelayHandler(ctx *MetadataContext) *relay.Handler {
+	schema := InitSchema(ctx)
+	return &relay.Handler{Schema: schema}
+}

@@ -12,6 +12,7 @@ import (
 	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"gitlab.com/bytesized/bytesized-streaming/hls"
+	"gitlab.com/bytesized/bytesized-streaming/metadata"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,6 +35,11 @@ func main() {
 	flag.Parse()
 	envflag.Parse()
 
+	mctx := metadata.NewMDContext()
+	defer mctx.Db.Close()
+	libraryManager := metadata.NewLibraryManager(mctx)
+	libraryManager.ActivateAll()
+
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -41,6 +47,8 @@ func main() {
 	r.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
+	r.Handle("/query", metadata.NewRelayHandler(mctx))
+	r.HandleFunc("/graphiql", http.HandlerFunc(metadata.GraphiQLHandler))
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
 	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
