@@ -7,6 +7,10 @@ A Go Wrapper for the API of [The Movie DB](http://www.themoviedb.org/). Complete
 
 An **api_key** is needed to use the API. Register for one at [themoviedb.org](https://www.themoviedb.org/documentation/api).
 
+Note: This product uses the TMDb API but is not endorsed or certified by TMDb.
+
+<img src="https://assets.tmdb.org/images/logos/var_7_0_tmdb-logo-2_Antitled.svg" alt="The Movie DB" width="200" height="200" />
+
 ## How to install
 
 ```shell
@@ -55,9 +59,13 @@ All functions return Go structs. To return JSON, use the ToJSON function:
 fightClubJson, err := TMDb.ToJSON(fightClubInfo)
 ```
 
+## How to test
+
+Create a local.yml file in the root directory that mirrors the local.yml.example file. Then, either run go test to simply run the tests or run the coverage.sh file to run the tests with coverage info.
+
 ## Available methods
 
-All themoviedb.org API v3 methods that don't require authentication are included. The POST and DELETE APIs are not included yet. For examples on how to call each function, refer to that function's tests. For documentation of the TheMovieDB's API, see their [documentation](http://docs.themoviedb.apiary.io/).
+All themoviedb.org API v3 GET methods are included. The POST and DELETE APIs are not included yet. For examples on how to call each function, refer to that function's tests. For documentation of the TheMovieDB's API, see their [documentation](http://docs.themoviedb.apiary.io/).
 
 ## License 
 

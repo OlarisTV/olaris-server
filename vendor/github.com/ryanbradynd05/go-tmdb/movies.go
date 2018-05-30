@@ -6,9 +6,10 @@ import (
 
 // Movie struct
 type Movie struct {
-	Adult               bool
-	BackdropPath        string `json:"backdrop_path"`
-	BelongsToCollection bool   `json:"belongs_to_collection"`
+	Adult        bool
+	BackdropPath string `json:"backdrop_path"`
+	// BelongsToCollection bool   `json:"belongs_to_collection"`
+	BelongsToCollection CollectionShort `json:"belongs_to_collection"`
 	Budget              uint32
 	Genres              []struct {
 		ID   int
@@ -158,6 +159,14 @@ type MovieCredits struct {
 		ID          int
 		Name        string
 		Order       int
+		ProfilePath string `json:"profile_path"`
+	}
+	Crew []struct {
+		CreditID    string `json:"credit_id"`
+		Department  string
+		ID          int
+		Job         string
+		Name        string
 		ProfilePath string `json:"profile_path"`
 	}
 	AlternativeTitles *MovieAlternativeTitles `json:"alternative_titles,omitempty"`

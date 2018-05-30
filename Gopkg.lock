@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/Jeffail/tunny"
+  packages = ["."]
+  revision = "59cfa8fcb19f5acba8db07a0dd3cb2fa7edbc228"
+  version = "0.1.1"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -82,8 +88,8 @@
 [[projects]]
   name = "github.com/mattn/go-sqlite3"
   packages = ["."]
-  revision = "6c771bb9887719704b210e87e934f08be014bdb1"
-  version = "v1.6.0"
+  revision = "323a32be5a2421b8c7087225079c6c900ec397cd"
+  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -110,14 +116,14 @@
 [[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
-  revision = "feef513b9575b32f84bafa580aad89b011259019"
-  version = "v1.3.0"
+  revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
+  version = "v1.4.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/ryanbradynd05/go-tmdb"
   packages = ["."]
-  revision = "5ab02a0655163a69d643172556bda2b05c676e44"
-  version = "1.0.0"
+  revision = "bbb88dee73c71a9d3ef1d24d32f7efd3e62c343f"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -148,11 +154,11 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "9ef9f5bb98a1fdc41f8cf6c250a4404b4085e389"
+  revision = "89e543239a64caf31d3a6865872ea120b41446df"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "aca6b954a5ab9bf807c6bf1fa5cf1e5b827731b6ec96bb1f0db2b56b67622bb5"
+  inputs-digest = "5ed634996221159a9c1c3433afc8bab077b2d5468a1605d906fd46604b554328"
   solver-name = "gps-cdcl"
   solver-version = 1
