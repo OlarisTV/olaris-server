@@ -120,6 +120,9 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 	for _, serie := range series {
 		fmt.Println("Looking up meta-data for series:", serie.Name)
 		var options = make(map[string]string)
+		if serie.FirstAirYear != 0 {
+			options["first_air_date_year"] = strconv.FormatUint(serie.FirstAirYear, 10)
+		}
 		searchRes, err := self.ctx.Tmdb.SearchTv(serie.Name, options)
 
 		if err != nil {
@@ -220,11 +223,25 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 					}
 					return err
 				}
-
+				var year string
+				fileName := fileInfo.Name()
+				// First figure out if there is a year in there, and if so parse it out.
+				yearRegex := regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?)")
+				ress := yearRegex.FindStringSubmatch(fileInfo.Name())
+				if len(ress) > 1 {
+					year = ress[2]
+					fmt.Println(year)
+					fileName = strings.Replace(fileName, ress[1], "", -1)
+				}
 				seriesRe := regexp.MustCompile("^(.*)S(\\d{2})E(\\d{2})")
-				res := seriesRe.FindStringSubmatch(fileInfo.Name())
+				res := seriesRe.FindStringSubmatch(fileName)
 
 				if len(res) > 2 {
+					yearInt, err := strconv.ParseUint(res[2], 10, 32)
+					if err != nil {
+						fmt.Println("Could not parse year:", err)
+					}
+
 					title := Sanitize(res[1])
 					season := res[2]
 					episode := res[3]
@@ -235,6 +252,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 						Size:      fileInfo.Size(),
 						Title:     title,
 						LibraryID: library.ID,
+						Year:      yearInt,
 					}
 					var tv TvSeries
 					var tvs TvSeason
@@ -244,7 +262,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 						fmt.Println("Could not parse season:", err)
 					}
 
-					self.ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title})
+					self.ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title, FirstAirYear: yearInt})
 					self.ctx.Db.FirstOrCreate(&tvs, TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
 
 					ep := TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}

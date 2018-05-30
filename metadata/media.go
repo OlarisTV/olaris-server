@@ -52,6 +52,7 @@ type TvSeries struct {
 	Name            string
 	Overview        string
 	FirstAirDate    string
+	FirstAirYear    uint64
 	OriginalName    string
 	Status          string
 	Seasons         []*TvSeason
