@@ -22,7 +22,7 @@ var SchemaTxt = `
 
 	type Mutation {
 		# Add a library to scan
-		createLibrary(name: String!, file_path: String!): LibRes!
+		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
 	}
 
 	interface LibRes {
@@ -315,16 +315,20 @@ func (r *libraryResolver) FilePath() string {
 	return r.r.FilePath
 }
 func (r *libraryResolver) Kind() int32 {
-	return 0
+	return int32(r.r.Kind)
 }
 
-func (r *Resolver) CreateLibrary(args *struct {
+type CreateLibraryArgs struct {
 	Name     string
 	FilePath string
-}) *libResResolv {
+	Kind     int32
+}
+
+func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 	library := Library{
 		Name:     args.Name,
 		FilePath: args.FilePath,
+		Kind:     MediaType(args.Kind),
 	}
 	r.db.Create(&library)
 	r.ctx.RefreshChan <- 1
@@ -364,8 +368,8 @@ func (r *errorResolver) HasError() bool {
 	return r.r.hasError
 }
 
-//mutation AddLibrary($name: String!, $file_path: String!) {
-//	createLibrary(name: $name, file_path: $file_path){
+//mutation AddLibrary($name: String!, $file_path: String!, $kind: Int!) {
+//	createLibrary(name: $name, file_path: $file_path, kind: $kind){
 //    library{
 //      name
 //    }
