@@ -20,14 +20,14 @@ Use your own media directory to mount at `/var/media` obviously.
 
 ### Running
 
-	go generate ./... && go run server/bindata.go server/main.go --media_files_dir ~/Videos
+	go generate ./... && go run bytesized-streaming-server/bindata.go bytesized-streaming-server/main.go --media_files_dir ~/Videos
 
 ## Building React
 
   Install prereqs
 
   `npm install create-react-app`
-  `cd server/react && yarn install`
+  `cd bytesized-streaming-server/react && yarn install`
   `yarn start` and `yarn sass:watch`
 
   Development on http://localhost:3000/ once done you can build it so
