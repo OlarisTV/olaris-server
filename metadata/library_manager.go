@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	"github.com/Jeffail/tunny"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,11 +11,34 @@ import (
 )
 
 type LibraryManager struct {
-	ctx *MetadataContext
+	ctx  *MetadataContext
+	pool *tunny.Pool
+}
+
+type EpisodePayload struct {
+	series  TvSeries
+	season  TvSeason
+	episode TvEpisode
 }
 
 func NewLibraryManager(ctx *MetadataContext) *LibraryManager {
-	return &LibraryManager{ctx: ctx}
+	manager := LibraryManager{ctx: ctx}
+	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
+		fmt.Println("Starting worker")
+		ep, ok := payload.(EpisodePayload)
+		if ok {
+			fmt.Printf("Worker in '%s', S%dE%s\n", ep.series.Name, ep.season.SeasonNumber, ep.episode.EpisodeNum)
+			err := manager.UpdateEpisodeMD(ep.series, ep.season, ep.episode)
+			if err != nil {
+				fmt.Println("GOT AN ERROR UPDATING EPISODE")
+			}
+		}
+		fmt.Println("Ending worker")
+		return nil
+	})
+	manager.pool.SetSize(10)
+
+	return &manager
 }
 
 func (self *LibraryManager) UpdateMD(library *Library) {
@@ -27,7 +51,32 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 		self.UpdateTvMD(library)
 	}
 }
-func (self *LibraryManager) UpdateEpisodeMD() error {
+
+func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
+	fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
+	episodeInt, err := strconv.ParseInt(episode.EpisodeNum, 10, 32)
+	if err != nil {
+		fmt.Println("Could not parse season:", err)
+	}
+	fullEpisode, err := self.ctx.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
+	if err == nil {
+		if fullEpisode != nil {
+			episode.AirDate = fullEpisode.AirDate
+			episode.Name = fullEpisode.Name
+			episode.TmdbID = fullEpisode.ID
+			episode.Overview = fullEpisode.Overview
+			episode.StillPath = fullEpisode.StillPath
+			obj := self.ctx.Db.Save(&episode)
+			return obj.Error
+		}
+		return nil
+	} else {
+		fmt.Println("Could not grab episode information:", err)
+		return err
+	}
+}
+
+func (self *LibraryManager) UpdateEpisodesMD() error {
 	episodes := []TvEpisode{}
 	self.ctx.Db.Where("tmdb_id = ?", 0).Find(&episodes)
 	for _, episode := range episodes {
@@ -35,23 +84,9 @@ func (self *LibraryManager) UpdateEpisodeMD() error {
 		var tv TvSeries
 		self.ctx.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
 		self.ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
-		fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
-		episodeInt, err := strconv.ParseInt(episode.EpisodeNum, 10, 32)
-		if err != nil {
-			fmt.Println("Could not parse season:", err)
-		}
-		fullEpisode, err := self.ctx.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
-		if err == nil {
-			episode.AirDate = fullEpisode.AirDate
-			episode.Name = fullEpisode.Name
-			episode.TmdbID = fullEpisode.ID
-			episode.Overview = fullEpisode.Overview
-			episode.StillPath = fullEpisode.StillPath
-			self.ctx.Db.Save(&episode)
-		} else {
-			fmt.Println("Could not grab episode information")
-
-		}
+		go func() {
+			self.pool.Process(EpisodePayload{season: season, series: tv, episode: episode})
+		}()
 	}
 	return nil
 }
@@ -112,7 +147,7 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 	}
 
 	self.UpdateSeasonMD()
-	self.UpdateEpisodeMD()
+	self.UpdateEpisodesMD()
 	//episodes := []TvEpisode{}
 	//self.ctx.Db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&episodes)
 	//for _, episode := range episodes {
