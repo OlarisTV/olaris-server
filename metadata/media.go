@@ -16,13 +16,16 @@ const (
 )
 
 type MediaItem struct {
-	Title     string
-	Year      uint64
-	FileName  string
-	FilePath  string
-	Size      int64
-	Library   Library
-	LibraryID uint
+	Title        string
+	Year         uint64
+	FileName     string
+	FilePath     string
+	BackdropPath string
+	PosterPath   string
+	Size         int64
+	Overview     string
+	Library      Library
+	LibraryID    uint
 }
 
 func (self *MediaItem) YearAsString() string {
@@ -35,12 +38,50 @@ type MovieItem struct {
 	TmdbID        int
 	ReleaseDate   string
 	OriginalTitle string
-	Overview      string
-	BackdropPath  string
-	PosterPath    string
 	ImdbID        string
 }
 
 func (self *MovieItem) String() string {
 	return fmt.Sprintf("Movie: %s\nYear: %d\nPath:%s", self.Title, self.Year, self.FilePath)
+}
+
+type TvSeries struct {
+	gorm.Model
+	BackdropPath string
+	PosterPath   string
+	Name         string
+	Overview     string
+	FirstAirDate string
+	OriginalName string
+	Status       string
+	Seasons      []*TvSeason
+	TmdbID       int
+	Type         string
+}
+
+type TvSeason struct {
+	gorm.Model
+	Name         string
+	Overview     string
+	AirDate      string
+	SeasonNumber int
+	PosterPath   string
+	TvSeries     *TvSeries
+	TvEpisodes   []*TvEpisode
+	TvSeriesID   uint
+	TmdbID       int
+}
+
+type TvEpisode struct {
+	gorm.Model
+	MediaItem
+	Name       string
+	Overview   string
+	SeasonNum  string
+	EpisodeNum string
+	TvSeasonID uint
+	TmdbID     int
+	AirDate    string
+	StillPath  string
+	TvSeason   *TvSeason
 }
