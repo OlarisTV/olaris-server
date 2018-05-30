@@ -11,6 +11,7 @@ func Sanitize(title string) string {
 	title = strings.Replace(title, ".", " ", -1)
 	title = strings.Replace(title, "’", "'", -1)
 	title = strings.Trim(title, " ")
+	title = strings.Trim(title, " -")
 	return title
 }
 
