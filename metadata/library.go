@@ -17,6 +17,7 @@ type Library struct {
 	FilePath string
 	Name     string
 	Movies   []*movieResolver
+	Episodes []*episodeResolver
 }
 
 /*

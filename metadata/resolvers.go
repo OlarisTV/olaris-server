@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/jinzhu/gorm"
@@ -15,7 +16,9 @@ var SchemaTxt = `
 	# The query type, represents all of the entry points into our object graph
 	type Query {
 		movies(): [Movie]!
-		libraries(): [Library]!  }
+		libraries(): [Library]!
+		tvseries(): [TvSeries]!
+	}
 
 	type Mutation {
 		# Add a library to scan
@@ -41,6 +44,41 @@ var SchemaTxt = `
 		# Path that this library manages
 		file_path: String!
 		movies: [Movie]!
+		episodes: [Episode]!
+	}
+
+	interface TvSeries {
+		name: String!
+		overview: String!
+		first_air_date: String!
+		status: String!
+		seasons: [Season]!
+		backdrop_path: String!
+		poster_path: String!
+		tmdb_id: Int!
+		type: String!
+	}
+
+	interface Season {
+		name: String!
+		overview: String!
+		season_number: Int!
+		air_date: String!
+		poster_path: String!
+		tmdb_id: Int!
+		episodes: [Episode]!
+	}
+
+	interface Episode {
+		name: String!
+		overview: String!
+		still_path: String!
+		air_date: String!
+		tmdb_id: Int!
+		# Filename
+		file_name: String!
+		# Absolute path to the filesystem
+		file_path: String!
 	}
 
 	# A movie file
@@ -91,6 +129,13 @@ func (r *Resolver) Libraries() []*libraryResolver {
 			}
 		}
 		library.Movies = mr
+
+		var episodes []TvEpisode
+		r.ctx.Db.Where("library_id =?", library.ID).Find(&episodes)
+		for _, episode := range episodes {
+			library.Episodes = append(library.Episodes, &episodeResolver{r: episode})
+		}
+
 		lib := libraryResolver{r: library}
 		l = append(l, &lib)
 	}
@@ -108,6 +153,115 @@ func (r *Resolver) Movies() []*movieResolver {
 		}
 	}
 	return l
+}
+
+func (r *Resolver) TvSeries() []*tvSeriesResolver {
+	var resolvers []*tvSeriesResolver
+	var series []TvSeries
+	r.ctx.Db.Find(&series)
+	for _, serie := range series {
+		var seasons []TvSeason
+		fmt.Println("Looking for seasons for:", serie.ID)
+		r.ctx.Db.Where("tv_series_id = ?", serie.ID).Find(&seasons)
+		for _, season := range seasons {
+			var episodes []TvEpisode
+			r.ctx.Db.Where("tv_season_id = ?", season.ID).Find(&episodes)
+			for _, episode := range episodes {
+				season.EpisodeResolvers = append(season.EpisodeResolvers, &episodeResolver{r: episode})
+			}
+			serie.SeasonResolvers = append(serie.SeasonResolvers, &seasonResolver{r: season})
+		}
+		resolvers = append(resolvers, &tvSeriesResolver{r: serie})
+
+	}
+	return resolvers
+}
+
+type tvSeriesResolver struct {
+	r TvSeries
+}
+
+func (r *tvSeriesResolver) Name() string {
+	return r.r.Name
+}
+func (r *tvSeriesResolver) Overview() string {
+	return r.r.Overview
+}
+func (r *tvSeriesResolver) FirstAirDate() string {
+	return r.r.FirstAirDate
+}
+func (r *tvSeriesResolver) Status() string {
+	return r.r.Status
+}
+func (r *tvSeriesResolver) Type() string {
+	return r.r.Type
+}
+func (r *tvSeriesResolver) PosterPath() string {
+	return r.r.PosterPath
+}
+func (r *tvSeriesResolver) BackdropPath() string {
+	return r.r.BackdropPath
+}
+func (r *tvSeriesResolver) TmdbID() int32 {
+	return int32(r.r.TmdbID)
+}
+func (r *tvSeriesResolver) Seasons() []*seasonResolver {
+	return r.r.SeasonResolvers
+}
+
+type seasonResolver struct {
+	r TvSeason
+}
+
+func (r *seasonResolver) Name() string {
+	return r.r.Name
+}
+
+func (r *seasonResolver) Overview() string {
+	return r.r.Overview
+}
+func (r *seasonResolver) AirDate() string {
+	return r.r.AirDate
+}
+func (r *seasonResolver) PosterPath() string {
+	return r.r.PosterPath
+}
+func (r *seasonResolver) TmdbID() int32 {
+	return int32(r.r.TmdbID)
+}
+
+func (r *seasonResolver) SeasonNumber() int32 {
+	return int32(r.r.SeasonNumber)
+}
+func (r *seasonResolver) Episodes() []*episodeResolver {
+	return r.r.EpisodeResolvers
+}
+
+type episodeResolver struct {
+	r TvEpisode
+}
+
+func (r *episodeResolver) Name() string {
+	return r.r.Name
+}
+
+func (r *episodeResolver) Overview() string {
+	return r.r.Overview
+}
+func (r *episodeResolver) AirDate() string {
+	return r.r.AirDate
+}
+func (r *episodeResolver) StillPath() string {
+	return r.r.StillPath
+}
+func (r *episodeResolver) TmdbID() int32 {
+	return int32(r.r.TmdbID)
+}
+func (r *episodeResolver) FilePath() string {
+	return r.r.FilePath
+}
+func (r *episodeResolver) FileName() string {
+	return r.r.FileName
 }
 
 type movieResolver struct {
@@ -153,6 +307,9 @@ func (r *libraryResolver) Name() string {
 }
 func (r *libraryResolver) Movies() []*movieResolver {
 	return r.r.Movies
+}
+func (r *libraryResolver) Episodes() []*episodeResolver {
+	return r.r.Episodes
 }
 func (r *libraryResolver) FilePath() string {
 	return r.r.FilePath
