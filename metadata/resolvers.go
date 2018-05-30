@@ -74,6 +74,7 @@ var SchemaTxt = `
 		overview: String!
 		still_path: String!
 		air_date: String!
+		episode_number: String!
 		tmdb_id: Int!
 		# Filename
 		file_name: String!
@@ -262,6 +263,9 @@ func (r *episodeResolver) FilePath() string {
 }
 func (r *episodeResolver) FileName() string {
 	return r.r.FileName
+}
+func (r *episodeResolver) EpisodeNumber() string {
+	return r.r.EpisodeNum
 }
 
 type movieResolver struct {
