@@ -17,11 +17,12 @@ func main() {
 	defer ctx.Db.Close()
 	libraryManager := metadata.NewLibraryManager(ctx)
 
-	var count int
-	ctx.Db.Table("libraries").Count(&count)
-	if count == 0 {
-		libraryManager.AddLibrary("Movies", *mediaFilesDir)
-	}
+	/*
+		var count int
+		ctx.Db.Table("libraries").Count(&count)
+		if count == 0 {
+			libraryManager.AddLibrary("Movies", *mediaFilesDir)
+		}*/
 
 	refresh := make(chan int)
 	ctx.RefreshChan = refresh

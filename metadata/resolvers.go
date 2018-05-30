@@ -330,9 +330,14 @@ func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 		FilePath: args.FilePath,
 		Kind:     MediaType(args.Kind),
 	}
-	r.db.Create(&library)
-	r.ctx.RefreshChan <- 1
-	libRes := LibRes{Error: &errorResolver{Error{hasError: false}}, Library: &libraryResolver{library}}
+	obj := r.db.Create(&library)
+	var libRes LibRes
+	if obj.Error == nil {
+		r.ctx.RefreshChan <- 1
+		libRes = LibRes{Error: &errorResolver{Error{hasError: false}}, Library: &libraryResolver{library}}
+	} else {
+		libRes = LibRes{Error: &errorResolver{Error{hasError: true, message: obj.Error.Error()}}, Library: &libraryResolver{Library{}}}
+	}
 	return &libResResolv{libRes}
 }
 

@@ -14,7 +14,7 @@ var supportedExtensions = map[string]bool{
 type Library struct {
 	gorm.Model
 	Kind     MediaType
-	FilePath string
+	FilePath string `gorm:"unique_index:idx_file_path"`
 	Name     string
 	Movies   []*movieResolver
 	Episodes []*episodeResolver

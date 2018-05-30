@@ -78,7 +78,6 @@ type TvEpisode struct {
 	gorm.Model
 	MediaItem
 	Name       string
-	Overview   string
 	SeasonNum  string
 	EpisodeNum string
 	TvSeasonID uint
