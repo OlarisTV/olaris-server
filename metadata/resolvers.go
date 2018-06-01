@@ -102,6 +102,10 @@ var SchemaTxt = `
 		imdb_id: String!
 		# TMDB ID
 		tmdb_id: Int!
+		# ID to retrieve backdrop
+		backdrop_path: String!
+		# ID to retrieve poster
+		poster_path: String!
 	}
 `
 
@@ -283,6 +287,12 @@ func (r *movieResolver) FilePath() string {
 }
 func (r *movieResolver) FileName() string {
 	return r.r.FileName
+}
+func (r *movieResolver) BackdropPath() string {
+	return r.r.BackdropPath
+}
+func (r *movieResolver) PosterPath() string {
+	return r.r.PosterPath
 }
 func (r *movieResolver) Year() string {
 	return r.r.YearAsString()
