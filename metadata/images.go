@@ -73,7 +73,7 @@ func (self *ImageManager) HttpHandler(w http.ResponseWriter, r *http.Request) {
 		// Write to a secondary variable so we can serve the image right away without rereading it from disk
 		imageB := b.Bytes()
 		fmt.Println("Wrote", n, "bytes")
-		_, err := b.WriteTo(openFile)
+		_, err = b.WriteTo(openFile)
 		if err != nil {
 			fmt.Println("Wrote file to disk")
 		}
