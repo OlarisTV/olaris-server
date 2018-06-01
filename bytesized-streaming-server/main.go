@@ -40,6 +40,7 @@ func main() {
 	libraryManager := metadata.NewLibraryManager(mctx)
 	libraryManager.ActivateAll()
 
+	imageManager := metadata.NewImageManager(mctx)
 	// subscribe to SIGINT signals
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -48,6 +49,7 @@ func main() {
 	r.HandleFunc("/api/v1/files", serveFileIndex)
 	r.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 	r.Handle("/query", metadata.NewRelayHandler(mctx))
+	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
 	r.HandleFunc("/graphiql", http.HandlerFunc(metadata.GraphiQLHandler))
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.

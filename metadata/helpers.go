@@ -44,3 +44,12 @@ func EnsurePath(pathName string) error {
 	}
 	return nil
 }
+
+func FileExists(pathName string) bool {
+	fmt.Println("Checking if path", pathName, "exists")
+	if _, err := os.Stat(pathName); err == nil {
+		return true
+	} else {
+		return false
+	}
+}
