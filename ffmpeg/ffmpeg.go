@@ -4,6 +4,8 @@ package ffmpeg
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -11,7 +13,7 @@ type Representation struct {
 	RepresentationId string
 
 	// The rest is just metadata for display
-	BitRate int64
+	BitRate int
 	// e.g. "video/mp4"
 	Container string
 	// codecs string ready for DASH/HLS serving
@@ -20,6 +22,8 @@ type Representation struct {
 	// Mutually exclusive
 	transcoded bool
 	transmuxed bool
+
+	encoderParams EncoderParams
 }
 
 type StreamRepresentation struct {
@@ -39,15 +43,6 @@ const MinTransmuxedSegDuration = 5000 * time.Millisecond
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
-
-type EncoderParams struct {
-	// One of these may be -1 to keep aspect ratio
-	// TODO(Leon Handreke): Add note about -2
-	width        int
-	height       int
-	videoBitrate int
-	audioBitrate int
-}
 
 func ComputeSegmentDurations(
 	segmentStartTimestamps []time.Duration,
@@ -84,15 +79,35 @@ func GetTransmuxedOrTranscodedRepresentation(
 			return GetTransmuxedRepresentation(stream)
 		}
 	}
-	// TODO(Leon Handreke): Return an approximation of the original quality
 	representations := []StreamRepresentation{}
+
+	similarEncoderParams, _ := GetSimilarEncoderParams(stream)
 	if stream.StreamType == "audio" {
+		representations = append(representations,
+			GetTranscodedAudioRepresentation(
+				stream,
+				// TODO(Leon Handreke): Make a util method for this prefix.
+				"transcode:"+EncoderParamsToString(similarEncoderParams),
+				similarEncoderParams))
+
 		// TODO(Leon Handreke): Ugly hardcode to 128k AAC
-		representations = GetTranscodedAudioRepresentations(stream)[1:]
+		representation, _ := StreamRepresentationFromRepresentationId(
+			stream, "preset:128k-audio")
+		representations = append(representations, representation)
 	}
 	if stream.StreamType == "video" {
+		representations = append(representations,
+			GetTranscodedVideoRepresentation(
+				stream,
+				// TODO(Leon Handreke): Make a util method for this prefix.
+				"transcode:"+EncoderParamsToString(similarEncoderParams),
+				similarEncoderParams))
+
 		// TODO(Leon Handreke): Ugly hardcode to 720p-5000k H264
-		representations = GetTranscodedVideoRepresentations(stream)[1:2]
+		representation, _ := StreamRepresentationFromRepresentationId(
+			stream, "preset:720-5000k-video")
+		representations = append(representations, representation)
+
 	}
 	for _, r := range representations {
 		for _, playableCodec := range capabilities.PlayableCodecs {
@@ -103,4 +118,75 @@ func GetTransmuxedOrTranscodedRepresentation(
 	}
 	return StreamRepresentation{},
 		fmt.Errorf("Could not find appropriate representation for stream %s", stream)
+}
+
+func StreamRepresentationFromRepresentationId(
+	s Stream,
+	representationId string) (StreamRepresentation, error) {
+
+	if s.StreamType == "subtitle" {
+		return GetSubtitleStreamRepresentation(s), nil
+	}
+
+	if representationId == "direct" {
+		transmuxedStream, err := GetTransmuxedRepresentation(s)
+		if err != nil {
+			return StreamRepresentation{}, err
+		}
+		if transmuxedStream.Representation.RepresentationId == representationId {
+			return transmuxedStream, nil
+		}
+	} else if strings.HasPrefix(representationId, "preset:") {
+		presetId := representationId[7:]
+		if encoderParams, ok := VideoEncoderPresets[presetId]; ok {
+			return GetTranscodedVideoRepresentation(s, representationId, encoderParams), nil
+		}
+		if encoderParams, ok := AudioEncoderPresets[presetId]; ok {
+			return GetTranscodedAudioRepresentation(s, representationId, encoderParams), nil
+		}
+	} else if strings.HasPrefix(representationId, "transcode:") {
+		encoderParamsStr := representationId[10:]
+		encoderParams, err := EncoderParamsFromString(encoderParamsStr)
+		if err != nil {
+			return StreamRepresentation{}, err
+		}
+		if s.StreamType == "video" {
+			return GetTranscodedVideoRepresentation(s, representationId, encoderParams), nil
+		} else if s.StreamType == "audio" {
+			return GetTranscodedAudioRepresentation(s, representationId, encoderParams), nil
+		}
+	}
+
+	return StreamRepresentation{},
+		fmt.Errorf("No such stream %s/%s found for file %s",
+			s.StreamId, representationId, s.MediaFilePath)
+}
+
+func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingSession, error) {
+	if s.Representation.RepresentationId == "direct" {
+		session, err := NewTransmuxingSession(s, os.TempDir(), segmentId)
+		if err != nil {
+			return nil, err
+		}
+		return session, nil
+	} else {
+		var session *TranscodingSession
+		var err error
+
+		if s.Stream.StreamType == "video" {
+			session, err = NewVideoTranscodingSession(s, os.TempDir(), segmentId)
+			return session, nil
+		} else if s.Stream.StreamType == "audio" {
+			session, err = NewAudioTranscodingSession(s, os.TempDir(), segmentId)
+			return session, nil
+		} else if s.Stream.StreamType == "subtitle" {
+			session, err = NewSubtitleSession(s, os.TempDir())
+		}
+		if err != nil {
+			return nil, err
+		}
+		return session, nil
+	}
+	return nil, fmt.Errorf("Failed to spawn TranscodingSession for %s", s)
+
 }

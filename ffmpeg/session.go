@@ -16,7 +16,7 @@ type TranscodingSession struct {
 	cmd            *exec.Cmd
 	Stream         StreamRepresentation
 	outputDir      string
-	firstSegmentId int64
+	firstSegmentId int
 }
 
 func (s *TranscodingSession) Start() error {
@@ -48,7 +48,7 @@ func (s *TranscodingSession) Destroy() error {
 
 // GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
 // It will block for at most deadline.
-func (s *TranscodingSession) GetSegment(segmentId int64, deadline time.Duration) (string, error) {
+func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (string, error) {
 
 	if !s.IsProjectedAvailable(segmentId, deadline) {
 		return "", fmt.Errorf("Segment not projected to be available within deadline %s", deadline)
@@ -64,7 +64,7 @@ func (s *TranscodingSession) GetSegment(segmentId int64, deadline time.Duration)
 	}
 }
 
-func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time.Duration) bool {
+func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
 	if s.Stream.Representation.RepresentationId == "webvtt" {
 		return true
 	}
@@ -72,8 +72,8 @@ func (s *TranscodingSession) IsProjectedAvailable(segmentId int64, deadline time
 	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+segmentsPerSession
 }
 
-func (s *TranscodingSession) AvailableSegments() (map[int64]string, error) {
-	res := make(map[int64]string)
+func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
+	res := make(map[int]string)
 
 	files, err := ioutil.ReadDir(s.outputDir)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *TranscodingSession) AvailableSegments() (map[int64]string, error) {
 		match := r.FindString(f.Name())
 		if match != "" {
 			segmentFsNumber, _ := strconv.Atoi(match[len("segment_") : len(match)-len(".m4s")])
-			res[int64(segmentFsNumber)] = filepath.Join(s.outputDir, f.Name())
+			res[segmentFsNumber] = filepath.Join(s.outputDir, f.Name())
 		}
 
 	}
@@ -100,8 +100,10 @@ func (s *TranscodingSession) InitialSegment() string {
 	segmentPath := filepath.Join(s.outputDir, "init.mp4")
 
 	for {
-		if _, err := os.Stat(segmentPath); err == nil {
-			return segmentPath
+		if stat, err := os.Stat(segmentPath); err == nil {
+			if stat.Size() > 0 {
+				return segmentPath
+			}
 		}
 		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
 		time.Sleep(500 * time.Millisecond)

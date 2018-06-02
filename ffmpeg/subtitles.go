@@ -38,38 +38,21 @@ func NewSubtitleSession(
 	}, nil
 }
 
-func GetSubtitleStreamRepresentations(mediaFilePath string) ([]StreamRepresentation, error) {
-	container, err := Probe(mediaFilePath)
-	if err != nil {
-		return nil, err
+func GetSubtitleStreamRepresentation(stream Stream) StreamRepresentation {
+	return StreamRepresentation{
+		Stream: stream,
+		Representation: Representation{
+			RepresentationId: "webvtt",
+		},
+		SegmentStartTimestamps: []time.Duration{0},
 	}
+}
 
-	representations := []StreamRepresentation{}
-
-	for _, stream := range container.Streams {
-		if stream.CodecType != "subtitle" {
-			continue
-		}
-
-		stream := Stream{
-			StreamKey: StreamKey{
-				MediaFilePath: mediaFilePath,
-				StreamId:      int64(stream.Index),
-			},
-			TotalDuration:    container.Format.Duration(),
-			StreamType:       "subtitle",
-			Language:         GetLanguageTag(stream),
-			Title:            GetTitleOrHumanizedLanguage(stream),
-			EnabledByDefault: stream.Disposition["default"] != 0,
-		}
-		representations = append(representations, StreamRepresentation{
-			Stream: stream,
-			Representation: Representation{
-				RepresentationId: "webvtt",
-			},
-			SegmentStartTimestamps: []time.Duration{0},
-		})
+func GetSubtitleStreamRepresentations(streams []Stream) []StreamRepresentation {
+	subtitleRepresentations := []StreamRepresentation{}
+	for _, s := range streams {
+		subtitleRepresentations = append(subtitleRepresentations,
+			GetSubtitleStreamRepresentation(s))
 	}
-
-	return representations, nil
+	return subtitleRepresentations
 }

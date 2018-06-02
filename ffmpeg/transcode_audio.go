@@ -12,8 +12,8 @@ import (
 )
 
 var AudioEncoderPresets = map[string]EncoderParams{
-	"64k-audio":  {audioBitrate: 64000},
-	"128k-audio": {audioBitrate: 128000},
+	"64k-audio":  {audioBitrate: 64000, Codecs: "mp4a.40.2"},
+	"128k-audio": {audioBitrate: 128000, Codecs: "mp4a.40.2"},
 }
 
 // This is exactly 234 AAC frames (1024 samples each) @ 48kHz.
@@ -23,15 +23,14 @@ const transcodedAudioSegmentDuration = 4992 * time.Millisecond
 func NewAudioTranscodingSession(
 	stream StreamRepresentation,
 	outputDirBase string,
-	segmentOffset int64,
-	transcodingParams EncoderParams) (*TranscodingSession, error) {
+	segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	startDuration := time.Duration(int64(transcodedAudioSegmentDuration) * segmentOffset)
+	startDuration := time.Duration(int64(transcodedAudioSegmentDuration) * int64(segmentOffset))
 
 	// With AAC, we always encode an extra segment before to avoid encoder priming on the first segment we actually want
 	runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration
@@ -45,6 +44,8 @@ func NewAudioTranscodingSession(
 		startNumber = 0
 	}
 
+	encoderParams := stream.Representation.encoderParams
+
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
@@ -52,7 +53,7 @@ func NewAudioTranscodingSession(
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
-		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(transcodingParams.audioBitrate),
+		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
 		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", startNumber),
@@ -77,9 +78,7 @@ func NewAudioTranscodingSession(
 	}, nil
 }
 
-func GetTranscodedAudioRepresentations(stream Stream) []StreamRepresentation {
-	representations := []StreamRepresentation{}
-
+func GetTranscodedAudioRepresentation(stream Stream, representationId string, encoderParams EncoderParams) StreamRepresentation {
 	numFullSegments := int64(stream.TotalDuration / transcodedAudioSegmentDuration)
 	segmentStartTimestamps := []time.Duration{}
 	for i := int64(0); i < numFullSegments+1; i++ {
@@ -87,19 +86,15 @@ func GetTranscodedAudioRepresentations(stream Stream) []StreamRepresentation {
 			time.Duration(i*int64(transcodedAudioSegmentDuration)))
 	}
 
-	for representationId, encoderParams := range AudioEncoderPresets {
-		representations = append(representations, StreamRepresentation{
-			Stream: stream,
-			Representation: Representation{
-				RepresentationId: representationId,
-				BitRate:          int64(encoderParams.audioBitrate),
-				// TODO(Leon Handreke): Container/Codecs belongs in encoderParams
-				Container:  "audio/mp4",
-				Codecs:     "mp4a.40.2",
-				transcoded: true,
-			},
-			SegmentStartTimestamps: segmentStartTimestamps,
-		})
+	return StreamRepresentation{
+		Stream: stream,
+		Representation: Representation{
+			RepresentationId: representationId,
+			BitRate:          encoderParams.audioBitrate,
+			Container:        "audio/mp4",
+			Codecs:           encoderParams.Codecs,
+			transcoded:       true,
+		},
+		SegmentStartTimestamps: segmentStartTimestamps,
 	}
-	return representations
 }

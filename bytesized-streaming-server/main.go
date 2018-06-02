@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/peak6/envflag"
@@ -18,7 +17,6 @@ import (
 	"os/signal"
 	"path"
 	"strconv"
-	"strings"
 	"sync"
 
 	"time"
@@ -120,7 +118,8 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, r)
 	}
 
-	subtitleStreamRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -132,7 +131,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 				AudioCodecs: "mp4a.40.2",
 			},
 		},
-		subtitleStreamRepresentations)
+		subtitleRepresentations)
 	w.Write([]byte(manifest))
 }
 
@@ -162,7 +161,8 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, transmuxedStream)
 	}
 
-	subtitleStreamRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -174,24 +174,31 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 				AudioCodecs: "mp4a.40.2",
 			},
 		},
-		subtitleStreamRepresentations)
+		subtitleRepresentations)
 	w.Write([]byte(manifest))
 }
 
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
+	// TODO(Leon Handreke): Error handling
 	audioStreams, _ := ffmpeg.GetAudioStreams(mediaFilePath)
-	subtitleRepresentations, _ := ffmpeg.GetSubtitleStreamRepresentations(mediaFilePath)
 
 	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
 	if err != nil {
 		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	videoRepresentations := ffmpeg.GetTranscodedVideoRepresentations(videoStream)
+
+	videoRepresentation1, _ := ffmpeg.StreamRepresentationFromRepresentationId(
+		videoStream, "preset:480-1000k-video")
+	videoRepresentation2, _ := ffmpeg.StreamRepresentationFromRepresentationId(
+		videoStream, "preset:720-5000k-video")
+	videoRepresentations := []ffmpeg.StreamRepresentation{
+		videoRepresentation1, videoRepresentation2}
 
 	representationCombinations := []hls.RepresentationCombination{}
+
 	for i, r := range videoRepresentations {
 		// NOTE(Leon Handreke): This will lead to multiple identical audio groups but whatevs
 		audioGroupName := "audio-group-" + strconv.Itoa(i)
@@ -201,20 +208,21 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 			AudioCodecs:    "mp4a.40.2",
 		}
 		for _, s := range audioStreams {
-			audioRepresentations := ffmpeg.GetTranscodedAudioRepresentations(s)
-
-			// Lowest audio for lowest video streams and so forth
-			// Once we run out of audio, just use the highest one.
-			// TODO(Leon Handreke): Do something more sophisticated here instead of relying on
-			// the order of the StreamRepresentations
-			audioRepresentationIdx := i
-			if audioRepresentationIdx > len(audioRepresentations)-1 {
-				audioRepresentationIdx = len(audioRepresentations) - 1
+			var audioRepresentation ffmpeg.StreamRepresentation
+			if i == 0 {
+				audioRepresentation, _ = ffmpeg.StreamRepresentationFromRepresentationId(
+					s, "preset:64k-audio")
+			} else {
+				audioRepresentation, _ = ffmpeg.StreamRepresentationFromRepresentationId(
+					s, "preset:128k-audio")
 			}
-			c.AudioStreams = append(c.AudioStreams, audioRepresentations[audioRepresentationIdx])
+			c.AudioStreams = append(c.AudioStreams, audioRepresentation)
 		}
 		representationCombinations = append(representationCombinations, c)
 	}
+
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		representationCombinations, subtitleRepresentations)
@@ -229,11 +237,12 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	stream, err := findStream(
-		streamKey,
+	stream, err := ffmpeg.GetStream(streamKey)
+	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
+		stream,
 		mux.Vars(r)["representationId"])
 
-	manifest := hls.BuildTranscodingMediaPlaylistFromFile(stream)
+	manifest := hls.BuildTranscodingMediaPlaylistFromFile(streamRepresentation)
 	w.Write([]byte(manifest))
 }
 
@@ -250,13 +259,13 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	stream, err := findStream(
-		streamKey,
+	stream, err := ffmpeg.GetStream(streamKey)
+	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
+		stream,
 		mux.Vars(r)["representationId"])
+	session, _ := getOrStartTranscodingSession(streamRepresentation, segmentId)
 
-	session, _ := getOrStartTranscodingSession(stream, int64(segmentId))
-
-	segmentPath, err := session.GetSegment(int64(segmentId), 20*time.Second)
+	segmentPath, err := session.GetSegment(segmentId, 20*time.Second)
 	http.ServeFile(w, r, segmentPath)
 }
 
@@ -271,7 +280,7 @@ func getSessions(streamKey ffmpeg.StreamKey, representationId string) []*ffmpeg.
 	return matching
 }
 
-func getOrStartTranscodingSession(stream ffmpeg.StreamRepresentation, segmentId int64) (*ffmpeg.TranscodingSession, error) {
+func getOrStartTranscodingSession(stream ffmpeg.StreamRepresentation, segmentId int) (*ffmpeg.TranscodingSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
@@ -289,34 +298,10 @@ func getOrStartTranscodingSession(stream ffmpeg.StreamRepresentation, segmentId 
 
 	if s == nil {
 		var err error
-		if stream.Representation.RepresentationId == "direct" {
-			s, err = ffmpeg.NewTransmuxingSession(stream, os.TempDir(), segmentId)
-		} else {
-			if strings.Contains(stream.Representation.RepresentationId, "video") {
-				if encoderParams, ok := ffmpeg.VideoEncoderPresets[representationId]; ok {
-					s, err = ffmpeg.NewVideoTranscodingSession(
-						stream, os.TempDir(), segmentId, encoderParams)
-				} else {
-					return nil, fmt.Errorf("No such encoder preset %s", representationId)
-				}
-			}
-			if strings.Contains(representationId, "audio") {
-				if encoderParams, ok := ffmpeg.AudioEncoderPresets[representationId]; ok {
-					s, err = ffmpeg.NewAudioTranscodingSession(
-						stream, os.TempDir(), segmentId, encoderParams)
-				} else {
-					return nil, fmt.Errorf("No such encoder preset %s", representationId)
-				}
-			}
-			if strings.Contains(representationId, "webvtt") {
-				s, err = ffmpeg.NewSubtitleSession(stream, os.TempDir())
-			}
-
-		}
+		s, err = ffmpeg.NewTranscodingSession(stream, segmentId)
 		if err != nil {
 			return nil, err
 		}
-
 		sessions = append(sessions, s)
 		s.Start()
 	}
@@ -332,11 +317,19 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	stream, err := findStream(
-		streamKey,
+	stream, err := ffmpeg.GetStream(streamKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
+		stream,
 		mux.Vars(r)["representationId"])
-	session, err := getOrStartTranscodingSession(stream, 0)
-
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	session, err := getOrStartTranscodingSession(streamRepresentation, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -367,57 +360,4 @@ func buildStreamKey(filename string, streamIdStr string) (ffmpeg.StreamKey, erro
 		StreamId:      int64(streamId),
 		MediaFilePath: getAbsoluteFilepath(filename),
 	}, nil
-}
-
-func findStream(streamKey ffmpeg.StreamKey, representationId string) (ffmpeg.StreamRepresentation, error) {
-	videoStreams, err := ffmpeg.GetVideoStreams(streamKey.MediaFilePath)
-	if err != nil {
-		return ffmpeg.StreamRepresentation{}, err
-	}
-	audioStreams, err := ffmpeg.GetAudioStreams(streamKey.MediaFilePath)
-	if err != nil {
-		return ffmpeg.StreamRepresentation{}, err
-	}
-
-	for _, s := range append(videoStreams, audioStreams...) {
-		if s.StreamKey != streamKey {
-			continue
-		}
-
-		transmuxedStream, err := ffmpeg.GetTransmuxedRepresentation(s)
-		if err != nil {
-			return ffmpeg.StreamRepresentation{}, err
-		}
-		if transmuxedStream.Representation.RepresentationId == representationId {
-			return transmuxedStream, nil
-		}
-
-		transcodedRepresentations := []ffmpeg.StreamRepresentation{}
-		if strings.Contains(representationId, "audio") {
-			transcodedRepresentations = ffmpeg.GetTranscodedAudioRepresentations(s)
-		} else if strings.Contains(representationId, "video") {
-			transcodedRepresentations = ffmpeg.GetTranscodedVideoRepresentations(s)
-		}
-		for _, r := range transcodedRepresentations {
-			if r.Representation.RepresentationId == representationId {
-				return r, nil
-			}
-		}
-	}
-
-	subtitleStreams, err := ffmpeg.GetSubtitleStreamRepresentations(streamKey.MediaFilePath)
-	if err != nil {
-		return ffmpeg.StreamRepresentation{}, err
-	}
-	for _, s := range subtitleStreams {
-		if s.Stream.StreamKey != streamKey {
-			continue
-		}
-		return s, nil
-	}
-
-	return ffmpeg.StreamRepresentation{},
-		fmt.Errorf("No such stream %s/%s found for file %s",
-			streamKey.StreamId, representationId, streamKey.MediaFilePath)
-
 }

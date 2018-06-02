@@ -12,7 +12,7 @@ import (
 )
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
-func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirBase string, segmentOffset int64) (*TranscodingSession, error) {
+func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirBase string, segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -21,7 +21,7 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 
 	startTimestamp := streamRepresentation.SegmentStartTimestamps[segmentOffset]
 	var endTimestamp time.Duration
-	if segmentOffset+segmentsPerSession >= int64(len(streamRepresentation.SegmentStartTimestamps)) {
+	if segmentOffset+segmentsPerSession >= len(streamRepresentation.SegmentStartTimestamps) {
 		endTimestamp = streamRepresentation.Stream.TotalDuration
 	} else {
 		endTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
@@ -63,7 +63,7 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 			RepresentationId: "direct",
 			Container:        "video/mp4",
 			Codecs:           stream.Codecs,
-			BitRate:          stream.BitRate,
+			BitRate:          int(stream.BitRate),
 			transmuxed:       true,
 		},
 	}
