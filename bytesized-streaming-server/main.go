@@ -90,7 +90,6 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
 
 	playableCodecs := r.URL.Query()["playableCodecs"]
-	// TODO(Leon Handreke): Get this from the client
 	capabilities := ffmpeg.ClientCodecCapabilities{
 		PlayableCodecs: playableCodecs,
 	}
