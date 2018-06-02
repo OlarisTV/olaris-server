@@ -335,15 +335,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for {
-		initPath := session.InitialSegment()
-		if _, err := os.Stat(initPath); err == nil {
-			http.ServeFile(w, r, initPath)
-			return
-
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
+	http.ServeFile(w, r, session.InitialSegment())
 }
 
 func getAbsoluteFilepath(filename string) string {
