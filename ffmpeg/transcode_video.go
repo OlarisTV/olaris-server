@@ -12,9 +12,9 @@ import (
 )
 
 var VideoEncoderPresets = map[string]EncoderParams{
-	"480-1000k-video":   EncoderParams{height: 480, width: -2, videoBitrate: 1000000},
-	"720-5000k-video":   EncoderParams{height: 720, width: -2, videoBitrate: 5000000},
-	"1080-10000k-video": EncoderParams{height: 1080, width: -2, videoBitrate: 10000000},
+	"480-1000k-video":   {height: 480, width: -2, videoBitrate: 1000000, Codecs: "avc1.64001e"},
+	"720-5000k-video":   {height: 720, width: -2, videoBitrate: 5000000, Codecs: "avc1.64001f"},
+	"1080-10000k-video": {height: 1080, width: -2, videoBitrate: 10000000, Codecs: "avc1.640028"},
 }
 
 // Doesn't have to be the same as audio, but why not.
@@ -23,16 +23,16 @@ const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,
 	outputDirBase string,
-	segmentOffset int64,
-	transcodingParams EncoderParams) (*TranscodingSession, error) {
+	segmentOffset int) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	startDuration := time.Duration(int64(transcodedVideoSegmentDuration) * segmentOffset)
+	startDuration := time.Duration(int64(transcodedVideoSegmentDuration) * int64(segmentOffset))
 	runDuration := segmentsPerSession * transcodedVideoSegmentDuration
+	encoderParams := stream.Representation.encoderParams
 
 	args := []string{
 		// -ss being before -i is important for fast seeking
@@ -41,10 +41,10 @@ func NewVideoTranscodingSession(
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
-		"-c:0", "libx264", "-b:v", strconv.Itoa(transcodingParams.videoBitrate),
+		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
 		"-preset:0", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", transcodedVideoSegmentDuration.Seconds()),
-		"-filter:0", fmt.Sprintf("scale=%d:%d", transcodingParams.width, transcodingParams.height),
+		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
 		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentOffset),
@@ -69,8 +69,10 @@ func NewVideoTranscodingSession(
 	}, nil
 }
 
-func GetTranscodedVideoRepresentations(stream Stream) []StreamRepresentation {
-	representations := []StreamRepresentation{}
+func GetTranscodedVideoRepresentation(
+	stream Stream,
+	representationId string,
+	encoderParams EncoderParams) StreamRepresentation {
 
 	numFullSegments := int64(stream.TotalDuration / transcodedVideoSegmentDuration)
 	segmentStartTimestamps := []time.Duration{}
@@ -79,30 +81,15 @@ func GetTranscodedVideoRepresentations(stream Stream) []StreamRepresentation {
 			time.Duration(i*int64(transcodedVideoSegmentDuration)))
 	}
 
-	for representationId, encoderParams := range VideoEncoderPresets {
-		codecsString := "avc1.64001e"
-		if representationId == "480-1000k-video" {
-			codecsString = "avc1.64001e"
-		}
-		if representationId == "720-5000k-video" {
-			codecsString = "avc1.64001f"
-		}
-		if representationId == "1080-10000k-video" {
-			codecsString = "avc1.640028"
-		}
-
-		representations = append(representations, StreamRepresentation{
-			Stream: stream,
-			Representation: Representation{
-				RepresentationId: representationId,
-				BitRate:          int64(encoderParams.audioBitrate),
-				// TODO(Leon Handreke): Container/Codecs belongs in encoderParams
-				Container:  "video/mp4",
-				Codecs:     codecsString,
-				transcoded: true,
-			},
-			SegmentStartTimestamps: segmentStartTimestamps,
-		})
+	return StreamRepresentation{
+		Stream: stream,
+		Representation: Representation{
+			RepresentationId: representationId,
+			BitRate:          encoderParams.videoBitrate,
+			Container:        "video/mp4",
+			Codecs:           encoderParams.Codecs,
+			transcoded:       true,
+		},
+		SegmentStartTimestamps: segmentStartTimestamps,
 	}
-	return representations
 }
