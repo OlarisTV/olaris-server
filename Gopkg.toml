@@ -52,3 +52,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/ryanbradynd05/go-tmdb"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"

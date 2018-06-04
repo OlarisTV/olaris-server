@@ -57,6 +57,7 @@ var SchemaTxt = `
 		poster_path: String!
 		tmdb_id: Int!
 		type: String!
+		uuid: String!
 	}
 
 	interface Season {
@@ -67,6 +68,7 @@ var SchemaTxt = `
 		poster_path: String!
 		tmdb_id: Int!
 		episodes: [Episode]!
+		uuid: String!
 	}
 
 	interface Episode {
@@ -80,6 +82,7 @@ var SchemaTxt = `
 		file_name: String!
 		# Absolute path to the filesystem
 		file_path: String!
+		uuid: String!
 	}
 
 	# A movie file
@@ -106,6 +109,7 @@ var SchemaTxt = `
 		backdrop_path: String!
 		# ID to retrieve poster
 		poster_path: String!
+		uuid: String!
 	}
 `
 
@@ -189,6 +193,9 @@ type tvSeriesResolver struct {
 func (r *tvSeriesResolver) Name() string {
 	return r.r.Name
 }
+func (r *tvSeriesResolver) UUID() string {
+	return r.r.UUID
+}
 func (r *tvSeriesResolver) Overview() string {
 	return r.r.Overview
 }
@@ -222,6 +229,9 @@ func (r *seasonResolver) Name() string {
 	return r.r.Name
 }
 
+func (r *seasonResolver) UUID() string {
+	return r.r.UUID
+}
 func (r *seasonResolver) Overview() string {
 	return r.r.Overview
 }
@@ -248,6 +258,10 @@ type episodeResolver struct {
 
 func (r *episodeResolver) Name() string {
 	return r.r.Name
+}
+
+func (r *episodeResolver) UUID() string {
+	return r.r.UUID
 }
 
 func (r *episodeResolver) Overview() string {
@@ -278,6 +292,9 @@ type movieResolver struct {
 
 func (r *movieResolver) Title() string {
 	return r.r.Title
+}
+func (r *movieResolver) UUID() string {
+	return r.r.UUID
 }
 func (r *movieResolver) OriginalTitle() string {
 	return r.r.OriginalTitle

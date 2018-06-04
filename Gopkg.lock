@@ -126,6 +126,12 @@
   revision = "bbb88dee73c71a9d3ef1d24d32f7efd3e62c343f"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+
+[[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
@@ -154,11 +160,11 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "89e543239a64caf31d3a6865872ea120b41446df"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5ed634996221159a9c1c3433afc8bab077b2d5468a1605d906fd46604b554328"
+  inputs-digest = "a8a4402dde1ab949dfa869330174adc9fb282c2102e4e6fe338339fe1b655ed7"
   solver-name = "gps-cdcl"
   solver-version = 1

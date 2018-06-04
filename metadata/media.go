@@ -3,6 +3,7 @@ package metadata
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	"github.com/satori/go.uuid"
 	"strconv"
 )
 
@@ -15,7 +16,27 @@ const (
 	MediaTypeOtherMovie
 )
 
+type UUIDable struct {
+	UUID string
+}
+
+func (self *UUIDable) SetUUID() error {
+	uuid, err := uuid.NewV4()
+
+	if err != nil {
+		fmt.Println("Could not generate unique UID", err)
+		return err
+	}
+	self.UUID = uuid.String()
+	return nil
+}
+
+func (self *UUIDable) GetUUID() string {
+	return self.UUID
+}
+
 type MediaItem struct {
+	UUIDable
 	Title        string
 	Year         uint64
 	FileName     string
@@ -46,6 +67,7 @@ func (self *MovieItem) String() string {
 }
 
 type TvSeries struct {
+	UUIDable
 	gorm.Model
 	BackdropPath    string
 	PosterPath      string
@@ -62,6 +84,7 @@ type TvSeries struct {
 }
 
 type TvSeason struct {
+	UUIDable
 	gorm.Model
 	Name             string
 	Overview         string
