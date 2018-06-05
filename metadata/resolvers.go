@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"fmt"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/jinzhu/gorm"
@@ -120,17 +119,16 @@ func InitSchema(ctx *MetadataContext) *graphql.Schema {
 
 type Resolver struct {
 	ctx *MetadataContext
-	db  *gorm.DB
 }
 
 func (r *Resolver) Libraries() []*libraryResolver {
 	var l []*libraryResolver
 	var libraries []Library
-	r.db.Find(&libraries)
+	r.ctx.Db.Find(&libraries)
 	for _, library := range libraries {
 		var movies []MovieItem
 		var mr []*movieResolver
-		r.db.Where("library_id = ?", library.ID).Find(&movies)
+		r.ctx.Db.Where("library_id = ?", library.ID).Find(&movies)
 		for _, movie := range movies {
 			if movie.Title != "" {
 				mov := movieResolver{r: movie}
@@ -154,7 +152,7 @@ func (r *Resolver) Libraries() []*libraryResolver {
 func (r *Resolver) Movies() []*movieResolver {
 	var l []*movieResolver
 	var movies []MovieItem
-	r.db.Find(&movies)
+	r.ctx.Db.Find(&movies)
 	for _, movie := range movies {
 		if movie.Title != "" {
 			mov := movieResolver{r: movie}
@@ -169,21 +167,24 @@ func (r *Resolver) TvSeries() []*tvSeriesResolver {
 	var series []TvSeries
 	r.ctx.Db.Find(&series)
 	for _, serie := range series {
-		var seasons []TvSeason
-		fmt.Println("Looking for seasons for:", serie.ID)
-		r.ctx.Db.Where("tv_series_id = ?", serie.ID).Find(&seasons)
-		for _, season := range seasons {
-			var episodes []TvEpisode
-			r.ctx.Db.Where("tv_season_id = ?", season.ID).Find(&episodes)
-			for _, episode := range episodes {
-				season.EpisodeResolvers = append(season.EpisodeResolvers, &episodeResolver{r: episode})
-			}
-			serie.SeasonResolvers = append(serie.SeasonResolvers, &seasonResolver{r: season})
-		}
-		resolvers = append(resolvers, &tvSeriesResolver{r: serie})
+		serieResolver := CreateSeriesResolver(r.ctx, serie)
+		resolvers = append(resolvers, serieResolver)
 
 	}
 	return resolvers
+}
+func CreateSeriesResolver(ctx *MetadataContext, serie TvSeries) *tvSeriesResolver {
+	var seasons []TvSeason
+	ctx.Db.Where("tv_series_id = ?", serie.ID).Find(&seasons)
+	for _, season := range seasons {
+		var episodes []TvEpisode
+		ctx.Db.Where("tv_season_id = ?", season.ID).Find(&episodes)
+		for _, episode := range episodes {
+			season.EpisodeResolvers = append(season.EpisodeResolvers, &episodeResolver{r: episode})
+		}
+		serie.SeasonResolvers = append(serie.SeasonResolvers, &seasonResolver{r: season})
+	}
+	return &tvSeriesResolver{r: serie}
 }
 
 type tvSeriesResolver struct {
@@ -361,7 +362,7 @@ func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 		FilePath: args.FilePath,
 		Kind:     MediaType(args.Kind),
 	}
-	obj := r.db.Create(&library)
+	obj := r.ctx.Db.Create(&library)
 	var libRes LibRes
 	if obj.Error == nil {
 		r.ctx.RefreshChan <- 1
