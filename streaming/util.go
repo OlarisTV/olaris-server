@@ -1,4 +1,4 @@
-package main
+package streaming
 
 import (
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"

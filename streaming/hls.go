@@ -1,4 +1,4 @@
-package main
+package streaming
 
 import (
 	"github.com/gorilla/mux"
