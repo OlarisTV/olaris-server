@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/ryanbradynd05/go-tmdb"
+	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,18 +17,18 @@ import (
 )
 
 type ImageManager struct {
-	ctx       *MetadataContext
+	ctx       *db.MetadataContext
 	cachePath string
 }
 
-func NewImageManager(ctx *MetadataContext) *ImageManager {
+func NewImageManager(ctx *db.MetadataContext) *ImageManager {
 	// DRY this up (context.go)
 	usr, err := user.Current()
 	if err != nil {
 		fmt.Println("Failed to determine user's home directory: ", err.Error())
 	}
 	cachePath := path.Join(usr.HomeDir, ".config", "bss", "metadb", "cache", "images")
-	EnsurePath(cachePath)
+	helpers.EnsurePath(cachePath)
 	return &ImageManager{ctx: ctx, cachePath: cachePath}
 }
 
@@ -37,7 +39,7 @@ func (self *ImageManager) HttpHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(provider, size, id)
 	folderPath := path.Join(self.cachePath, provider, size)
 	filePath := path.Join(folderPath, id)
-	if FileExists(filePath) {
+	if helpers.FileExists(filePath) {
 		fmt.Println("We have cache")
 		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
@@ -48,7 +50,7 @@ func (self *ImageManager) HttpHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Println("We don't have cache")
 
-		EnsurePath(folderPath)
+		helpers.EnsurePath(folderPath)
 		openFile, err := os.Create(filePath)
 		if err != nil {
 			fmt.Println("Error while creating", filePath, ":", err)

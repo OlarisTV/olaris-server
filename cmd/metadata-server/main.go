@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/resolvers"
 	"log"
 	"net/http"
 )
@@ -13,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	//defer db.Close()
-	ctx := metadata.NewMDContext()
+	ctx := db.NewMDContext()
 	defer ctx.Db.Close()
 	libraryManager := metadata.NewLibraryManager(ctx)
 
@@ -28,9 +30,9 @@ func main() {
 	ctx.RefreshChan = refresh
 	libraryManager.ActivateAll()
 
-	http.Handle("/", http.HandlerFunc(metadata.GraphiQLHandler))
+	http.Handle("/", http.HandlerFunc(resolvers.GraphiQLHandler))
 
-	http.Handle("/query", metadata.NewRelayHandler(ctx))
+	http.Handle("/query", resolvers.NewRelayHandler(ctx))
 
 	go func() {
 		for _ = range refresh {

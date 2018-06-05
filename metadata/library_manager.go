@@ -3,6 +3,7 @@ package metadata
 import (
 	"fmt"
 	"github.com/Jeffail/tunny"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,18 +11,32 @@ import (
 	"strings"
 )
 
+var supportedExtensions = map[string]bool{
+	".mp4": true,
+	".mkv": true,
+	".mov": true,
+	".avi": true,
+}
+
+const (
+	MediaTypeMovie = iota
+	MediaTypeSeries
+	MediaTypeMusic
+	MediaTypeOtherMovie
+)
+
 type LibraryManager struct {
-	ctx  *MetadataContext
+	ctx  *db.MetadataContext
 	pool *tunny.Pool
 }
 
 type EpisodePayload struct {
-	series  TvSeries
-	season  TvSeason
-	episode TvEpisode
+	series  db.TvSeries
+	season  db.TvSeason
+	episode db.TvEpisode
 }
 
-func NewLibraryManager(ctx *MetadataContext) *LibraryManager {
+func NewLibraryManager(ctx *db.MetadataContext) *LibraryManager {
 	manager := LibraryManager{ctx: ctx}
 	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
 		fmt.Println("Starting worker")
@@ -41,7 +56,7 @@ func NewLibraryManager(ctx *MetadataContext) *LibraryManager {
 	return &manager
 }
 
-func (self *LibraryManager) UpdateMD(library *Library) {
+func (self *LibraryManager) UpdateMD(library *db.Library) {
 	switch kind := library.Kind; kind {
 	case MediaTypeMovie:
 		fmt.Println("Updating meta-data for movies")
@@ -52,7 +67,7 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 	}
 }
 
-func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
+func (self *LibraryManager) UpdateEpisodeMD(tv db.TvSeries, season db.TvSeason, episode db.TvEpisode) error {
 	fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
 	episodeInt, err := strconv.ParseInt(episode.EpisodeNum, 10, 32)
 	if err != nil {
@@ -78,11 +93,11 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 }
 
 func (self *LibraryManager) UpdateEpisodesMD() error {
-	episodes := []TvEpisode{}
+	episodes := []db.TvEpisode{}
 	self.ctx.Db.Where("tmdb_id = ?", 0).Find(&episodes)
 	for _, episode := range episodes {
-		var season TvSeason
-		var tv TvSeries
+		var season db.TvSeason
+		var tv db.TvSeries
 		self.ctx.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
 		self.ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
 		go func() {
@@ -93,10 +108,10 @@ func (self *LibraryManager) UpdateEpisodesMD() error {
 }
 
 func (self *LibraryManager) UpdateSeasonMD() error {
-	seasons := []TvSeason{}
+	seasons := []db.TvSeason{}
 	self.ctx.Db.Where("tmdb_id = ?", 0).Find(&seasons)
 	for _, season := range seasons {
-		var tv TvSeries
+		var tv db.TvSeries
 		self.ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
 
 		fmt.Printf("Grabbing meta-data for season %d of series '%s'\n", season.SeasonNumber, tv.Name)
@@ -116,8 +131,8 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 	return nil
 }
 
-func (self *LibraryManager) UpdateTvMD(library *Library) error {
-	series := []TvSeries{}
+func (self *LibraryManager) UpdateTvMD(library *db.Library) error {
+	series := []db.TvSeries{}
 	self.ctx.Db.Where("tmdb_id = ?", 0).Find(&series)
 	for _, serie := range series {
 		fmt.Println("Looking up meta-data for series:", serie.Name)
@@ -154,7 +169,7 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 
 	self.UpdateSeasonMD()
 	self.UpdateEpisodesMD()
-	//episodes := []TvEpisode{}
+	//episodes := []db.TvEpisode{}
 	//self.ctx.Db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&episodes)
 	//for _, episode := range episodes {
 	//}
@@ -162,8 +177,8 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 	return nil
 }
 
-func (self *LibraryManager) UpdateMovieMD(library *Library) error {
-	movies := []MovieItem{}
+func (self *LibraryManager) UpdateMovieMD(library *db.Library) error {
+	movies := []db.MovieItem{}
 	self.ctx.Db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&movies)
 	for _, movie := range movies {
 		fmt.Printf("Attempting to fetch metadata for '%s'\n", movie.Title)
@@ -200,7 +215,7 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 	return nil
 }
 
-func (self *LibraryManager) Probe(library *Library) {
+func (self *LibraryManager) Probe(library *db.Library) {
 	switch kind := library.Kind; kind {
 	case MediaTypeMovie:
 		fmt.Println("Probing for movies")
@@ -211,11 +226,11 @@ func (self *LibraryManager) Probe(library *Library) {
 	}
 }
 
-func (self *LibraryManager) ProbeSeries(library *Library) {
+func (self *LibraryManager) ProbeSeries(library *db.Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			count := 0
-			self.ctx.Db.Where("file_path= ?", walkPath).Find(&TvEpisode{}).Count(&count)
+			self.ctx.Db.Where("file_path= ?", walkPath).Find(&db.TvEpisode{}).Count(&count)
 			if count == 0 {
 				fileInfo, err := os.Stat(walkPath)
 
@@ -250,7 +265,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 					season := res[2]
 					episode := res[3]
 					fmt.Printf("Found '%s' season %s episode %s\n", title, season, episode)
-					mi := MediaItem{
+					mi := db.MediaItem{
 						FileName:  fileInfo.Name(),
 						FilePath:  walkPath,
 						Size:      fileInfo.Size(),
@@ -258,18 +273,18 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 						LibraryID: library.ID,
 						Year:      yearInt,
 					}
-					var tv TvSeries
-					var tvs TvSeason
+					var tv db.TvSeries
+					var tvs db.TvSeason
 
 					seasonInt, err := strconv.ParseInt(season, 10, 32)
 					if err != nil {
 						fmt.Println("Could not parse season:", err)
 					}
 
-					self.ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title, FirstAirYear: yearInt})
-					self.ctx.Db.FirstOrCreate(&tvs, TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
+					self.ctx.Db.FirstOrCreate(&tv, db.TvSeries{Name: title, FirstAirYear: yearInt})
+					self.ctx.Db.FirstOrCreate(&tvs, db.TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
 
-					ep := TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
+					ep := db.TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
 					self.ctx.Db.Create(&ep)
 				}
 			}
@@ -281,7 +296,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 	}
 }
 
-func (self *LibraryManager) ProbeMovies(library *Library) {
+func (self *LibraryManager) ProbeMovies(library *db.Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		var title string
 		var year uint64
@@ -291,7 +306,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 		}
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			count := 0
-			self.ctx.Db.Where("file_path= ?", walkPath).Find(&MovieItem{}).Count(&count)
+			self.ctx.Db.Where("file_path= ?", walkPath).Find(&db.MovieItem{}).Count(&count)
 			if count == 0 {
 				fileInfo, err := os.Stat(walkPath)
 
@@ -331,7 +346,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 					fmt.Println("attempted to find some stuff", title, year)
 				}
 
-				mi := MediaItem{
+				mi := db.MediaItem{
 					FileName:  fileInfo.Name(),
 					FilePath:  walkPath,
 					Size:      fileInfo.Size(),
@@ -339,7 +354,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 					Year:      year,
 					LibraryID: library.ID,
 				}
-				movie := MovieItem{MediaItem: mi}
+				movie := db.MovieItem{MediaItem: mi}
 				fmt.Println(movie.String())
 				self.ctx.Db.Create(&movie)
 			} else {
@@ -356,20 +371,9 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 
 	}
 }
-func (self *LibraryManager) AllLibraries() []Library {
-	var libraries []Library
-	self.ctx.Db.Find(&libraries)
-	return libraries
-}
-
-func (self *LibraryManager) AddLibrary(name string, filePath string) {
-	fmt.Printf("Add library '%s' with path '%s'", name, filePath)
-	lib := Library{Name: name, FilePath: filePath}
-	self.ctx.Db.Create(&lib)
-}
 
 func (self *LibraryManager) ActivateAll() {
-	for _, lib := range self.AllLibraries() {
+	for _, lib := range db.AllLibraries() {
 		fmt.Println("Scanning library:", lib.Name, lib.FilePath)
 		self.Probe(&lib)
 

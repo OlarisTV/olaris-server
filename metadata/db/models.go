@@ -1,4 +1,4 @@
-package metadata
+package db
 
 import (
 	"fmt"
@@ -8,14 +8,6 @@ import (
 )
 
 type MediaType int
-
-const (
-	MediaTypeMovie = iota
-	MediaTypeSeries
-	MediaTypeMusic
-	MediaTypeOtherMovie
-)
-
 type UUIDable struct {
 	UUID string
 }
@@ -69,44 +61,28 @@ func (self *MovieItem) String() string {
 type TvSeries struct {
 	UUIDable
 	gorm.Model
-	BackdropPath    string
-	PosterPath      string
-	Name            string
-	Overview        string
-	FirstAirDate    string
-	FirstAirYear    uint64
-	OriginalName    string
-	Status          string
-	Seasons         []*TvSeason
-	SeasonResolvers []*seasonResolver
-	TmdbID          int
-	Type            string
+	BackdropPath string
+	PosterPath   string
+	Name         string
+	Overview     string
+	FirstAirDate string
+	FirstAirYear uint64
+	OriginalName string
+	Status       string
+	TmdbID       int
+	Type         string
 }
 
 type TvSeason struct {
 	UUIDable
 	gorm.Model
-	Name             string
-	Overview         string
-	AirDate          string
-	SeasonNumber     int
-	PosterPath       string
-	TvSeries         *TvSeries
-	TvEpisodes       []*TvEpisode
-	TvSeriesID       uint
-	TmdbID           int
-	EpisodeResolvers []*episodeResolver
-}
-
-type TvEpisode struct {
-	gorm.Model
-	MediaItem
-	Name       string
-	SeasonNum  string
-	EpisodeNum string
-	TvSeasonID uint
-	TmdbID     int
-	AirDate    string
-	StillPath  string
-	TvSeason   *TvSeason
+	Name         string
+	Overview     string
+	AirDate      string
+	SeasonNumber int
+	PosterPath   string
+	TvSeries     *TvSeries
+	TvEpisodes   []*TvEpisode
+	TvSeriesID   uint
+	TmdbID       int
 }

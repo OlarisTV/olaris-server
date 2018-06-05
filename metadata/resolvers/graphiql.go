@@ -1,4 +1,4 @@
-package metadata
+package resolvers
 
 var graphiQLpage = []byte(`
 <!DOCTYPE html>
