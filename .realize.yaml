@@ -1,0 +1,23 @@
+settings:
+  legacy:
+    force: false
+    interval: 0s
+schema:
+- name: bytesized-streaming-server
+  path: .
+  commands:
+    build:
+      status: true
+      dir: cmd/bytesized-streaming-server
+    run:
+      status: true
+      path: cmd/bytesized-streaming-server
+  watcher:
+    extensions:
+    - go
+    paths:
+    - /
+    ignored_paths:
+    - .git
+    - .realize
+    - vendor

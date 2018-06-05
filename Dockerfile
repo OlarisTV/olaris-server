@@ -94,17 +94,17 @@ ENV PATH="/usr/lib/go-1.10/bin:${GOPATH}/bin:${PATH}"
 ADD . /go/src/gitlab.com/bytesized/bytesized-streaming
 RUN mkdir /var/media
 
-WORKDIR /go/src/gitlab.com/bytesized/bytesized-streaming/bytesized-streaming-server
+WORKDIR /go/src/gitlab.com/bytesized/bytesized-streaming
 
 RUN go get github.com/jteeuwen/go-bindata/...
 RUN go get github.com/elazarl/go-bindata-assetfs/...
 RUN go generate -x ./...
 
-RUN go get github.com/codegangsta/gin
+RUN go get github.com/oxequa/realize
 
 EXPOSE 8080
 
 ENV LOGTOSTDERR=1
 ENV V=4
-ENTRYPOINT gin --port 8080 run
+ENTRYPOINT realize start
  
