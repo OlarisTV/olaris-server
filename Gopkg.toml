@@ -25,6 +25,9 @@
 #   unused-packages = true
 
 
+# Required by streaming/bindata.go, which is go generated
+required = ["github.com/elazarl/go-bindata-assetfs"]
+
 [[constraint]]
   name = "github.com/elazarl/go-bindata-assetfs"
   version = "1.0.0"
