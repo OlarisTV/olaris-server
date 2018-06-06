@@ -34,7 +34,7 @@ func GetHandler() http.Handler {
 	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/init.mp4", serveInit)
 
 	//TODO: (Maran) This is probably not serving subfolders yet
-	r.Handle("/", http.FileServer(http.Dir(*mediaFilesDir)))
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(*mediaFilesDir))))
 
 	handler := cors.AllowAll().Handler(r)
 	return handler
