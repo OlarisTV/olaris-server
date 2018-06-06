@@ -15,11 +15,13 @@ var SchemaTxt = `
 		movies(): [Movie]!
 		libraries(): [Library]!
 		tvseries(): [TvSeries]!
+		users(): [User]!
 	}
 
 	type Mutation {
 		# Add a library to scan
 		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
+		createUser(login: String!, password: String!, admin: Boolean!): CreateUserResponse!
 	}
 
 	interface LibRes {
@@ -27,9 +29,19 @@ var SchemaTxt = `
 		error: Error
 	}
 
+	interface CreateUserResponse {
+		user: User!
+		error: Error
+	}
+
 	interface Error {
 		message: String!
 		hasError: Boolean!
+	}
+
+	interface User {
+		login: String!
+		admin: Boolean!
 	}
 
 	# A media library

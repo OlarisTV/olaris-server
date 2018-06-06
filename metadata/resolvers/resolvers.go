@@ -75,6 +75,14 @@ type Error struct {
 	hasError bool
 }
 
+func CreateErr(err error) Error {
+	return Error{message: err.Error(), hasError: true}
+}
+
+func CreateErrResolver(err error) *ErrorResolver {
+	return &ErrorResolver{r: Error{message: err.Error(), hasError: true}}
+}
+
 func (r *ErrorResolver) Message() string {
 	return r.r.message
 }
