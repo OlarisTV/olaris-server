@@ -17,8 +17,9 @@ func AllLibraries() []Library {
 	ctx.Db.Find(&libraries)
 	return libraries
 }
-func AddLibrary(name string, filePath string) {
-	fmt.Printf("Add library '%s' with path '%s'", name, filePath)
-	lib := Library{Name: name, FilePath: filePath}
-	ctx.Db.Create(&lib)
+func AddLibrary(name string, filePath string, kind MediaType) (Library, error) {
+	fmt.Printf("Add library '%s' with path '%s', type: '%s'\n", name, filePath)
+	lib := Library{Name: name, FilePath: filePath, Kind: kind}
+	dbObj := ctx.Db.Create(&lib)
+	return lib, dbObj.Error
 }

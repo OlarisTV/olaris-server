@@ -1,6 +1,7 @@
 package resolvers
 
 import (
+	"fmt"
 	"github.com/graph-gophers/graphql-go/relay"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"net/http"
@@ -37,18 +38,14 @@ type CreateLibraryArgs struct {
 }
 
 func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
-	library := db.Library{
-		Name:     args.Name,
-		FilePath: args.FilePath,
-		Kind:     db.MediaType(args.Kind),
-	}
-	obj := r.ctx.Db.Create(&library)
+	library, err := db.AddLibrary(args.Name, args.FilePath, db.MediaType(args.Kind))
 	var libRes LibRes
-	if obj.Error == nil {
+	if err == nil {
+		fmt.Println("LIbrary Added, refreshing")
 		r.ctx.RefreshChan <- 1
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
-		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: obj.Error.Error()}}, Library: &LibraryResolver{Library{}}}
+		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}
 	}
 	return &libResResolv{libRes}
 }

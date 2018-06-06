@@ -6,9 +6,7 @@ import (
 
 func (r *Resolver) Movies() []*MovieResolver {
 	var l []*MovieResolver
-	var movies []db.MovieItem
-	r.ctx.Db.Find(&movies)
-	for _, movie := range movies {
+	for _, movie := range db.FindAllMovies() {
 		if movie.Title != "" {
 			mov := MovieResolver{r: movie}
 			l = append(l, &mov)

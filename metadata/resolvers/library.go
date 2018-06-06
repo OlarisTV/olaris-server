@@ -15,10 +15,8 @@ func (r *Resolver) Libraries() []*LibraryResolver {
 	libraries := db.AllLibraries()
 	for _, library := range libraries {
 		list := Library{library, nil, nil}
-		var movies []db.MovieItem
 		var mr []*MovieResolver
-		r.ctx.Db.Where("library_id = ?", library.ID).Find(&movies)
-		for _, movie := range movies {
+		for _, movie := range db.FindMoviesInLibrary(library.ID) {
 			if movie.Title != "" {
 				mov := MovieResolver{r: movie}
 				mr = append(mr, &mov)
@@ -26,9 +24,7 @@ func (r *Resolver) Libraries() []*LibraryResolver {
 		}
 		list.Movies = mr
 
-		var episodes []db.TvEpisode
-		r.ctx.Db.Where("library_id =?", library.ID).Find(&episodes)
-		for _, episode := range episodes {
+		for _, episode := range db.FindEpisodesInLibrary(library.ID) {
 			list.Episodes = append(list.Episodes, &EpisodeResolver{r: episode})
 		}
 

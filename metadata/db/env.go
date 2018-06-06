@@ -26,6 +26,7 @@ func NewMDContext() *MetadataContext {
 	dbPath := path.Join(usr.HomeDir, ".config", "bss", "metadb")
 	helpers.EnsurePath(dbPath)
 	db, err := gorm.Open("sqlite3", path.Join(dbPath, "bsmdb_data.db"))
+	db.LogMode(true)
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}

@@ -16,25 +16,19 @@ type TvSeries struct {
 
 func (r *Resolver) TvSeries() []*TvSeriesResolver {
 	var resolvers []*TvSeriesResolver
-	var series []db.TvSeries
-	r.ctx.Db.Find(&series)
-	for _, serie := range series {
-		serieResolver := CreateSeriesResolver(r.ctx, serie)
+	for _, serie := range db.FindAllSeries() {
+		serieResolver := CreateSeriesResolver(serie)
 		resolvers = append(resolvers, serieResolver)
 
 	}
 	return resolvers
 }
 
-func CreateSeriesResolver(ctx *db.MetadataContext, dbserie db.TvSeries) *TvSeriesResolver {
+func CreateSeriesResolver(dbserie db.TvSeries) *TvSeriesResolver {
 	serie := TvSeries{dbserie, nil}
-	var seasons []db.TvSeason
-	ctx.Db.Where("tv_series_id = ?", serie.ID).Find(&seasons)
-	for _, dbseason := range seasons {
+	for _, dbseason := range db.FindSeasonsForSeries(serie.ID) {
 		season := TvSeason{dbseason, nil}
-		var episodes []db.TvEpisode
-		ctx.Db.Where("tv_season_id = ?", season.ID).Find(&episodes)
-		for _, episode := range episodes {
+		for _, episode := range db.FindEpisodesForSeason(season.ID) {
 			season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
 		}
 		serie.Seasons = append(serie.Seasons, &SeasonResolver{r: season})
