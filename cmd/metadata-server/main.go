@@ -32,7 +32,7 @@ func main() {
 
 	http.Handle("/", http.HandlerFunc(resolvers.GraphiQLHandler))
 
-	http.Handle("/query", resolvers.NewRelayHandler(ctx))
+	http.Handle("/m/query", resolvers.NewRelayHandler(ctx))
 
 	go func() {
 		for _ = range refresh {
