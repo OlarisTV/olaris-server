@@ -2,7 +2,7 @@
 image: golang:latest
 
 variables:
-  REPO_NAME: gitlab.com/bytesized/bytesized-streaming/
+  REPO_NAME: gitlab.com/bytesized/bytesized-streaming
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
