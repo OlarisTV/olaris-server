@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/peak6/envflag"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/streaming"
 	"net/http"
 	"os"
@@ -26,7 +27,14 @@ func main() {
 	r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 	defer streaming.Cleanup()
 
-	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler()))
+	mctx := db.NewMDContext()
+	defer mctx.Db.Close()
+
+	libraryManager := db.NewLibraryManager()
+	// Scan on start-up
+	go libraryManager.RefreshAll()
+
+	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
 
 	handler := handlers.LoggingHandler(os.Stdout, r)
 

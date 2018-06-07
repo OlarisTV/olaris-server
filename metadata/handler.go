@@ -7,27 +7,13 @@ import (
 	"net/http"
 )
 
-func GetHandler() http.Handler {
-	mctx := db.NewMDContext()
-	refresh := make(chan int)
-	mctx.RefreshChan = refresh
-
-	libraryManager := NewLibraryManager(mctx)
-	libraryManager.ActivateAll()
-
-	imageManager := NewImageManager(mctx)
+func GetHandler(mctx *db.MetadataContext) http.Handler {
+	imageManager := NewImageManager()
 
 	r := mux.NewRouter()
-
 	r.Handle("/query", db.AuthMiddleWare(resolvers.NewRelayHandler(mctx)))
 	r.Handle("/auth", http.HandlerFunc(db.AuthHandler))
 	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
-
-	go func() {
-		for _ = range refresh {
-			libraryManager.ActivateAll()
-		}
-	}()
 
 	return r
 }

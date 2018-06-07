@@ -41,8 +41,8 @@ func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 	library, err := db.AddLibrary(args.Name, args.FilePath, db.MediaType(args.Kind))
 	var libRes LibRes
 	if err == nil {
-		fmt.Println("LIbrary Added, refreshing")
-		r.ctx.RefreshChan <- 1
+		fmt.Println("Scaninng library")
+		go db.NewLibraryManager().RefreshAll()
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}

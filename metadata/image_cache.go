@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
-	_ "github.com/ryanbradynd05/go-tmdb"
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,11 +15,10 @@ import (
 )
 
 type ImageManager struct {
-	ctx       *db.MetadataContext
 	cachePath string
 }
 
-func NewImageManager(ctx *db.MetadataContext) *ImageManager {
+func NewImageManager() *ImageManager {
 	// DRY this up (context.go)
 	usr, err := user.Current()
 	if err != nil {
@@ -29,7 +26,7 @@ func NewImageManager(ctx *db.MetadataContext) *ImageManager {
 	}
 	cachePath := path.Join(usr.HomeDir, ".config", "bss", "metadb", "cache", "images")
 	helpers.EnsurePath(cachePath)
-	return &ImageManager{ctx: ctx, cachePath: cachePath}
+	return &ImageManager{cachePath: cachePath}
 }
 
 func (self *ImageManager) HttpHandler(w http.ResponseWriter, r *http.Request) {

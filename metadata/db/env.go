@@ -10,9 +10,8 @@ import (
 )
 
 type MetadataContext struct {
-	Db          *gorm.DB
-	Tmdb        *tmdb.TMDb
-	RefreshChan chan int
+	Db   *gorm.DB
+	Tmdb *tmdb.TMDb
 }
 
 var ctx *MetadataContext
@@ -31,6 +30,7 @@ func NewMDContext() *MetadataContext {
 
 	apiKey := "0cdacd9ab172ac6ff69c8d84b2c938a8"
 	tmdb := tmdb.Init(apiKey)
+
 	ctx = &MetadataContext{Db: db, Tmdb: tmdb}
 	return ctx
 }
