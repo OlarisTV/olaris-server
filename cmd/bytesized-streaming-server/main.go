@@ -30,10 +30,6 @@ func main() {
 	mctx := db.NewMDContext()
 	defer mctx.Db.Close()
 
-	libraryManager := db.NewLibraryManager()
-	// Scan on start-up
-	go libraryManager.RefreshAll()
-
 	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
 
 	handler := handlers.LoggingHandler(os.Stdout, r)
@@ -49,6 +45,7 @@ func main() {
 	// Wait for termination signal
 	<-stopChan
 
+	mctx.ExitChan <- 1
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	srv.Shutdown(ctx)
 
