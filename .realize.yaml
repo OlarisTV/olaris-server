@@ -6,6 +6,8 @@ schema:
 - name: bytesized-streaming-server
   path: .
   commands:
+    generate:
+      status: true
     build:
       status: true
       dir: cmd/bytesized-streaming-server
