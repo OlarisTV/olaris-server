@@ -31,7 +31,7 @@ func (r *CreateUserResponseResolver) User() *UserResolver {
 }
 
 func (r *Resolver) CreateUser(args *CreateUserArgs) *CreateUserResponseResolver {
-	user, err := db.CreateUser(args.Login, args.Password, args.Admin)
+	user, err := db.CreateUser(args.Login, args.Password, args.Admin, "")
 	if err != nil {
 		res := &CreateUserResponse{Error: CreateErrResolver(err), User: &UserResolver{db.User{}}}
 		return &CreateUserResponseResolver{res}

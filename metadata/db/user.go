@@ -13,13 +13,27 @@ import (
 	"time"
 )
 
+type commonModelFields struct {
+	ID        uint       `gorm:"primary_key" json:"id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
+}
+
 type User struct {
 	UUIDable
+	commonModelFields
+	Login        string `gorm:"not null;unique" json:"login"`
+	Admin        bool   `gorm:"not null" json:"admin"`
+	PasswordHash string `gorm:"not null" json:"-"`
+	Salt         string `gorm:"not null" json:"-"`
+}
+
+type Invite struct {
 	gorm.Model
-	Login        string `gorm:"not null;unique"`
-	Admin        bool   `gorm:"not null"`
-	PasswordHash string `gorm:"not null"`
-	Salt         string `gorm:"not null"`
+	Code   string
+	UserID uint
+	User   User
 }
 
 func (self *User) ValidPassword(password string) bool {
@@ -47,7 +61,8 @@ func (self *User) HashPassword(password string, salt string) string {
 }
 
 // TODO Maran: Create a way to return all errors at once
-func CreateUser(login string, password string, admin bool) (User, error) {
+func CreateUser(login string, password string, admin bool, code string) (User, error) {
+	invite := Invite{}
 	if len(login) < 3 {
 		return User{}, fmt.Errorf("Login should be at least 3 characters")
 	}
@@ -55,10 +70,25 @@ func CreateUser(login string, password string, admin bool) (User, error) {
 	if len(password) < 8 {
 		return User{}, fmt.Errorf("Password should be at least 8 characters")
 	}
+	if code != "" {
+		fmt.Println("Invite code supplied, validation presence")
+		count := 0
+		ctx.Db.Where("code = ? and user_id IS NULL", code).Find(&invite).Count(&count)
+		if count != 0 {
+			fmt.Println("Valid and unused code, creating account")
+		} else {
+			fmt.Println("Not a valid code or already used")
+			return User{}, fmt.Errorf("Invite code invalid")
+		}
+	}
 
 	user := User{Login: login, Admin: admin}
 	user.SetPassword(password, randString(24))
 	dbobj := ctx.Db.Create(&user)
+	if !ctx.Db.NewRecord(&user) {
+		invite.UserID = user.ID
+		ctx.Db.Save(&invite)
+	}
 	return user, dbobj.Error
 }
 
@@ -108,11 +138,6 @@ func (self *User) CreateJWT() (string, error) {
 	}
 
 	return ss, nil
-}
-
-// This is so we can invite users later
-type InviteLink struct {
-	Code string
 }
 
 // Plucked from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang

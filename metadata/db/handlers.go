@@ -1,8 +1,10 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -51,4 +53,54 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(token))
 		}
 	}
+}
+
+func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	ur := UserRequest{}
+	b, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		fmt.Println("Could not read request body")
+		return
+	}
+
+	if err := json.Unmarshal(b, &ur); err != nil {
+		fmt.Println("Could not parse request")
+		return
+	}
+
+	if ur.Code == "" {
+		WriteError("No invite code supplied", w)
+		return
+	}
+
+	user, err := CreateUser(ur.Login, ur.Password, ur.Admin, ur.Code)
+	if err != nil {
+		WriteError(err.Error(), w)
+		return
+	} else {
+		jre, _ := json.Marshal(user)
+		w.Write(jre)
+
+	}
+}
+
+type UserRequest struct {
+	Login    string `json:"login"`
+	Admin    bool   `json:"admin"`
+	Code     string `json:"code"`
+	Password string `json:"password"`
+}
+type UserRequestRes struct {
+	HasError bool   `json:"has_error"`
+	Message  string `json:"message"`
+}
+
+func WriteError(errStr string, w http.ResponseWriter) {
+	urr := UserRequestRes{true, errStr}
+	jres, err := json.Marshal(urr)
+	if err != nil {
+		fmt.Println("error during error creation :p")
+	}
+	w.Write(jres)
 }

@@ -12,7 +12,11 @@ func GetHandler(mctx *db.MetadataContext) http.Handler {
 
 	r := mux.NewRouter()
 	r.Handle("/query", db.AuthMiddleWare(resolvers.NewRelayHandler(mctx)))
-	r.Handle("/auth", http.HandlerFunc(db.AuthHandler))
+
+	r.Handle("/v1/auth", http.HandlerFunc(db.AuthHandler))
+
+	r.Handle("/v1/user", http.HandlerFunc(db.CreateUserHandler))
+
 	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
 
 	return r

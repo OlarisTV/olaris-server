@@ -9,7 +9,7 @@ import (
 
 type MediaType int
 type UUIDable struct {
-	UUID string
+	UUID string `json:"uuid"`
 }
 
 func (self *UUIDable) SetUUID() error {
