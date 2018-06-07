@@ -106,5 +106,4 @@ EXPOSE 8080
 
 ENV LOGTOSTDERR=1
 ENV V=4
-ENTRYPOINT realize start
- 
+ENTRYPOINT realize start --generate
