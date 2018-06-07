@@ -17,5 +17,5 @@ func GetSimilarEncoderParams(stream Stream) (EncoderParams, error) {
 		}, nil
 
 	}
-	return EncoderParams{}, fmt.Errorf("Cannot produce similar transcoded version for %s", stream)
+	return EncoderParams{}, fmt.Errorf("Cannot produce similar transcoded version for %s", stream.StreamType)
 }

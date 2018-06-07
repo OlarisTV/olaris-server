@@ -117,7 +117,7 @@ func GetTransmuxedOrTranscodedRepresentation(
 		}
 	}
 	return StreamRepresentation{},
-		fmt.Errorf("Could not find appropriate representation for stream %s", stream)
+		fmt.Errorf("Could not find appropriate representation for stream %s", stream.StreamType)
 }
 
 func StreamRepresentationFromRepresentationId(
@@ -158,7 +158,7 @@ func StreamRepresentationFromRepresentationId(
 	}
 
 	return StreamRepresentation{},
-		fmt.Errorf("No such stream %s/%s found for file %s",
+		fmt.Errorf("No such stream %d/%s found for file %s",
 			s.StreamId, representationId, s.MediaFilePath)
 }
 
@@ -187,6 +187,4 @@ func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingS
 		}
 		return session, nil
 	}
-	return nil, fmt.Errorf("Failed to spawn TranscodingSession for %s", s)
-
 }

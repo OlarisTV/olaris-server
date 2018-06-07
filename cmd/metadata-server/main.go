@@ -35,6 +35,7 @@ func main() {
 	fmt.Println("Stopping services and cleaning up")
 
 	mctx.ExitChan <- 1
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	srv.Shutdown(ctx)
 }

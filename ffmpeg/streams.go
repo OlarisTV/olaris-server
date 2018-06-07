@@ -149,5 +149,5 @@ func GetStream(streamKey StreamKey) (Stream, error) {
 			return s, nil
 		}
 	}
-	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey)
+	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey.MediaFilePath)
 }

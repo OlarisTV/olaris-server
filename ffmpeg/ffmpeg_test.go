@@ -20,7 +20,7 @@ func TestTranscodingSession_AvailableSegments(t *testing.T) {
 
 	s := TranscodingSession{outputDir: tempDir}
 
-	availableSegments, _ := s.AvailableSegments("video")
+	availableSegments, _ := s.AvailableSegments()
 	fmt.Println(availableSegments)
 	assert.Equal(t, map[int]string{0: seg1, 1: seg2, 2: seg3, 4: seg5}, availableSegments)
 }

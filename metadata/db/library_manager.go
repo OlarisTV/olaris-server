@@ -99,14 +99,14 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 func (self *LibraryManager) UpdateEpisodesMD() error {
 	episodes := []TvEpisode{}
 	ctx.Db.Where("tmdb_id = ?", 0).Find(&episodes)
-	for _, episode := range episodes {
-		var season TvSeason
-		var tv TvSeries
-		ctx.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
-		ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
-		go func() {
-			self.pool.Process(EpisodePayload{season: season, series: tv, episode: episode})
-		}()
+	for i := range episodes {
+		go func(episode *TvEpisode) {
+			var season TvSeason
+			var tv TvSeries
+			ctx.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
+			ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
+			self.pool.Process(EpisodePayload{season: season, series: tv, episode: *episode})
+		}(&episodes[i])
 	}
 	return nil
 }
