@@ -14,6 +14,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   name = "github.com/elazarl/go-bindata-assetfs"
   packages = ["."]
   revision = "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43"
@@ -165,6 +171,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a8a4402dde1ab949dfa869330174adc9fb282c2102e4e6fe338339fe1b655ed7"
+  inputs-digest = "1c8558c2841fa6fa06c570b34c5e346ab2828b30315ccf42ceff3d3bb0522a48"
   solver-name = "gps-cdcl"
   solver-version = 1

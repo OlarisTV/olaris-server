@@ -3,7 +3,16 @@ package helpers
 import (
 	"fmt"
 	"os"
+	"os/user"
 )
+
+func GetHome() string {
+	usr, err := user.Current()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to determine user's home directory, error: '%s'\n", err.Error()))
+	}
+	return usr.HomeDir
+}
 
 func EnsurePath(pathName string) error {
 	fmt.Printf("Ensuring folder %s exists.\n", pathName)

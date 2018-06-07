@@ -19,20 +19,15 @@ func main() {
 	defer ctx.Db.Close()
 	libraryManager := metadata.NewLibraryManager(ctx)
 
-	/*
-		var count int
-		ctx.Db.Table("libraries").Count(&count)
-		if count == 0 {
-			libraryManager.AddLibrary("Movies", *mediaFilesDir)
-		}*/
-
 	refresh := make(chan int)
 	ctx.RefreshChan = refresh
 	libraryManager.ActivateAll()
 
 	http.Handle("/", http.HandlerFunc(resolvers.GraphiQLHandler))
 
-	http.Handle("/m/query", resolvers.NewRelayHandler(ctx))
+	http.Handle("/auth", http.HandlerFunc(db.AuthHandler))
+
+	http.Handle("/m/query", db.AuthMiddleWare(resolvers.NewRelayHandler(ctx)))
 
 	go func() {
 		for _ = range refresh {

@@ -4,8 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
+	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"io/ioutil"
 	"math/rand"
+	"path"
+	"time"
 )
 
 type User struct {
@@ -17,14 +22,28 @@ type User struct {
 	Salt         string `gorm:"not null"`
 }
 
+func (self *User) ValidPassword(password string) bool {
+	ctx.Db.Where("login = ?", self.Login).Find(self)
+	if self.HashPassword(password, self.Salt) == self.PasswordHash {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (self *User) SetPassword(password string, salt string) string {
 	self.Salt = salt
-	h := sha256.New()
-	h.Write([]byte(self.Salt))
-	h.Write([]byte(password))
-	self.PasswordHash = hex.EncodeToString(h.Sum(nil))
+	self.PasswordHash = self.HashPassword(password, self.Salt)
 
 	return self.PasswordHash
+}
+
+func (self *User) HashPassword(password string, salt string) string {
+	h := sha256.New()
+	h.Write([]byte(salt))
+	h.Write([]byte(password))
+	hashedStr := hex.EncodeToString(h.Sum(nil))
+	return hashedStr
 }
 
 // TODO Maran: Create a way to return all errors at once
@@ -46,6 +65,49 @@ func CreateUser(login string, password string, admin bool) (User, error) {
 func AllUsers() (users []User) {
 	ctx.Db.Find(&users)
 	return users
+}
+
+type UserClaims struct {
+	Login string `json:"login"`
+	Admin bool   `json:"admin"`
+	jwt.StandardClaims
+}
+
+// TODO Maran: Rotate secrets
+func TokenSecret() (string, error) {
+	tokenPath := path.Join(helpers.GetHome(), ".config", "bss", "token.secret")
+	if helpers.FileExists(tokenPath) {
+		secret, err := ioutil.ReadFile(tokenPath)
+		if err != nil {
+			return "", err
+		} else {
+			return string(secret), nil
+		}
+	} else {
+		secret := randString(32)
+		ioutil.WriteFile(tokenPath, []byte(secret), 0700)
+		return secret, nil
+	}
+}
+
+// TODO Maran: Consider setting the jti if we want to increase security.
+func (self *User) CreateJWT() (string, error) {
+	expiresAt := time.Now().Add(time.Hour * 24).Unix()
+
+	claims := UserClaims{self.Login, self.Admin, jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"}}
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	secret, err := TokenSecret()
+	if err != nil {
+		return "", err
+	}
+
+	ss, err := t.SignedString([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+
+	return ss, nil
 }
 
 // This is so we can invite users later

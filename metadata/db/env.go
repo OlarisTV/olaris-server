@@ -6,7 +6,6 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/ryanbradynd05/go-tmdb"
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
-	"os/user"
 	"path"
 )
 
@@ -19,11 +18,7 @@ type MetadataContext struct {
 var ctx *MetadataContext
 
 func NewMDContext() *MetadataContext {
-	usr, err := user.Current()
-	if err != nil {
-		fmt.Println("Failed to determine user's home directory: ", err.Error())
-	}
-	dbPath := path.Join(usr.HomeDir, ".config", "bss", "metadb")
+	dbPath := path.Join(helpers.GetHome(), ".config", "bss", "metadb")
 	helpers.EnsurePath(dbPath)
 	db, err := gorm.Open("sqlite3", path.Join(dbPath, "bsmdb_data.db"))
 	db.LogMode(true)
