@@ -42,7 +42,7 @@ func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 	var libRes LibRes
 	if err == nil {
 		fmt.Println("Scaninng library")
-		go db.NewLibraryManager().RefreshAll()
+		go db.NewLibraryManager(nil).RefreshAll()
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}

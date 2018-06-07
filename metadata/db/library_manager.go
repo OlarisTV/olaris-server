@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/Jeffail/tunny"
+	"github.com/fsnotify/fsnotify"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"os"
 	"path/filepath"
@@ -26,7 +27,8 @@ const (
 )
 
 type LibraryManager struct {
-	pool *tunny.Pool
+	pool    *tunny.Pool
+	watcher *fsnotify.Watcher
 }
 
 type EpisodePayload struct {
@@ -35,8 +37,11 @@ type EpisodePayload struct {
 	episode TvEpisode
 }
 
-func NewLibraryManager() *LibraryManager {
+func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	manager := LibraryManager{}
+	if watcher != nil {
+		manager.watcher = watcher
+	}
 	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
 		fmt.Println("Starting worker")
 		ep, ok := payload.(EpisodePayload)
@@ -290,68 +295,87 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 		fmt.Println(err)
 	}
 }
+func (self *LibraryManager) AddWatcher(filePath string) {
+	err := self.watcher.Add(filePath)
+	if err != nil {
+		fmt.Println("FSNOTIFY FAILURE:", err)
+	}
+}
+
+func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
+	fmt.Println("Scanning file:", filePath)
+	var title string
+	var year uint64
+	fileInfo, err := os.Stat(filePath)
+
+	if err != nil {
+		// This catches broken symlinks
+		if _, ok := err.(*os.PathError); ok {
+			fmt.Println("Got an error while statting file:", err)
+			return nil
+		}
+		return err
+	}
+	switch kind := library.Kind; kind {
+	case MediaTypeMovie:
+
+		movieRe := regexp.MustCompile("(.*)\\((\\d{4})\\)")
+		res := movieRe.FindStringSubmatch(fileInfo.Name())
+
+		if len(res) > 1 {
+			title = helpers.Sanitize(res[1])
+		}
+		if len(res) > 2 {
+			year, err = strconv.ParseUint(res[2], 10, 32)
+			if err != nil {
+				fmt.Println("Could not parse year:", err)
+			}
+		}
+
+		if title == "" {
+			basename := fileInfo.Name()
+			name := strings.TrimSuffix(basename, filepath.Ext(basename))
+			fmt.Println("Could not parse title for:")
+			fmt.Println("Trying heavy sanitizing")
+			var yearStr string
+			title, yearStr = helpers.HeavySanitize(name)
+			year, err = strconv.ParseUint(yearStr, 10, 32)
+			if err != nil {
+				fmt.Println("Could not parse year:", err)
+			}
+			fmt.Println("attempted to find some stuff", title, year)
+		}
+
+		mi := MediaItem{
+			FileName:  fileInfo.Name(),
+			FilePath:  filePath,
+			Size:      fileInfo.Size(),
+			Title:     title,
+			Year:      year,
+			LibraryID: library.ID,
+		}
+		movie := MovieItem{MediaItem: mi}
+		fmt.Println(movie.String())
+		ctx.Db.Create(&movie)
+	}
+	return nil
+}
 
 func (self *LibraryManager) ProbeMovies(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-		var title string
-		var year uint64
 
 		if err != nil {
 			return err
 		}
 		if supportedExtensions[filepath.Ext(walkPath)] {
+			// Add FSNOTIFY Watcher
+			self.AddWatcher(walkPath)
+			self.AddWatcher(filepath.Dir(walkPath))
+
 			count := 0
 			ctx.Db.Where("file_path= ?", walkPath).Find(&MovieItem{}).Count(&count)
 			if count == 0 {
-				fileInfo, err := os.Stat(walkPath)
-
-				if err != nil {
-					// This catches broken symlinks
-					if _, ok := err.(*os.PathError); ok {
-						fmt.Println("Got an error while statting file:", err)
-						return nil
-					}
-					return err
-				}
-
-				movieRe := regexp.MustCompile("(.*)\\((\\d{4})\\)")
-				res := movieRe.FindStringSubmatch(fileInfo.Name())
-
-				if len(res) > 1 {
-					title = helpers.Sanitize(res[1])
-				}
-				if len(res) > 2 {
-					year, err = strconv.ParseUint(res[2], 10, 32)
-					if err != nil {
-						fmt.Println("Could not parse year:", err)
-					}
-				}
-
-				if title == "" {
-					basename := fileInfo.Name()
-					name := strings.TrimSuffix(basename, filepath.Ext(basename))
-					fmt.Println("Could not parse title for:")
-					fmt.Println("Trying heavy sanitizing")
-					var yearStr string
-					title, yearStr = helpers.HeavySanitize(name)
-					year, err = strconv.ParseUint(yearStr, 10, 32)
-					if err != nil {
-						fmt.Println("Could not parse year:", err)
-					}
-					fmt.Println("attempted to find some stuff", title, year)
-				}
-
-				mi := MediaItem{
-					FileName:  fileInfo.Name(),
-					FilePath:  walkPath,
-					Size:      fileInfo.Size(),
-					Title:     title,
-					Year:      year,
-					LibraryID: library.ID,
-				}
-				movie := MovieItem{MediaItem: mi}
-				fmt.Println(movie.String())
-				ctx.Db.Create(&movie)
+				self.ProbeFile(library, walkPath)
 			} else {
 				fmt.Printf("Path '%s' already exists in library.\n", walkPath)
 			}
