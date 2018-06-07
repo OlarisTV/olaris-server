@@ -2,10 +2,8 @@ package main
 
 import (
 	"flag"
+	"github.com/gorilla/mux"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/resolvers"
-	"log"
 	"net/http"
 )
 
@@ -14,26 +12,10 @@ var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path used if n
 func main() {
 	flag.Parse()
 
-	//defer db.Close()
-	ctx := db.NewMDContext()
-	defer ctx.Db.Close()
-	libraryManager := metadata.NewLibraryManager(ctx)
+	r := mux.NewRouter()
+	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler()))
 
-	refresh := make(chan int)
-	ctx.RefreshChan = refresh
-	libraryManager.ActivateAll()
+	srv := &http.Server{Addr: ":8080", Handler: r}
+	srv.ListenAndServe()
 
-	http.Handle("/", http.HandlerFunc(resolvers.GraphiQLHandler))
-
-	http.Handle("/auth", http.HandlerFunc(db.AuthHandler))
-
-	http.Handle("/m/query", db.AuthMiddleWare(resolvers.NewRelayHandler(ctx)))
-
-	go func() {
-		for _ = range refresh {
-			libraryManager.ActivateAll()
-		}
-	}()
-
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }

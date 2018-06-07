@@ -9,7 +9,8 @@ import (
 
 func GetHandler() http.Handler {
 	mctx := db.NewMDContext()
-	defer mctx.Db.Close()
+	refresh := make(chan int)
+	mctx.RefreshChan = refresh
 
 	libraryManager := NewLibraryManager(mctx)
 	libraryManager.ActivateAll()
@@ -18,9 +19,15 @@ func GetHandler() http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/query", resolvers.NewRelayHandler(mctx))
+	r.Handle("/query", db.AuthMiddleWare(resolvers.NewRelayHandler(mctx)))
+	r.Handle("/auth", http.HandlerFunc(db.AuthHandler))
 	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
-	r.HandleFunc("/graphiql", http.HandlerFunc(resolvers.GraphiQLHandler))
+
+	go func() {
+		for _ = range refresh {
+			libraryManager.ActivateAll()
+		}
+	}()
 
 	return r
 }
