@@ -232,61 +232,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 			count := 0
 			ctx.Db.Where("file_path= ?", walkPath).Find(&TvEpisode{}).Count(&count)
 			if count == 0 {
-				fileInfo, err := os.Stat(walkPath)
-
-				if err != nil {
-					// This catches broken symlinks
-					if _, ok := err.(*os.PathError); ok {
-						fmt.Println("Got an error while statting file:", err)
-						return nil
-					}
-					return err
-				}
-				var year string
-				fileName := fileInfo.Name()
-				// First figure out if there is a year in there, and if so parse it out.
-				yearRegex := regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?)")
-				ress := yearRegex.FindStringSubmatch(fileInfo.Name())
-				if len(ress) > 1 {
-					year = ress[2]
-					fmt.Println(year)
-					fileName = strings.Replace(fileName, ress[1], "", -1)
-				}
-				seriesRe := regexp.MustCompile("^(.*)S(\\d{2})E(\\d{2})")
-				res := seriesRe.FindStringSubmatch(fileName)
-
-				if len(res) > 2 {
-					yearInt, err := strconv.ParseUint(res[2], 10, 32)
-					if err != nil {
-						fmt.Println("Could not parse year:", err)
-					}
-
-					title := helpers.Sanitize(res[1])
-					season := res[2]
-					episode := res[3]
-					fmt.Printf("Found '%s' season %s episode %s\n", title, season, episode)
-					mi := MediaItem{
-						FileName:  fileInfo.Name(),
-						FilePath:  walkPath,
-						Size:      fileInfo.Size(),
-						Title:     title,
-						LibraryID: library.ID,
-						Year:      yearInt,
-					}
-					var tv TvSeries
-					var tvs TvSeason
-
-					seasonInt, err := strconv.ParseInt(season, 10, 32)
-					if err != nil {
-						fmt.Println("Could not parse season:", err)
-					}
-
-					ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title, FirstAirYear: yearInt})
-					ctx.Db.FirstOrCreate(&tvs, TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
-
-					ep := TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
-					ctx.Db.Create(&ep)
-				}
+				self.ProbeFile(library, walkPath)
 			}
 		}
 		return nil
@@ -317,6 +263,52 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 		return err
 	}
 	switch kind := library.Kind; kind {
+	case MediaTypeSeries:
+		var year string
+		fileName := fileInfo.Name()
+		// First figure out if there is a year in there, and if so parse it out.
+		yearRegex := regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?)")
+		ress := yearRegex.FindStringSubmatch(fileInfo.Name())
+		if len(ress) > 1 {
+			year = ress[2]
+			fmt.Println(year)
+			fileName = strings.Replace(fileName, ress[1], "", -1)
+		}
+		seriesRe := regexp.MustCompile("^(.*)S(\\d{2})E(\\d{2})")
+		res := seriesRe.FindStringSubmatch(fileName)
+
+		if len(res) > 2 {
+			yearInt, err := strconv.ParseUint(res[2], 10, 32)
+			if err != nil {
+				fmt.Println("Could not parse year:", err)
+			}
+
+			title := helpers.Sanitize(res[1])
+			season := res[2]
+			episode := res[3]
+			fmt.Printf("Found '%s' season %s episode %s\n", title, season, episode)
+			mi := MediaItem{
+				FileName:  fileInfo.Name(),
+				FilePath:  filePath,
+				Size:      fileInfo.Size(),
+				Title:     title,
+				LibraryID: library.ID,
+				Year:      yearInt,
+			}
+			var tv TvSeries
+			var tvs TvSeason
+
+			seasonInt, err := strconv.ParseInt(season, 10, 32)
+			if err != nil {
+				fmt.Println("Could not parse season:", err)
+			}
+
+			ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title, FirstAirYear: yearInt})
+			ctx.Db.FirstOrCreate(&tvs, TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
+
+			ep := TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
+			ctx.Db.Create(&ep)
+		}
 	case MediaTypeMovie:
 
 		movieRe := regexp.MustCompile("(.*)\\((\\d{4})\\)")
@@ -393,6 +385,8 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 
 func (self *LibraryManager) RefreshAll() {
 	for _, lib := range AllLibraries() {
+		self.AddWatcher(lib.FilePath)
+
 		fmt.Println("Scanning library:", lib.Name, lib.FilePath)
 		self.Probe(&lib)
 
