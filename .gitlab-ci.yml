@@ -12,8 +12,11 @@ variables:
 # Thus, making a symbolic link corrects this.
 before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
-  - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
+  - ln -s $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
+  - go get github.com/jteeuwen/go-bindata/...
+  - go get github.com/elazarl/go-bindata-assetfs/...
+  - go generate -v ./...
 
 stages:
     - test
@@ -29,9 +32,9 @@ format:
 compile:
     stage: build
     script:
-      - cd $CI_PROJECT_DIR/cmd/bytesized-streaming-server
-      - go generate -v ./...
-      - go build -o $CI_PROJECT_DIR/bytesized-streaming-server
+      - go build -o binaries/bytesized-streaming-server-linux cmd/bytesized-streaming-server/main.go
+      #- GOOS=windows GOARCH=amd64 go build -o binaries/bytesized-streaming-server.exe cmd/bytesized-streaming-server/main.go
     artifacts:
       paths:
-        - bytesized-streaming-server
+        - binaries/
+      expire_in: 2 week  
