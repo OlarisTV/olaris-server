@@ -2,8 +2,10 @@ package metadata
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/resolvers"
+
 	"net/http"
 )
 
@@ -19,5 +21,7 @@ func GetHandler(mctx *db.MetadataContext) http.Handler {
 
 	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
 
-	return r
+	handler := cors.AllowAll().Handler(r)
+
+	return handler
 }
