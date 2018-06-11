@@ -43,12 +43,12 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if len(r.Form["login"]) == 0 {
-		WriteError("No login supplied", w)
+		WriteError("No login supplied", w, http.StatusBadRequest)
 		return
 	}
 
 	if len(r.Form["password"]) == 0 {
-		WriteError("No password supplied", w)
+		WriteError("No password supplied", w, http.StatusBadRequest)
 		return
 	}
 
@@ -61,6 +61,8 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			w.Write([]byte(token))
 		}
+	} else {
+		WriteError("Invalid username or password", w, http.StatusUnauthorized)
 	}
 }
 
@@ -79,13 +81,13 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ur.Code == "" {
-		WriteError("No invite code supplied", w)
+		WriteError("No invite code supplied", w, http.StatusBadRequest)
 		return
 	}
 
 	user, err := CreateUser(ur.Login, ur.Password, ur.Admin, ur.Code)
 	if err != nil {
-		WriteError(err.Error(), w)
+		WriteError(err.Error(), w, http.StatusUnauthorized)
 		return
 	} else {
 		jre, _ := json.Marshal(user)
@@ -105,7 +107,8 @@ type UserRequestRes struct {
 	Message  string `json:"message"`
 }
 
-func WriteError(errStr string, w http.ResponseWriter) {
+func WriteError(errStr string, w http.ResponseWriter, code int) {
+	w.WriteHeader(code)
 	urr := UserRequestRes{true, errStr}
 	jres, err := json.Marshal(urr)
 	if err != nil {
