@@ -42,6 +42,15 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 
 func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
+	if len(r.Form["login"]) == 0 {
+		WriteError("No login supplied", w)
+		return
+	}
+
+	if len(r.Form["password"]) == 0 {
+		WriteError("No password supplied", w)
+		return
+	}
 
 	u := User{Login: r.Form["login"][0]}
 
