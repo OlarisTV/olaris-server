@@ -41,25 +41,42 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 }
 
 func AuthHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	if len(r.Form["login"]) == 0 {
+	ur := UserRequest{}
+	b, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		fmt.Println("Could not read request body")
+		return
+	}
+
+	if err := json.Unmarshal(b, &ur); err != nil {
+		WriteError("Could not parse JSON object", w, http.StatusBadRequest)
+		return
+	}
+
+	if ur.Login == "" {
 		WriteError("No login supplied", w, http.StatusBadRequest)
 		return
 	}
 
-	if len(r.Form["password"]) == 0 {
+	if ur.Password == "" {
 		WriteError("No password supplied", w, http.StatusBadRequest)
 		return
 	}
 
-	u := User{Login: r.Form["login"][0]}
+	u := User{Login: ur.Login}
 
-	if u.ValidPassword(r.Form["password"][0]) == true {
+	if u.ValidPassword(ur.Password) == true {
 		token, err := u.CreateJWT()
 		if err != nil {
-			w.Write([]byte(err.Error()))
+			WriteError(err.Error(), w, http.StatusUnauthorized)
 		} else {
-			w.Write([]byte(token))
+			tokenRes := TokenResponse{JWT: token}
+			jtoken, err := json.Marshal(tokenRes)
+			if err != nil {
+				fmt.Println("error during token creation josn :p")
+			}
+			w.Write(jtoken)
 		}
 	} else {
 		WriteError("Invalid username or password", w, http.StatusUnauthorized)
@@ -105,6 +122,10 @@ type UserRequest struct {
 type UserRequestRes struct {
 	HasError bool   `json:"has_error"`
 	Message  string `json:"message"`
+}
+
+type TokenResponse struct {
+	JWT string `json:"jwt"`
 }
 
 func WriteError(errStr string, w http.ResponseWriter, code int) {
