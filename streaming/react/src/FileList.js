@@ -12,7 +12,7 @@ class FileList extends Component {
   state = { files: [], name: '' }
 
   componentDidMount() {
-    axios.get(`${this.props.serverAddress}/api/v1/files`).then(response => {
+    axios.get(`${this.props.serverAddress}/s/api/v1/files`).then(response => {
       this.setState({files: response.data, allFiles: response.data})
     })
   }
