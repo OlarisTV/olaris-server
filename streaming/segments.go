@@ -10,7 +10,7 @@ import (
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	streamKey, err := buildStreamKey(
-		mux.Vars(r)["filename"],
+		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -44,7 +44,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	streamKey, err := buildStreamKey(
-		mux.Vars(r)["filename"],
+		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -30,7 +30,7 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startTimestamp.Seconds()),
-		"-i", streamRepresentation.Stream.MediaFilePath,
+		"-i", streamRepresentation.Stream.MediaFileURL,
 		"-copyts",
 		"-to", fmt.Sprintf("%.3f", endTimestamp.Seconds()),
 		"-map", fmt.Sprintf("0:%d", streamRepresentation.Stream.StreamId),
@@ -72,7 +72,7 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
 		// sometimes just a name. We need some other good descriptor for files,
 		// preferably including a checksum
-		keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFilePath)
+		keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFileURL)
 		if err != nil {
 			return StreamRepresentation{}, err
 		}
@@ -80,17 +80,17 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		keyframeTimestamps := []time.Duration{}
 
 		if keyframeCache != nil {
-			//glog.Infof("Reading keyframes for %s from cache", stream.MediaFilePath)
+			//glog.Infof("Reading keyframes for %s from cache", stream.MediaFileURL)
 			for _, v := range keyframeCache.KeyframeTimestamps {
 				keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
 			}
 		} else {
-			keyframeTimestamps, err = ProbeKeyframes(stream.MediaFilePath)
+			keyframeTimestamps, err = ProbeKeyframes(stream.MediaFileURL)
 			if err != nil {
 				return StreamRepresentation{}, err
 			}
 
-			keyframeCache := db.KeyframeCache{Filename: stream.MediaFilePath}
+			keyframeCache := db.KeyframeCache{Filename: stream.MediaFileURL}
 			for _, v := range keyframeTimestamps {
 				keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
 			}

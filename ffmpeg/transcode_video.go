@@ -37,7 +37,7 @@ func NewVideoTranscodingSession(
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.Stream.MediaFilePath,
+		"-i", stream.Stream.MediaFileURL,
 		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),

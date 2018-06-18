@@ -7,7 +7,7 @@ import (
 )
 
 type StreamKey struct {
-	MediaFilePath string
+	MediaFileURL string
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
 	StreamId int64
@@ -33,9 +33,9 @@ type Stream struct {
 	EnabledByDefault bool
 }
 
-func GetAudioStreams(mediaFilePath string) ([]Stream, error) {
+func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
 	streams := []Stream{}
-	container, err := Probe(mediaFilePath)
+	container, err := Probe(mediaFileURL)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,8 @@ func GetAudioStreams(mediaFilePath string) ([]Stream, error) {
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
-					MediaFilePath: mediaFilePath,
-					StreamId:      int64(stream.Index),
+					MediaFileURL: mediaFileURL,
+					StreamId:     int64(stream.Index),
 				},
 				Codecs:           stream.GetMime(),
 				BitRate:          int64(bitrate),
@@ -94,8 +94,8 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
-					MediaFilePath: mediaFilePath,
-					StreamId:      int64(stream.Index),
+					MediaFileURL: mediaFilePath,
+					StreamId:     int64(stream.Index),
 				},
 				Codecs:        stream.GetMime(),
 				BitRate:       int64(bitrate),
@@ -124,8 +124,8 @@ func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
-					MediaFilePath: mediaFilePath,
-					StreamId:      int64(stream.Index),
+					MediaFileURL: mediaFilePath,
+					StreamId:     int64(stream.Index),
 				},
 				TotalDuration:    container.Format.Duration(),
 				StreamType:       "subtitle",
@@ -139,9 +139,9 @@ func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
 
 func GetStream(streamKey StreamKey) (Stream, error) {
 	// TODO(Leon Handreke): Error handling
-	videoStreams, _ := GetVideoStreams(streamKey.MediaFilePath)
-	audioStreams, _ := GetAudioStreams(streamKey.MediaFilePath)
-	subtitleStreams, _ := GetSubtitleStreams(streamKey.MediaFilePath)
+	videoStreams, _ := GetVideoStreams(streamKey.MediaFileURL)
+	audioStreams, _ := GetAudioStreams(streamKey.MediaFileURL)
+	subtitleStreams, _ := GetSubtitleStreams(streamKey.MediaFileURL)
 
 	streams := append(videoStreams, append(audioStreams, subtitleStreams...)...)
 	for _, s := range streams {
@@ -149,5 +149,5 @@ func GetStream(streamKey StreamKey) (Stream, error) {
 			return s, nil
 		}
 	}
-	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey.MediaFilePath)
+	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey.MediaFileURL)
 }

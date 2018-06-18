@@ -92,14 +92,14 @@ type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
 
-func Probe(filename string) (*ProbeContainer, error) {
-	cmdOut, inCache := probeCache[filename]
+func Probe(fileURL string) (*ProbeContainer, error) {
+	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
 		cmd := exec.Command("ffprobe",
 			"-show_data",
 			"-show_format",
-			"-show_streams", filename, "-print_format", "json", "-v", "quiet")
+			"-show_streams", fileURL, "-print_format", "json", "-v", "quiet")
 		cmd.Stderr = os.Stderr
 
 		r, err := cmd.StdoutPipe()
@@ -116,7 +116,7 @@ func Probe(filename string) (*ProbeContainer, error) {
 		if err != nil {
 			return nil, err
 		}
-		probeCache[filename] = cmdOut
+		probeCache[fileURL] = cmdOut
 
 		err = cmd.Wait()
 	}
@@ -131,7 +131,7 @@ func Probe(filename string) (*ProbeContainer, error) {
 }
 
 // ProbeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
-func ProbeKeyframes(filename string) ([]time.Duration, error) {
+func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 	cmd := exec.Command("ffprobe",
 		"-select_streams", "v",
 		// Use dts_time here because ffmpeg seeking works by DTS,
@@ -139,7 +139,7 @@ func ProbeKeyframes(filename string) ([]time.Duration, error) {
 		"-show_entries", "packet=dts_time,flags",
 		"-v", "quiet",
 		"-of", "csv",
-		filename)
+		fileURL)
 	cmd.Stderr = os.Stderr
 
 	rawReader, err := cmd.StdoutPipe()

@@ -18,25 +18,28 @@ var sessions = []*ffmpeg.TranscodingSession{}
 // Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
 var sessionsMutex = sync.Mutex{}
 
-func GetHandler() http.Handler {
-	r := mux.NewRouter()
+var router = mux.NewRouter()
 
-	r.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
-	r.HandleFunc("/api/v1/files", serveFileIndex)
-	r.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
+func GetHandler() http.Handler {
+	router.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
+	router.HandleFunc("/api/v1/files", serveFileIndex)
+	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
 	// segments.
-	r.HandleFunc("/{filename:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
-	r.HandleFunc("/{filename:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
-	r.HandleFunc("/{filename:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
-	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
-	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
-	r.HandleFunc("/{filename:.*}/{streamId}/{representationId}/init.mp4", serveInit)
+	router.HandleFunc("/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
+	router.HandleFunc("/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	router.HandleFunc("/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
+	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
+	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/init.mp4", serveInit)
+
+	router.HandleFunc("/rclone/{rcloneRemote}/{rclonePath:.*}", serveRcloneFile).
+		Name("rcloneFile")
 
 	//TODO: (Maran) This is probably not serving subfolders yet
-	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(*mediaFilesDir))))
+	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(*mediaFilesDir))))
 
-	handler := cors.AllowAll().Handler(r)
+	handler := cors.AllowAll().Handler(router)
 	return handler
 }
 

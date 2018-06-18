@@ -20,7 +20,7 @@ func NewSubtitleSession(
 
 	extractSubtitlesCmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
-		"-i", stream.Stream.MediaFilePath,
+		"-i", stream.Stream.MediaFileURL,
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-threads", "2",
 		"-f", "webvtt",

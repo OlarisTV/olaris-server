@@ -9,21 +9,25 @@ import (
 )
 
 func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
+	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	playableCodecs := r.URL.Query()["playableCodecs"]
 	capabilities := ffmpeg.ClientCodecCapabilities{
 		PlayableCodecs: playableCodecs,
 	}
 
-	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
+	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
 	if err != nil {
 		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	videoRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(videoStream, capabilities)
 
-	audioStreams, err := ffmpeg.GetAudioStreams(mediaFilePath)
+	audioStreams, err := ffmpeg.GetAudioStreams(mediaFileURL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -39,7 +43,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, r)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
@@ -57,16 +61,20 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
+	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
+	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
 	if err != nil {
 		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(videoStream)
 
-	audioStreams, err := ffmpeg.GetAudioStreams(mediaFilePath)
+	audioStreams, err := ffmpeg.GetAudioStreams(mediaFileURL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,7 +90,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, transmuxedStream)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
@@ -100,12 +108,16 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFilePath := getAbsoluteFilepath(mux.Vars(r)["filename"])
+	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// TODO(Leon Handreke): Error handling
-	audioStreams, _ := ffmpeg.GetAudioStreams(mediaFilePath)
+	audioStreams, _ := ffmpeg.GetAudioStreams(mediaFileURL)
 
-	videoStream, err := ffmpeg.GetVideoStream(mediaFilePath)
+	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
 	if err != nil {
 		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -142,7 +154,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		representationCombinations = append(representationCombinations, c)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFilePath)
+	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
@@ -152,7 +164,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 	streamKey, err := buildStreamKey(
-		mux.Vars(r)["filename"],
+		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
