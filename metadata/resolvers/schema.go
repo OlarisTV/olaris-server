@@ -12,9 +12,9 @@ var SchemaTxt = `
 	}
 	# The query type, represents all of the entry points into our object graph
 	type Query {
-		movies(): [Movie]!
+		movies(uuid: String): [Movie]!
 		libraries(): [Library]!
-		tvseries(): [TvSeries]!
+		tvseries(uuid: String): [TvSeries]!
 		users(): [User]!
 	}
 

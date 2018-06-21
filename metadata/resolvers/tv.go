@@ -14,13 +14,21 @@ type TvSeries struct {
 	Seasons []*SeasonResolver
 }
 
-func (r *Resolver) TvSeries() []*TvSeriesResolver {
+func (r *Resolver) TvSeries(args *UuidArgs) []*TvSeriesResolver {
 	var resolvers []*TvSeriesResolver
-	for _, serie := range db.FindAllSeries() {
+	var series []db.TvSeries
+
+	if args.Uuid != nil {
+		series = db.FindSeriesByUUID(args.Uuid)
+	} else {
+		series = db.FindAllSeries()
+	}
+
+	for _, serie := range series {
 		serieResolver := CreateSeriesResolver(serie)
 		resolvers = append(resolvers, serieResolver)
-
 	}
+
 	return resolvers
 }
 

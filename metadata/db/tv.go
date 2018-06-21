@@ -48,3 +48,7 @@ func FindEpisodesInLibrary(libraryID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("library_id =?", libraryID).Find(&episodes)
 	return episodes
 }
+func FindSeriesByUUID(uuid *string) (series []TvSeries) {
+	ctx.Db.Where("uuid = ?", uuid).Find(&series)
+	return series
+}

@@ -22,6 +22,10 @@ func FindAllMovies() (movies []MovieItem) {
 	ctx.Db.Where("tmdb_id != 0").Find(&movies)
 	return movies
 }
+func FindMovieWithUUID(uuid *string) (movies []MovieItem) {
+	ctx.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
+	return movies
+}
 
 func FindMoviesInLibrary(libraryID uint) (movies []MovieItem) {
 	ctx.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)

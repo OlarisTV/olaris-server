@@ -4,9 +4,19 @@ import (
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 )
 
-func (r *Resolver) Movies() []*MovieResolver {
+type UuidArgs struct {
+	Uuid *string
+}
+
+func (r *Resolver) Movies(args *UuidArgs) []*MovieResolver {
 	var l []*MovieResolver
-	for _, movie := range db.FindAllMovies() {
+	var movies []db.MovieItem
+	if args.Uuid != nil {
+		movies = db.FindMovieWithUUID(args.Uuid)
+	} else {
+		movies = db.FindAllMovies()
+	}
+	for _, movie := range movies {
 		if movie.Title != "" {
 			mov := MovieResolver{r: movie}
 			l = append(l, &mov)
