@@ -7,6 +7,9 @@ import (
 type UuidArgs struct {
 	Uuid *string
 }
+type MustUuidArgs struct {
+	Uuid string
+}
 
 func (r *Resolver) Movies(args *UuidArgs) []*MovieResolver {
 	var l []*MovieResolver

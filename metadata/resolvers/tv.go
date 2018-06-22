@@ -14,6 +14,24 @@ type TvSeries struct {
 	Seasons []*SeasonResolver
 }
 
+func (r *Resolver) TvEpisode(args *MustUuidArgs) *EpisodeResolver {
+	dbepisode := db.FindEpisodeByUUID(&args.Uuid)
+
+	return &EpisodeResolver{r: dbepisode}
+}
+
+func (r *Resolver) TvSeason(args *MustUuidArgs) *SeasonResolver {
+	dbseason := db.FindSeasonByUUID(&args.Uuid)
+	season := TvSeason{dbseason, nil}
+
+	// TODO(Maran): This part can be DRIED up and moved into it's own function
+	for _, episode := range db.FindEpisodesForSeason(season.ID) {
+		season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
+	}
+
+	return &SeasonResolver{r: season}
+}
+
 func (r *Resolver) TvSeries(args *UuidArgs) []*TvSeriesResolver {
 	var resolvers []*TvSeriesResolver
 	var series []db.TvSeries

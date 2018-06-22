@@ -15,6 +15,8 @@ var SchemaTxt = `
 		movies(uuid: String): [Movie]!
 		libraries(): [Library]!
 		tvseries(uuid: String): [TvSeries]!
+		tvseason(uuid: String!): Season!
+		tvepisode(uuid: String!): Episode!
 		users(): [User]!
 	}
 

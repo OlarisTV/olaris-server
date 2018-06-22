@@ -52,3 +52,11 @@ func FindSeriesByUUID(uuid *string) (series []TvSeries) {
 	ctx.Db.Where("uuid = ?", uuid).Find(&series)
 	return series
 }
+func FindSeasonByUUID(uuid *string) (season TvSeason) {
+	ctx.Db.Where("uuid = ?", uuid).Find(&season)
+	return season
+}
+func FindEpisodeByUUID(uuid *string) (episode TvEpisode) {
+	ctx.Db.Where("uuid = ?", uuid).Find(&episode)
+	return episode
+}
