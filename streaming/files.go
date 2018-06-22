@@ -69,9 +69,9 @@ func serveFileIndex(w http.ResponseWriter, r *http.Request) {
 				Playtime:               playtime,
 				Codecs:                 append(audioCodecs, videoStream.Codecs),
 				TranscodedCodecs:       []string{"mp4a.40.2", "avc1.64001e", "avc1.64001f", "avc1.640028"},
-				HlsManifest:            path.Join(relPath, "hls-manifest.m3u8"),
-				HlsTranscodingManifest: path.Join(relPath, "hls-transcoding-manifest.m3u8"),
-				HlsTransmuxingManifest: path.Join(relPath, "hls-transmuxing-manifest.m3u8")})
+				HlsManifest:            path.Join("/s/", relPath, "hls-manifest.m3u8"),
+				HlsTranscodingManifest: path.Join("/s/", relPath, "hls-transcoding-manifest.m3u8"),
+				HlsTransmuxingManifest: path.Join("/s/", relPath, "hls-transmuxing-manifest.m3u8")})
 		}
 
 		return nil
