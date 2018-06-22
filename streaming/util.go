@@ -23,7 +23,7 @@ func buildMediaFileURL(fileLocator string) (string, error) {
 			"rcloneRemote", rcloneParts[0],
 			"rclonePath", rcloneParts[1])
 		if err != nil {
-			return "", fmt.Errorf("Failed to build rclone URL: ", err.Error())
+			return "", fmt.Errorf("Failed to build rclone URL: %s\n ", err.Error())
 
 		}
 		// TODO(Leon Handreke): Find a better way to do this
