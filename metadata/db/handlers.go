@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/net/context"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -26,12 +27,19 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 					secret, err := TokenSecret()
 					return []byte(secret), err
 				})
+
+				if err != nil {
+					fmt.Println("Token error", err)
+				}
+
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					fmt.Printf("%v %v", claims.Login, claims.StandardClaims.ExpiresAt)
-					h.ServeHTTP(w, r)
+					fmt.Printf("%v %v Expires at: %v\n", claims.Login, claims.UserID, claims.StandardClaims.ExpiresAt)
+					ctx := r.Context()
+					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
+					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				} else {
-					fmt.Println(err)
+					fmt.Println("Not authorised")
 				}
 			}
 			w.WriteHeader(http.StatusUnauthorized)
