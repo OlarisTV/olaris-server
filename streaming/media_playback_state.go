@@ -2,7 +2,7 @@ package streaming
 
 import (
 	"encoding/json"
-	"gitlab.com/bytesized/bytesized-streaming/db"
+	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
 	"net/http"
 )
 

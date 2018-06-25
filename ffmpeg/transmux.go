@@ -2,7 +2,7 @@ package ffmpeg
 
 import (
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/db"
+	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
 	"io/ioutil"
 	"log"
 	"os"
