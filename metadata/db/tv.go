@@ -4,13 +4,17 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type TvSeries struct {
+type BaseItem struct {
 	UUIDable
-	gorm.Model
+	Overview     string
 	BackdropPath string
 	PosterPath   string
+}
+
+type TvSeries struct {
+	BaseItem
+	gorm.Model
 	Name         string
-	Overview     string
 	FirstAirDate string
 	FirstAirYear uint64
 	OriginalName string
@@ -19,17 +23,36 @@ type TvSeries struct {
 	Type         string
 }
 
+type TvSeason struct {
+	BaseItem
+	gorm.Model
+	Name         string
+	AirDate      string
+	SeasonNumber int
+	TvSeries     *TvSeries
+	TvEpisodes   []*TvEpisode
+	TvSeriesID   uint
+	TmdbID       int
+}
+
 type TvEpisode struct {
 	gorm.Model
+	BaseItem
+	Name         string
+	SeasonNum    string
+	EpisodeNum   string
+	TvSeasonID   uint
+	TmdbID       int
+	AirDate      string
+	StillPath    string
+	TvSeason     *TvSeason
+	EpisodeFiles []EpisodeFile
+}
+
+type EpisodeFile struct {
 	MediaItem
-	Name       string
-	SeasonNum  string
-	EpisodeNum string
-	TvSeasonID uint
-	TmdbID     int
-	AirDate    string
-	StillPath  string
-	TvSeason   *TvSeason
+	TvEpisodeID uint
+	TvEpisode   *TvEpisode
 }
 
 func FindAllSeries() (series []TvSeries) {
@@ -42,10 +65,16 @@ func FindSeasonsForSeries(seriesID uint) (seasons []TvSeason) {
 }
 func FindEpisodesForSeason(seasonID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
+	for i, _ := range episodes {
+		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+	}
 	return episodes
 }
 func FindEpisodesInLibrary(libraryID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("library_id =?", libraryID).Find(&episodes)
+	for i, _ := range episodes {
+		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+	}
 	return episodes
 }
 func FindSeriesByUUID(uuid *string) (series []TvSeries) {
@@ -58,5 +87,6 @@ func FindSeasonByUUID(uuid *string) (season TvSeason) {
 }
 func FindEpisodeByUUID(uuid *string) (episode TvEpisode) {
 	ctx.Db.Where("uuid = ?", uuid).Find(&episode)
+	ctx.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 	return episode
 }

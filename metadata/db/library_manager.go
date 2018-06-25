@@ -42,6 +42,7 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	if watcher != nil {
 		manager.watcher = watcher
 	}
+	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
 	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
 		fmt.Println("Starting worker")
 		ep, ok := payload.(EpisodePayload)
@@ -55,7 +56,6 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 		fmt.Println("Ending worker")
 		return nil
 	})
-	manager.pool.SetSize(10)
 
 	return &manager
 }
@@ -178,8 +178,9 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 }
 
 func (self *LibraryManager) UpdateMovieMD(library *Library) error {
-	movies := []MovieItem{}
-	ctx.Db.Where("tmdb_id = ? AND library_id = ?", 0, library.ID).Find(&movies)
+	movies := []Movie{}
+	// Consider removing the library here as metadata is no longer tied to one library
+	ctx.Db.Where("tmdb_id = ?", 0).Find(&movies)
 	for _, movie := range movies {
 		fmt.Printf("Attempting to fetch metadata for '%s'\n", movie.Title)
 		var options = make(map[string]string)
@@ -230,7 +231,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			count := 0
-			ctx.Db.Where("file_path= ?", walkPath).Find(&TvEpisode{}).Count(&count)
+			ctx.Db.Where("file_path= ?", walkPath).Find(&EpisodeFile{}).Count(&count)
 			if count == 0 {
 				self.ProbeFile(library, walkPath)
 			}
@@ -274,6 +275,7 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 			fmt.Println(year)
 			fileName = strings.Replace(fileName, ress[1], "", -1)
 		}
+		// Find out episode numbers
 		seriesRe := regexp.MustCompile("^(.*)S(\\d{2})E(\\d{2})")
 		res := seriesRe.FindStringSubmatch(fileName)
 
@@ -295,6 +297,7 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 				LibraryID: library.ID,
 				Year:      yearInt,
 			}
+			mi.SetUUID()
 			var tv TvSeries
 			var tvs TvSeason
 
@@ -303,11 +306,17 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 				fmt.Println("Could not parse season:", err)
 			}
 
-			ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title, FirstAirYear: yearInt})
-			ctx.Db.FirstOrCreate(&tvs, TvSeason{TvSeriesID: tv.ID, Name: title, SeasonNumber: int(seasonInt)})
+			ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title})
+			newSeason := TvSeason{TvSeriesID: tv.ID, SeasonNumber: int(seasonInt)}
+			ctx.Db.FirstOrCreate(&tvs, newSeason)
+			fmt.Println("Found/created:", tvs)
 
-			ep := TvEpisode{MediaItem: mi, SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
-			ctx.Db.Create(&ep)
+			ep := TvEpisode{SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
+			ctx.Db.FirstOrCreate(&ep, ep)
+
+			epFile := EpisodeFile{MediaItem: mi, TvEpisodeID: ep.ID}
+
+			ctx.Db.FirstOrCreate(&epFile, epFile)
 		}
 	case MediaTypeMovie:
 
@@ -338,6 +347,10 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 			fmt.Println("attempted to find some stuff", title, year)
 		}
 
+		// Create a movie stub so the metadata can get to work on it after probing
+		movie := Movie{Title: title, Year: year}
+		ctx.Db.FirstOrCreate(&movie, movie)
+
 		mi := MediaItem{
 			FileName:  fileInfo.Name(),
 			FilePath:  filePath,
@@ -346,9 +359,13 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 			Year:      year,
 			LibraryID: library.ID,
 		}
-		movie := MovieItem{MediaItem: mi}
-		fmt.Println(movie.String())
-		ctx.Db.Create(&movie)
+		mi.SetUUID()
+
+		movieFile := MovieFile{MediaItem: mi, MovieID: movie.ID}
+
+		fmt.Println(movieFile.String())
+		ctx.Db.FirstOrCreate(&movieFile, movieFile)
+
 	}
 	return nil
 }
@@ -360,12 +377,11 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 			return err
 		}
 		if supportedExtensions[filepath.Ext(walkPath)] {
-			// Add FSNOTIFY Watcher
 			self.AddWatcher(walkPath)
 			self.AddWatcher(filepath.Dir(walkPath))
 
 			count := 0
-			ctx.Db.Where("file_path= ?", walkPath).Find(&MovieItem{}).Count(&count)
+			ctx.Db.Where("file_path= ?", walkPath).Find(&MovieFile{}).Count(&count)
 			if count == 0 {
 				self.ProbeFile(library, walkPath)
 			} else {
@@ -379,7 +395,6 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 	if err != nil {
 		fmt.Println(err)
 		return
-
 	}
 }
 

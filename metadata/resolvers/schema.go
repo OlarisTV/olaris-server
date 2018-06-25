@@ -89,6 +89,11 @@ var SchemaTxt = `
 		air_date: String!
 		episode_number: String!
 		tmdb_id: Int!
+		uuid: String!
+		files: [EpisodeFile]!
+	}
+
+	interface EpisodeFile {
 		# Filename
 		file_name: String!
 		# Absolute path to the filesystem
@@ -102,14 +107,8 @@ var SchemaTxt = `
 		title: String!
 		# Official Title
 		original_title: String!
-		# Filename
-		file_name: String!
-		# Absolute path to the filesystem
-		file_path: String!
 		# Release year
 		year: String!
-		# Library ID
-		library_id: Int!
 		# Short description of the movie
 		overview: String!
 		# IMDB ID
@@ -120,6 +119,17 @@ var SchemaTxt = `
 		backdrop_path: String!
 		# ID to retrieve poster
 		poster_path: String!
+		uuid: String!
+		files: [MovieFile]!
+	}
+
+	interface MovieFile {
+		# Filename
+		file_name: String!
+		# Absolute path to the filesystem
+		file_path: String!
+		# Library ID
+		library_id: Int!
 		uuid: String!
 	}
 `

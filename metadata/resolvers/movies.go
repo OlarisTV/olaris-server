@@ -13,7 +13,7 @@ type MustUuidArgs struct {
 
 func (r *Resolver) Movies(args *UuidArgs) []*MovieResolver {
 	var l []*MovieResolver
-	var movies []db.MovieItem
+	var movies []db.Movie
 	if args.Uuid != nil {
 		movies = db.FindMovieWithUUID(args.Uuid)
 	} else {
@@ -29,7 +29,15 @@ func (r *Resolver) Movies(args *UuidArgs) []*MovieResolver {
 }
 
 type MovieResolver struct {
-	r db.MovieItem
+	r db.Movie
+}
+
+func (r *MovieResolver) Files() (res []*MovieFileResolver) {
+	for _, file := range r.r.MovieFiles {
+		resolver := MovieFileResolver{r: file}
+		res = append(res, &resolver)
+	}
+	return res
 }
 
 func (r *MovieResolver) Title() string {
@@ -41,12 +49,7 @@ func (r *MovieResolver) UUID() string {
 func (r *MovieResolver) OriginalTitle() string {
 	return r.r.OriginalTitle
 }
-func (r *MovieResolver) FilePath() string {
-	return r.r.FilePath
-}
-func (r *MovieResolver) FileName() string {
-	return r.r.FileName
-}
+
 func (r *MovieResolver) BackdropPath() string {
 	return r.r.BackdropPath
 }
@@ -66,7 +69,20 @@ func (r *MovieResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
 
+type MovieFileResolver struct {
+	r db.MovieFile
+}
+
 // Will this be a problem if we ever run out of the 32int space?
-func (r *MovieResolver) LibraryID() int32 {
+func (r *MovieFileResolver) LibraryID() int32 {
 	return int32(r.r.LibraryID)
+}
+func (r *MovieFileResolver) FilePath() string {
+	return r.r.FilePath
+}
+func (r *MovieFileResolver) FileName() string {
+	return r.r.FileName
+}
+func (r *MovieFileResolver) UUID() string {
+	return r.r.UUID
 }

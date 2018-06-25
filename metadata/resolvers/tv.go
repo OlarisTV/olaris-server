@@ -132,6 +132,13 @@ type EpisodeResolver struct {
 	r db.TvEpisode
 }
 
+func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {
+	for _, episode := range r.r.EpisodeFiles {
+		files = append(files, &EpisodeFileResolver{r: episode})
+	}
+	return files
+}
+
 func (r *EpisodeResolver) Name() string {
 	return r.r.Name
 }
@@ -152,12 +159,20 @@ func (r *EpisodeResolver) StillPath() string {
 func (r *EpisodeResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
-func (r *EpisodeResolver) FilePath() string {
-	return r.r.FilePath
-}
-func (r *EpisodeResolver) FileName() string {
-	return r.r.FileName
-}
 func (r *EpisodeResolver) EpisodeNumber() string {
 	return r.r.EpisodeNum
+}
+
+type EpisodeFileResolver struct {
+	r db.EpisodeFile
+}
+
+func (r *EpisodeFileResolver) FilePath() string {
+	return r.r.FilePath
+}
+func (r *EpisodeFileResolver) FileName() string {
+	return r.r.FileName
+}
+func (r *EpisodeFileResolver) UUID() string {
+	return r.r.UUID
 }

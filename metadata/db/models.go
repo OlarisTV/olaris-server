@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"github.com/satori/go.uuid"
 	"strconv"
 )
@@ -29,32 +28,15 @@ func (self *UUIDable) GetUUID() string {
 
 type MediaItem struct {
 	UUIDable
-	Title        string
-	Year         uint64
-	FileName     string
-	FilePath     string
-	BackdropPath string
-	PosterPath   string
-	Size         int64
-	Overview     string
-	Library      Library
-	LibraryID    uint
+	Title     string
+	Year      uint64
+	FileName  string
+	FilePath  string
+	Size      int64
+	Library   Library
+	LibraryID uint
 }
 
 func (self *MediaItem) YearAsString() string {
 	return strconv.FormatUint(self.Year, 10)
-}
-
-type TvSeason struct {
-	UUIDable
-	gorm.Model
-	Name         string
-	Overview     string
-	AirDate      string
-	SeasonNumber int
-	PosterPath   string
-	TvSeries     *TvSeries
-	TvEpisodes   []*TvEpisode
-	TvSeriesID   uint
-	TmdbID       int
 }
