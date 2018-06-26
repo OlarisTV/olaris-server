@@ -9,12 +9,11 @@ func TestStreamingTicket(t *testing.T) {
 	path := "/users/maran/does/not/exist.mkv"
 	token, err := CreateStreamingJWT(1, path)
 	if err != nil {
-		t.Errorf("Expected error to be nil, got error instead: %s", err.Error())
+		t.Errorf("Expected error to be nil, got error instead: %s", err)
 	}
-	fmt.Println(token)
 	claim, err := ValidateStreamingJWT(token)
 	if err != nil {
-		t.Errorf("Could not validate created token")
+		t.Errorf("Could not validate created token: %s", err)
 	}
 	if claim.FilePath != path {
 		t.Errorf("Filepath was not correct in token. Expected %s but got %s", path, claim.FilePath)
