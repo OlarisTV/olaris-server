@@ -58,17 +58,17 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.Unmarshal(b, &ur); err != nil {
-		WriteError("Could not parse JSON object", w, http.StatusBadRequest)
+		writeError("Could not parse JSON object", w, http.StatusBadRequest)
 		return
 	}
 
 	if ur.Login == "" {
-		WriteError("No login supplied", w, http.StatusBadRequest)
+		writeError("No login supplied", w, http.StatusBadRequest)
 		return
 	}
 
 	if ur.Password == "" {
-		WriteError("No password supplied", w, http.StatusBadRequest)
+		writeError("No password supplied", w, http.StatusBadRequest)
 		return
 	}
 
@@ -77,7 +77,7 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if u.ValidPassword(ur.Password) == true {
 		token, err := u.CreateJWT()
 		if err != nil {
-			WriteError(err.Error(), w, http.StatusUnauthorized)
+			writeError(err.Error(), w, http.StatusUnauthorized)
 		} else {
 			tokenRes := TokenResponse{JWT: token}
 			jtoken, err := json.Marshal(tokenRes)
@@ -87,7 +87,7 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(jtoken)
 		}
 	} else {
-		WriteError("Invalid username or password", w, http.StatusUnauthorized)
+		writeError("Invalid username or password", w, http.StatusUnauthorized)
 	}
 }
 
@@ -106,13 +106,13 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ur.Code == "" {
-		WriteError("No invite code supplied", w, http.StatusBadRequest)
+		writeError("No invite code supplied", w, http.StatusBadRequest)
 		return
 	}
 
 	user, err := CreateUser(ur.Login, ur.Password, ur.Admin, ur.Code)
 	if err != nil {
-		WriteError(err.Error(), w, http.StatusUnauthorized)
+		writeError(err.Error(), w, http.StatusUnauthorized)
 		return
 	} else {
 		jre, _ := json.Marshal(user)
@@ -136,7 +136,7 @@ type TokenResponse struct {
 	JWT string `json:"jwt"`
 }
 
-func WriteError(errStr string, w http.ResponseWriter, code int) {
+func writeError(errStr string, w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 	urr := UserRequestRes{true, errStr}
 	jres, err := json.Marshal(urr)
