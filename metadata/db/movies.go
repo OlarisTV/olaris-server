@@ -22,6 +22,7 @@ type Movie struct {
 	OriginalTitle string
 	ImdbID        string
 	MovieFiles    []MovieFile
+	PlayState     PlayState `gorm:"polymorphic:Playstae;"`
 }
 
 func (self *MovieFile) String() string {
@@ -38,21 +39,26 @@ func FindAllMovies() (movies []Movie) {
 	// TODO(Maran): DRY this up
 	for i, _ := range movies {
 		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
+		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
 	}
 	return movies
 }
 func FindMovieWithUUID(uuid *string) (movies []Movie) {
 	ctx.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
+	// TODO(Maran): DRY this up
 	for i, _ := range movies {
 		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
+		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
 	}
 	return movies
 }
 
 func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
 	ctx.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
+	// TODO(Maran): DRY this up
 	for i, _ := range movies {
 		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
+		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
 	}
 
 	return movies

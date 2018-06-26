@@ -166,6 +166,20 @@ func (r *EpisodeResolver) TmdbID() int32 {
 func (r *EpisodeResolver) EpisodeNumber() string {
 	return r.r.EpisodeNum
 }
+func (r *EpisodeResolver) PlayState() *PlayStateResolver {
+	return &PlayStateResolver{r: r.r.PlayState}
+}
+
+type PlayStateResolver struct {
+	r db.PlayState
+}
+
+func (r *PlayStateResolver) Finished() bool {
+	return r.r.Finished
+}
+func (r *PlayStateResolver) Playtime() float64 {
+	return r.r.Playtime
+}
 
 type EpisodeFileResolver struct {
 	r db.EpisodeFile

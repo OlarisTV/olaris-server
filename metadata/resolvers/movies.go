@@ -68,6 +68,9 @@ func (r *MovieResolver) ImdbID() string {
 func (r *MovieResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
+func (r *MovieResolver) PlayState() *PlayStateResolver {
+	return &PlayStateResolver{r: r.r.PlayState}
+}
 
 type MovieFileResolver struct {
 	r db.MovieFile
