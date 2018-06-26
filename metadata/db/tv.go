@@ -51,9 +51,11 @@ type TvEpisode struct {
 }
 
 type EpisodeFile struct {
+	gorm.Model
 	MediaItem
 	TvEpisodeID uint
 	TvEpisode   *TvEpisode
+	Streams     []Stream `gorm:"polymorphic:Owner"`
 }
 
 func CollectEpisodeData(episodes []TvEpisode, userID uint) {

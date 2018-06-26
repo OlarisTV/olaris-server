@@ -119,13 +119,13 @@
   revision = "e698b6abc17ead17ea89d3d22a4b2625299701e3"
 
 [[projects]]
+  branch = "master"
   name = "github.com/jinzhu/gorm"
   packages = [
     ".",
     "dialects/sqlite"
   ]
-  revision = "6ed508ec6a4ecb3531899a69cbc746ccf65a4166"
-  version = "v1.9.1"
+  revision = "0fd395ab37aefd2d50854f0556a4311dccc6f45a"
 
 [[projects]]
   branch = "master"
@@ -352,6 +352,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8823276a3858ee21bc1f0ee33be1f83df10d85a80141cf36a09cefdce1dcd59a"
+  inputs-digest = "af9be907ff54003c29ec610954a932c28941846b79de66bd06496b21485753e2"
   solver-name = "gps-cdcl"
   solver-version = 1

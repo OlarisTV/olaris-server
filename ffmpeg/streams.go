@@ -18,8 +18,10 @@ type Stream struct {
 
 	TotalDuration time.Duration
 	// codecs string ready for DASH/HLS serving
-	Codecs  string
-	BitRate int64
+	Codecs    string
+	CodecName string
+	Profile   string
+	BitRate   int64
 
 	Width  int
 	Height int
@@ -103,6 +105,8 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 				Height:        stream.Height,
 				TotalDuration: container.Format.Duration(),
 				StreamType:    stream.CodecType,
+				CodecName:     stream.CodecName,
+				Profile:       stream.Profile,
 			})
 	}
 

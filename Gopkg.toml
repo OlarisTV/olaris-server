@@ -63,3 +63,7 @@ required = ["github.com/elazarl/go-bindata-assetfs"]
 [[constraint]]
   branch = "master"
   name = "github.com/dgrijalva/jwt-go"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/jinzhu/gorm"

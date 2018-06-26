@@ -7,9 +7,11 @@ import (
 )
 
 type MovieFile struct {
+	gorm.Model
 	MediaItem
 	Movie   Movie
 	MovieID uint
+	Streams []Stream `gorm:"polymorphic:Owner;"`
 }
 
 type Movie struct {
@@ -22,7 +24,7 @@ type Movie struct {
 	OriginalTitle string
 	ImdbID        string
 	MovieFiles    []MovieFile
-	PlayState     PlayState `gorm:"polymorphic:Playstae;"`
+	PlayState     PlayState `gorm:"polymorphic:Playstate;"`
 }
 
 func (self *MovieFile) String() string {

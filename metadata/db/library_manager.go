@@ -70,7 +70,6 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 		self.UpdateTvMD(library)
 	}
 }
-
 func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
 	fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
 	episodeInt, err := strconv.ParseInt(episode.EpisodeNum, 10, 32)
@@ -315,8 +314,10 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 			env.Db.FirstOrCreate(&ep, ep)
 
 			epFile := EpisodeFile{MediaItem: mi, TvEpisodeID: ep.ID}
+			epFile.Streams = CollectStreams(filePath)
 
-			env.Db.FirstOrCreate(&epFile, epFile)
+			// TODO(Maran) We might be adding double files in case it already exist
+			env.Db.Save(&epFile)
 		}
 	case MediaTypeMovie:
 
@@ -362,9 +363,8 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 		mi.SetUUID()
 
 		movieFile := MovieFile{MediaItem: mi, MovieID: movie.ID}
-
-		fmt.Println(movieFile.String())
-		env.Db.FirstOrCreate(&movieFile, movieFile)
+		movieFile.Streams = CollectStreams(filePath)
+		env.Db.Save(&movieFile)
 
 	}
 	return nil
