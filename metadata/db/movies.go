@@ -39,27 +39,27 @@ func CollectMovieInfo(movies []Movie, userID uint) {
 	// Can't use 'movie' in range here as it won't modify the original object
 	// TODO(Maran): We might want to see if we can make these queries smarter somehow
 	for i, _ := range movies {
-		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
-		ctx.Db.Where("uuid = ? AND user_id = ?", movies[i].UUID, userID).Find(&movies[i].PlayState)
+		env.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
+		env.Db.Where("uuid = ? AND user_id = ?", movies[i].UUID, userID).Find(&movies[i].PlayState)
 	}
 }
 
-func FindAllMovies(ct context.Context) (movies []Movie) {
-	ctx.Db.Where("tmdb_id != 0").Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ct))
+func FindAllMovies(ctx context.Context) (movies []Movie) {
+	env.Db.Where("tmdb_id != 0").Find(&movies)
+	CollectMovieInfo(movies, helpers.GetUserID(ctx))
 
 	return movies
 }
-func FindMovieWithUUID(ct context.Context, uuid *string) (movies []Movie) {
-	ctx.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ct))
+func FindMovieWithUUID(ctx context.Context, uuid *string) (movies []Movie) {
+	env.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
+	CollectMovieInfo(movies, helpers.GetUserID(ctx))
 
 	return movies
 }
 
-func FindMoviesInLibrary(ct context.Context, libraryID uint) (movies []Movie) {
-	ctx.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ct))
+func FindMoviesInLibrary(ctx context.Context, libraryID uint) (movies []Movie) {
+	env.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
+	CollectMovieInfo(movies, helpers.GetUserID(ctx))
 
 	return movies
 }

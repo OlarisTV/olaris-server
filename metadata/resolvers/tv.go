@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type TvSeason struct {
@@ -35,8 +36,8 @@ func (r *Resolver) TvSeason(args *MustUuidArgs) *SeasonResolver {
 }
 
 func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesResolver {
-	id := ctx.Value("user_id").(*uint)
-	fmt.Println("ID:", *id)
+	id := helpers.GetUserID(ctx)
+	fmt.Println(id)
 	var resolvers []*TvSeriesResolver
 	var series []db.TvSeries
 

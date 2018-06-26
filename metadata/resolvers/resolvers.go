@@ -8,7 +8,7 @@ import (
 )
 
 type Resolver struct {
-	ctx *db.MetadataContext
+	env *db.MetadataContext
 }
 
 type LibraryResolver struct {
@@ -42,7 +42,7 @@ func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
 	var libRes LibRes
 	if err == nil {
 		fmt.Println("Scaninng library")
-		go db.NewLibraryManager(r.ctx.Watcher).RefreshAll()
+		go db.NewLibraryManager(r.env.Watcher).RefreshAll()
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
 		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}
@@ -106,7 +106,7 @@ func GraphiQLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(graphiQLpage)
 }
 
-func NewRelayHandler(ctx *db.MetadataContext) *relay.Handler {
-	schema := InitSchema(ctx)
+func NewRelayHandler(env *db.MetadataContext) *relay.Handler {
+	schema := InitSchema(env)
 	return &relay.Handler{Schema: schema}
 }

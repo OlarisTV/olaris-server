@@ -19,7 +19,7 @@ type MetadataContext struct {
 	ExitChan       chan int
 }
 
-var ctx *MetadataContext
+var env *MetadataContext
 
 func NewMDContext() *MetadataContext {
 	dbPath := path.Join(helpers.GetHome(), ".config", "bss", "metadb")
@@ -46,10 +46,10 @@ func NewMDContext() *MetadataContext {
 	go libraryManager.RefreshAll()
 
 	exitChan := make(chan int)
-	ctx = &MetadataContext{Db: db, Tmdb: tmdb, Watcher: watcher, ExitChan: exitChan, LibraryManager: libraryManager}
-	go ctx.StartWatcher(exitChan)
+	env = &MetadataContext{Db: db, Tmdb: tmdb, Watcher: watcher, ExitChan: exitChan, LibraryManager: libraryManager}
+	go env.StartWatcher(exitChan)
 
-	return ctx
+	return env
 }
 
 func (self *MetadataContext) StartWatcher(exitChan chan int) {

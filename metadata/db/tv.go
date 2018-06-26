@@ -61,43 +61,43 @@ func LoadEpisodes(episodes []*TvEpisode) {
 }
 
 func FindAllSeries() (series []TvSeries) {
-	ctx.Db.Where("tmdb_id != 0").Find(&series)
+	env.Db.Where("tmdb_id != 0").Find(&series)
 	return series
 }
 func FindSeasonsForSeries(seriesID uint) (seasons []TvSeason) {
-	ctx.Db.Where("tv_series_id = ?", seriesID).Find(&seasons)
+	env.Db.Where("tv_series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
 func FindEpisodesForSeason(seasonID uint) (episodes []TvEpisode) {
-	ctx.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
+	env.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
 	for i, _ := range episodes {
 		// TODO(Maran): DRY THIS SHIT UP
-		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		ctx.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
+		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
 	}
 	return episodes
 }
-func FindEpisodesInLibrary(ct context.Context, libraryID uint) (episodes []TvEpisode) {
-	ctx.Db.Where("library_id =?", libraryID).Find(&episodes)
+func FindEpisodesInLibrary(ctx context.Context, libraryID uint) (episodes []TvEpisode) {
+	env.Db.Where("library_id =?", libraryID).Find(&episodes)
 	for i, _ := range episodes {
 		// TODO(Maran): DRY THIS SHIT UP
-		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		ctx.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
+		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
 	}
 	return episodes
 }
 func FindSeriesByUUID(uuid *string) (series []TvSeries) {
-	ctx.Db.Where("uuid = ?", uuid).Find(&series)
+	env.Db.Where("uuid = ?", uuid).Find(&series)
 	return series
 }
 func FindSeasonByUUID(uuid *string) (season TvSeason) {
-	ctx.Db.Where("uuid = ?", uuid).Find(&season)
+	env.Db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
 func FindEpisodeByUUID(uuid *string) (episode TvEpisode) {
-	ctx.Db.Where("uuid = ?", uuid).Find(&episode)
-	ctx.Db.Where("uuid = ?", uuid).Find(&episode.PlayState)
+	env.Db.Where("uuid = ?", uuid).Find(&episode)
+	env.Db.Where("uuid = ?", uuid).Find(&episode.PlayState)
 	// TODO(Maran): DRY THIS SHIT UP
-	ctx.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+	env.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 	return episode
 }

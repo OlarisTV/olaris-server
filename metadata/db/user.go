@@ -33,7 +33,7 @@ type Invite struct {
 }
 
 func (self *User) ValidPassword(password string) bool {
-	ctx.Db.Where("login = ?", self.Login).Find(self)
+	env.Db.Where("login = ?", self.Login).Find(self)
 	if self.HashPassword(password, self.Salt) == self.PasswordHash {
 		return true
 	} else {
@@ -69,7 +69,7 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 
 	if code != "" {
 		count := 0
-		ctx.Db.Where("code = ? and user_id IS NULL", code).Find(&invite).Count(&count)
+		env.Db.Where("code = ? and user_id IS NULL", code).Find(&invite).Count(&count)
 		if count != 0 {
 			fmt.Println("Valid and unused code, creating account")
 		} else {
@@ -80,22 +80,22 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 
 	user := User{Login: login, Admin: admin}
 	user.SetPassword(password, randString(24))
-	dbobj := ctx.Db.Create(&user)
-	if !ctx.Db.NewRecord(&user) {
+	dbobj := env.Db.Create(&user)
+	if !env.Db.NewRecord(&user) {
 		invite.UserID = user.ID
-		ctx.Db.Save(&invite)
+		env.Db.Save(&invite)
 	}
 	return user, dbobj.Error
 }
 
 func AllUsers() (users []User) {
-	ctx.Db.Find(&users)
+	env.Db.Find(&users)
 	return users
 }
 
 func UserCount() int {
 	count := 0
-	ctx.Db.Find(&User{}).Count(&count)
+	env.Db.Find(&User{}).Count(&count)
 	return count
 }
 

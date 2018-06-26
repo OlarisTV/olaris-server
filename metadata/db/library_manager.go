@@ -77,7 +77,7 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 	if err != nil {
 		fmt.Println("Could not parse season:", err)
 	}
-	fullEpisode, err := ctx.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
+	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
 	if err == nil {
 		if fullEpisode != nil {
 			episode.SetUUID()
@@ -86,7 +86,7 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 			episode.TmdbID = fullEpisode.ID
 			episode.Overview = fullEpisode.Overview
 			episode.StillPath = fullEpisode.StillPath
-			obj := ctx.Db.Save(&episode)
+			obj := env.Db.Save(&episode)
 			return obj.Error
 		}
 		return nil
@@ -98,13 +98,13 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 
 func (self *LibraryManager) UpdateEpisodesMD() error {
 	episodes := []TvEpisode{}
-	ctx.Db.Where("tmdb_id = ?", 0).Find(&episodes)
+	env.Db.Where("tmdb_id = ?", 0).Find(&episodes)
 	for i := range episodes {
 		go func(episode *TvEpisode) {
 			var season TvSeason
 			var tv TvSeries
-			ctx.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
-			ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
+			env.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
+			env.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
 			self.pool.Process(EpisodePayload{season: season, series: tv, episode: *episode})
 		}(&episodes[i])
 	}
@@ -113,13 +113,13 @@ func (self *LibraryManager) UpdateEpisodesMD() error {
 
 func (self *LibraryManager) UpdateSeasonMD() error {
 	seasons := []TvSeason{}
-	ctx.Db.Where("tmdb_id = ?", 0).Find(&seasons)
+	env.Db.Where("tmdb_id = ?", 0).Find(&seasons)
 	for _, season := range seasons {
 		var tv TvSeries
-		ctx.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
+		env.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
 
 		fmt.Printf("Grabbing meta-data for season %d of series '%s'\n", season.SeasonNumber, tv.Name)
-		fullSeason, err := ctx.Tmdb.GetTvSeasonInfo(tv.TmdbID, season.SeasonNumber, nil)
+		fullSeason, err := env.Tmdb.GetTvSeasonInfo(tv.TmdbID, season.SeasonNumber, nil)
 		if err == nil {
 			season.SetUUID()
 			season.AirDate = fullSeason.AirDate
@@ -127,7 +127,7 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 			season.Name = fullSeason.Name
 			season.TmdbID = fullSeason.ID
 			season.PosterPath = fullSeason.PosterPath
-			ctx.Db.Save(&season)
+			env.Db.Save(&season)
 		} else {
 			fmt.Println("Could not grab seasonal information")
 		}
@@ -137,14 +137,14 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 
 func (self *LibraryManager) UpdateTvMD(library *Library) error {
 	series := []TvSeries{}
-	ctx.Db.Where("tmdb_id = ?", 0).Find(&series)
+	env.Db.Where("tmdb_id = ?", 0).Find(&series)
 	for _, serie := range series {
 		fmt.Println("Looking up meta-data for series:", serie.Name)
 		var options = make(map[string]string)
 		if serie.FirstAirYear != 0 {
 			options["first_air_date_year"] = strconv.FormatUint(serie.FirstAirYear, 10)
 		}
-		searchRes, err := ctx.Tmdb.SearchTv(serie.Name, options)
+		searchRes, err := env.Tmdb.SearchTv(serie.Name, options)
 
 		if err != nil {
 			return err
@@ -153,7 +153,7 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 		if len(searchRes.Results) > 0 {
 			fmt.Println("Found Series that matches, using first result and doing deepscan.")
 			tv := searchRes.Results[0] // Take the first result for now
-			fullTv, err := ctx.Tmdb.GetTvInfo(tv.ID, nil)
+			fullTv, err := env.Tmdb.GetTvInfo(tv.ID, nil)
 			if err == nil {
 				serie.Overview = fullTv.Overview
 				serie.Status = fullTv.Status
@@ -167,7 +167,7 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 			serie.OriginalName = tv.OriginalName
 			serie.BackdropPath = tv.BackdropPath
 			serie.PosterPath = tv.PosterPath
-			ctx.Db.Save(&serie)
+			env.Db.Save(&serie)
 		}
 	}
 
@@ -180,14 +180,14 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 	movies := []Movie{}
 	// Consider removing the library here as metadata is no longer tied to one library
-	ctx.Db.Where("tmdb_id = ?", 0).Find(&movies)
+	env.Db.Where("tmdb_id = ?", 0).Find(&movies)
 	for _, movie := range movies {
 		fmt.Printf("Attempting to fetch metadata for '%s'\n", movie.Title)
 		var options = make(map[string]string)
 		if movie.Year > 0 {
 			options["year"] = movie.YearAsString()
 		}
-		searchRes, err := ctx.Tmdb.SearchMovie(movie.Title, options)
+		searchRes, err := env.Tmdb.SearchMovie(movie.Title, options)
 
 		if err != nil {
 			return err
@@ -196,7 +196,7 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 		if len(searchRes.Results) > 0 {
 			fmt.Println("Found movie that matches, using first result and doing deepscan.")
 			mov := searchRes.Results[0] // Take the first result for now
-			fullMov, err := ctx.Tmdb.GetMovieInfo(mov.ID, nil)
+			fullMov, err := env.Tmdb.GetMovieInfo(mov.ID, nil)
 			if err == nil {
 				movie.Overview = fullMov.Overview
 				movie.ImdbID = fullMov.ImdbID
@@ -209,7 +209,7 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 			movie.OriginalTitle = mov.OriginalTitle
 			movie.BackdropPath = mov.BackdropPath
 			movie.PosterPath = mov.PosterPath
-			ctx.Db.Save(&movie)
+			env.Db.Save(&movie)
 		}
 
 	}
@@ -231,7 +231,7 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if supportedExtensions[filepath.Ext(walkPath)] {
 			count := 0
-			ctx.Db.Where("file_path= ?", walkPath).Find(&EpisodeFile{}).Count(&count)
+			env.Db.Where("file_path= ?", walkPath).Find(&EpisodeFile{}).Count(&count)
 			if count == 0 {
 				self.ProbeFile(library, walkPath)
 			}
@@ -306,17 +306,17 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 				fmt.Println("Could not parse season:", err)
 			}
 
-			ctx.Db.FirstOrCreate(&tv, TvSeries{Name: title})
+			env.Db.FirstOrCreate(&tv, TvSeries{Name: title})
 			newSeason := TvSeason{TvSeriesID: tv.ID, SeasonNumber: int(seasonInt)}
-			ctx.Db.FirstOrCreate(&tvs, newSeason)
+			env.Db.FirstOrCreate(&tvs, newSeason)
 			fmt.Println("Found/created:", tvs)
 
 			ep := TvEpisode{SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
-			ctx.Db.FirstOrCreate(&ep, ep)
+			env.Db.FirstOrCreate(&ep, ep)
 
 			epFile := EpisodeFile{MediaItem: mi, TvEpisodeID: ep.ID}
 
-			ctx.Db.FirstOrCreate(&epFile, epFile)
+			env.Db.FirstOrCreate(&epFile, epFile)
 		}
 	case MediaTypeMovie:
 
@@ -349,7 +349,7 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 
 		// Create a movie stub so the metadata can get to work on it after probing
 		movie := Movie{Title: title, Year: year}
-		ctx.Db.FirstOrCreate(&movie, movie)
+		env.Db.FirstOrCreate(&movie, movie)
 
 		mi := MediaItem{
 			FileName:  fileInfo.Name(),
@@ -364,7 +364,7 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 		movieFile := MovieFile{MediaItem: mi, MovieID: movie.ID}
 
 		fmt.Println(movieFile.String())
-		ctx.Db.FirstOrCreate(&movieFile, movieFile)
+		env.Db.FirstOrCreate(&movieFile, movieFile)
 
 	}
 	return nil
@@ -381,7 +381,7 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 			self.AddWatcher(filepath.Dir(walkPath))
 
 			count := 0
-			ctx.Db.Where("file_path= ?", walkPath).Find(&MovieFile{}).Count(&count)
+			env.Db.Where("file_path= ?", walkPath).Find(&MovieFile{}).Count(&count)
 			if count == 0 {
 				self.ProbeFile(library, walkPath)
 			} else {

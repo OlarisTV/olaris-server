@@ -10,11 +10,11 @@ import (
 	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
 )
 
-func GetHandler(mctx *db.MetadataContext) http.Handler {
+func GetHandler(menv *db.MetadataContext) http.Handler {
 	imageManager := NewImageManager()
 
 	r := mux.NewRouter()
-	r.Handle("/query", auth.AuthMiddleWare(resolvers.NewRelayHandler(mctx)))
+	r.Handle("/query", auth.AuthMiddleWare(resolvers.NewRelayHandler(menv)))
 
 	r.Handle("/v1/auth", http.HandlerFunc(auth.UserHandler)).Methods("POST")
 

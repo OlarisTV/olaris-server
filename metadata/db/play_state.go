@@ -16,10 +16,10 @@ type PlayState struct {
 
 func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) bool {
 	var ps PlayState
-	ctx.Db.FirstOrInit(&ps, PlayState{UUID: uuid, UserID: userID})
+	env.Db.FirstOrInit(&ps, PlayState{UUID: uuid, UserID: userID})
 	ps.Finished = finished
 	ps.Playtime = playtime
-	ctx.Db.Save(&ps)
+	env.Db.Save(&ps)
 	return true
 
 	/*
@@ -28,18 +28,18 @@ func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) 
 		var movie Movie
 		var episode TvEpisode
 
-		ctx.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+		env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
 		if count > 0 {
 			movie.PlayState = ps
-			ctx.Db.Save(&movie)
+			env.Db.Save(&movie)
 			return true
 		}
 
 		count = 0
-		ctx.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+		env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
 		if count > 0 {
 			episode.PlayState = ps
-			ctx.Db.Save(&episode)
+			env.Db.Save(&episode)
 			return true
 		}
 	*/

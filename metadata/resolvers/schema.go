@@ -146,7 +146,7 @@ var SchemaTxt = `
 	}
 `
 
-func InitSchema(ctx *db.MetadataContext) *graphql.Schema {
-	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{ctx: ctx})
+func InitSchema(env *db.MetadataContext) *graphql.Schema {
+	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{env: env})
 	return Schema
 }
