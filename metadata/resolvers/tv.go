@@ -1,6 +1,8 @@
 package resolvers
 
 import (
+	"context"
+	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 )
 
@@ -32,7 +34,9 @@ func (r *Resolver) TvSeason(args *MustUuidArgs) *SeasonResolver {
 	return &SeasonResolver{r: season}
 }
 
-func (r *Resolver) TvSeries(args *UuidArgs) []*TvSeriesResolver {
+func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesResolver {
+	id := ctx.Value("user_id").(*uint)
+	fmt.Println("ID:", *id)
 	var resolvers []*TvSeriesResolver
 	var series []db.TvSeries
 
@@ -161,6 +165,20 @@ func (r *EpisodeResolver) TmdbID() int32 {
 }
 func (r *EpisodeResolver) EpisodeNumber() string {
 	return r.r.EpisodeNum
+}
+func (r *EpisodeResolver) PlayState() *PlayStateResolver {
+	return &PlayStateResolver{r: r.r.PlayState}
+}
+
+type PlayStateResolver struct {
+	r db.PlayState
+}
+
+func (r *PlayStateResolver) Finished() bool {
+	return r.r.Finished
+}
+func (r *PlayStateResolver) Playtime() float64 {
+	return r.r.Playtime
 }
 
 type EpisodeFileResolver struct {

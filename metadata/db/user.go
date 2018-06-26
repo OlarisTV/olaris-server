@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type commonModelFields struct {
+type CommonModelFields struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -18,7 +18,7 @@ type commonModelFields struct {
 
 type User struct {
 	UUIDable
-	commonModelFields
+	CommonModelFields
 	Login        string `gorm:"not null;unique" json:"login"`
 	Admin        bool   `gorm:"not null" json:"admin"`
 	PasswordHash string `gorm:"not null" json:"-"`
@@ -66,8 +66,8 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 	if len(password) < 8 {
 		return User{}, fmt.Errorf("Password should be at least 8 characters")
 	}
+
 	if code != "" {
-		fmt.Println("Invite code supplied, validation presence")
 		count := 0
 		ctx.Db.Where("code = ? and user_id IS NULL", code).Find(&invite).Count(&count)
 		if count != 0 {
@@ -95,7 +95,7 @@ func AllUsers() (users []User) {
 
 func UserCount() int {
 	count := 0
-	ctx.Db.Find(User{}).Count(&count)
+	ctx.Db.Find(&User{}).Count(&count)
 	return count
 }
 

@@ -47,12 +47,16 @@ type TvEpisode struct {
 	StillPath    string
 	TvSeason     *TvSeason
 	EpisodeFiles []EpisodeFile
+	PlayState    PlayState `gorm:"polymorphic:Playstate;"`
 }
 
 type EpisodeFile struct {
 	MediaItem
 	TvEpisodeID uint
 	TvEpisode   *TvEpisode
+}
+
+func LoadEpisodes(episodes []*TvEpisode) {
 }
 
 func FindAllSeries() (series []TvSeries) {
@@ -66,14 +70,18 @@ func FindSeasonsForSeries(seriesID uint) (seasons []TvSeason) {
 func FindEpisodesForSeason(seasonID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
 	for i, _ := range episodes {
+		// TODO(Maran): DRY THIS SHIT UP
 		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		ctx.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
 	}
 	return episodes
 }
 func FindEpisodesInLibrary(libraryID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("library_id =?", libraryID).Find(&episodes)
 	for i, _ := range episodes {
+		// TODO(Maran): DRY THIS SHIT UP
 		ctx.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		ctx.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
 	}
 	return episodes
 }
@@ -87,6 +95,8 @@ func FindSeasonByUUID(uuid *string) (season TvSeason) {
 }
 func FindEpisodeByUUID(uuid *string) (episode TvEpisode) {
 	ctx.Db.Where("uuid = ?", uuid).Find(&episode)
+	ctx.Db.Where("uuid = ?", uuid).Find(&episode.PlayState)
+	// TODO(Maran): DRY THIS SHIT UP
 	ctx.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 	return episode
 }

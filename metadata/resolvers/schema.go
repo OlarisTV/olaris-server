@@ -24,6 +24,7 @@ var SchemaTxt = `
 		# Add a library to scan
 		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
 		createUser(login: String!, password: String!, admin: Boolean!): CreateUserResponse!
+		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): CreatePSResponse!
 	}
 
 	interface LibRes {
@@ -36,6 +37,10 @@ var SchemaTxt = `
 		error: Error
 	}
 
+	interface CreatePSResponse {
+		success: Boolean!
+	}
+
 	interface Error {
 		message: String!
 		hasError: Boolean!
@@ -44,6 +49,11 @@ var SchemaTxt = `
 	interface User {
 		login: String!
 		admin: Boolean!
+	}
+
+	interface PlayState {
+		finished: Boolean!
+		playtime: Float!
 	}
 
 	# A media library
@@ -91,6 +101,7 @@ var SchemaTxt = `
 		tmdb_id: Int!
 		uuid: String!
 		files: [EpisodeFile]!
+		play_state: PlayState
 	}
 
 	interface EpisodeFile {
@@ -121,6 +132,7 @@ var SchemaTxt = `
 		poster_path: String!
 		uuid: String!
 		files: [MovieFile]!
+		play_state: PlayState
 	}
 
 	interface MovieFile {
