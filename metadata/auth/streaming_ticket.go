@@ -36,7 +36,7 @@ func CreateStreamingJWT(userID uint, filePath string) (string, error) {
 }
 
 func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &StreamingClaims{}, JwtSecretFunc)
+	token, err := jwt.ParseWithClaims(tokenStr, &StreamingClaims{}, jwtSecretFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
 	}
 }
 
-func JwtSecretFunc(token *jwt.Token) (interface{}, error) {
+func jwtSecretFunc(token *jwt.Token) (interface{}, error) {
 	secret, err := tokenSecret()
 	return []byte(secret), err
 }

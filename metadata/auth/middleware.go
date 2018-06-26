@@ -32,7 +32,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 			authHeader = r.Header.Get("Authorization")
 			if authHeader != "" {
 				tokenStr := strings.Split(authHeader, " ")[1]
-				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, JwtSecretFunc)
+				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, jwtSecretFunc)
 				if err != nil {
 					writeError(fmt.Sprintf("Unauthorized: %s", err.Error()), w, http.StatusUnauthorized)
 				}
