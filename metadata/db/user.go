@@ -4,12 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
-	"gitlab.com/bytesized/bytesized-streaming/helpers"
-	"io/ioutil"
 	"math/rand"
-	"path"
 	"time"
 )
 
@@ -97,48 +93,10 @@ func AllUsers() (users []User) {
 	return users
 }
 
-type UserClaims struct {
-	Login  string `json:"login"`
-	UserID uint   `json:"user_id"`
-	Admin  bool   `json:"admin"`
-	jwt.StandardClaims
-}
-
-// TODO Maran: Rotate secrets
-func TokenSecret() (string, error) {
-	tokenPath := path.Join(helpers.GetHome(), ".config", "bss", "token.secret")
-	if helpers.FileExists(tokenPath) {
-		secret, err := ioutil.ReadFile(tokenPath)
-		if err != nil {
-			return "", err
-		} else {
-			return string(secret), nil
-		}
-	} else {
-		secret := randString(32)
-		ioutil.WriteFile(tokenPath, []byte(secret), 0700)
-		return secret, nil
-	}
-}
-
-// TODO Maran: Consider setting the jti if we want to increase security.
-func (self *User) CreateJWT() (string, error) {
-	expiresAt := time.Now().Add(time.Hour * 24).Unix()
-
-	claims := UserClaims{self.Login, self.ID, self.Admin, jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"}}
-
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	secret, err := TokenSecret()
-	if err != nil {
-		return "", err
-	}
-
-	ss, err := t.SignedString([]byte(secret))
-	if err != nil {
-		return "", err
-	}
-
-	return ss, nil
+func UserCount() int {
+	count := 0
+	ctx.Db.Find(&User{}).Count(&count)
+	return count
 }
 
 // Plucked from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
