@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"github.com/jinzhu/gorm"
 )
 
@@ -76,7 +77,7 @@ func FindEpisodesForSeason(seasonID uint) (episodes []TvEpisode) {
 	}
 	return episodes
 }
-func FindEpisodesInLibrary(libraryID uint) (episodes []TvEpisode) {
+func FindEpisodesInLibrary(ct context.Context, libraryID uint) (episodes []TvEpisode) {
 	ctx.Db.Where("library_id =?", libraryID).Find(&episodes)
 	for i, _ := range episodes {
 		// TODO(Maran): DRY THIS SHIT UP

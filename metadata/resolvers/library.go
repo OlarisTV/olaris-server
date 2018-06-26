@@ -1,6 +1,7 @@
 package resolvers
 
 import (
+	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 )
 
@@ -10,13 +11,13 @@ type Library struct {
 	Episodes []*EpisodeResolver
 }
 
-func (r *Resolver) Libraries() []*LibraryResolver {
+func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
 	var l []*LibraryResolver
 	libraries := db.AllLibraries()
 	for _, library := range libraries {
 		list := Library{library, nil, nil}
 		var mr []*MovieResolver
-		for _, movie := range db.FindMoviesInLibrary(library.ID) {
+		for _, movie := range db.FindMoviesInLibrary(ctx, library.ID) {
 			if movie.Title != "" {
 				mov := MovieResolver{r: movie}
 				mr = append(mr, &mov)
@@ -24,7 +25,7 @@ func (r *Resolver) Libraries() []*LibraryResolver {
 		}
 		list.Movies = mr
 
-		for _, episode := range db.FindEpisodesInLibrary(library.ID) {
+		for _, episode := range db.FindEpisodesInLibrary(ctx, library.ID) {
 			list.Episodes = append(list.Episodes, &EpisodeResolver{r: episode})
 		}
 

@@ -1,6 +1,7 @@
 package resolvers
 
 import (
+	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 )
 
@@ -11,13 +12,13 @@ type MustUuidArgs struct {
 	Uuid string
 }
 
-func (r *Resolver) Movies(args *UuidArgs) []*MovieResolver {
+func (r *Resolver) Movies(ctx context.Context, args *UuidArgs) []*MovieResolver {
 	var l []*MovieResolver
 	var movies []db.Movie
 	if args.Uuid != nil {
-		movies = db.FindMovieWithUUID(args.Uuid)
+		movies = db.FindMovieWithUUID(ctx, args.Uuid)
 	} else {
-		movies = db.FindAllMovies()
+		movies = db.FindAllMovies(ctx)
 	}
 	for _, movie := range movies {
 		if movie.Title != "" {

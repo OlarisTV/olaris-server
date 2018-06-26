@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"github.com/jinzhu/gorm"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"strconv"
 )
 
@@ -33,33 +35,31 @@ func (self *Movie) YearAsString() string {
 	return strconv.FormatUint(self.Year, 10)
 }
 
-func FindAllMovies() (movies []Movie) {
-	ctx.Db.Where("tmdb_id != 0").Find(&movies)
+func CollectMovieInfo(movies []Movie, userID uint) {
 	// Can't use 'movie' in range here as it won't modify the original object
-	// TODO(Maran): DRY this up
+	// TODO(Maran): We might want to see if we can make these queries smarter somehow
 	for i, _ := range movies {
 		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
-		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
+		ctx.Db.Where("uuid = ? AND user_id = ?", movies[i].UUID, userID).Find(&movies[i].PlayState)
 	}
+}
+
+func FindAllMovies(ct context.Context) (movies []Movie) {
+	ctx.Db.Where("tmdb_id != 0").Find(&movies)
+	CollectMovieInfo(movies, helpers.GetUserID(ct))
+
 	return movies
 }
-func FindMovieWithUUID(uuid *string) (movies []Movie) {
+func FindMovieWithUUID(ct context.Context, uuid *string) (movies []Movie) {
 	ctx.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
-	// TODO(Maran): DRY this up
-	for i, _ := range movies {
-		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
-		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
-	}
+	CollectMovieInfo(movies, helpers.GetUserID(ct))
+
 	return movies
 }
 
-func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
+func FindMoviesInLibrary(ct context.Context, libraryID uint) (movies []Movie) {
 	ctx.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
-	// TODO(Maran): DRY this up
-	for i, _ := range movies {
-		ctx.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
-		ctx.Db.Where("uuid = ?", movies[i].UUID).Find(&movies[i].PlayState)
-	}
+	CollectMovieInfo(movies, helpers.GetUserID(ct))
 
 	return movies
 }
