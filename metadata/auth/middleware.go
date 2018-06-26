@@ -37,6 +37,10 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 					secret, err := tokenSecret()
 					return []byte(secret), err
 				})
+				if err != nil {
+					writeError(fmt.Sprintf("Unauthorized: %s", err.Error()), w, http.StatusUnauthorized)
+				}
+
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
 					fmt.Printf("%v %v Expires at: %v\n", claims.Login, claims.UserID, claims.StandardClaims.ExpiresAt)
 					ctx := r.Context()
@@ -44,11 +48,9 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				} else {
-					fmt.Println(err)
+					writeError("Unauthorized", w, http.StatusUnauthorized)
 				}
 			}
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
 		}
 	})
 }

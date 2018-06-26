@@ -40,3 +40,27 @@ type MediaItem struct {
 func (self *MediaItem) YearAsString() string {
 	return strconv.FormatUint(self.Year, 10)
 }
+
+type MediaResult struct {
+	Movie     *MovieFile
+	TvEpisode *EpisodeFile
+}
+
+func FindContentByUUID(uuid string) *MediaResult {
+	count := 0
+	var movie MovieFile
+	var episode EpisodeFile
+
+	env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+	if count > 0 {
+		return &MediaResult{Movie: &movie}
+	}
+
+	count = 0
+	env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+	if count > 0 {
+		return &MediaResult{TvEpisode: &episode}
+	}
+
+	return &MediaResult{}
+}

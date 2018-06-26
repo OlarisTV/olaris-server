@@ -25,6 +25,7 @@ var SchemaTxt = `
 		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
 		createUser(login: String!, password: String!, admin: Boolean!): CreateUserResponse!
 		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): CreatePSResponse!
+		createStreamingTicket(uuid: String!): CreateSTResponse!
 	}
 
 	interface LibRes {
@@ -39,6 +40,12 @@ var SchemaTxt = `
 
 	interface CreatePSResponse {
 		success: Boolean!
+	}
+
+	interface CreateSTResponse {
+		error: Error
+		# JWT Token that will allow you access to the streaming server
+		ticket: String!
 	}
 
 	interface Error {
@@ -144,6 +151,7 @@ var SchemaTxt = `
 		library_id: Int!
 		uuid: String!
 	}
+
 `
 
 func InitSchema(env *db.MetadataContext) *graphql.Schema {
