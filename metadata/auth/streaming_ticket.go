@@ -36,10 +36,7 @@ func CreateStreamingJWT(userID uint, filePath string) (string, error) {
 }
 
 func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &StreamingClaims{}, func(token *jwt.Token) (interface{}, error) {
-		secret, err := tokenSecret()
-		return []byte(secret), err
-	})
+	token, err := jwt.ParseWithClaims(tokenStr, &StreamingClaims{}, JwtSecretFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -50,4 +47,9 @@ func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
 	} else {
 		return nil, fmt.Errorf("Could not validate ticket.")
 	}
+}
+
+func JwtSecretFunc(token *jwt.Token) (interface{}, error) {
+	secret, err := tokenSecret()
+	return []byte(secret), err
 }

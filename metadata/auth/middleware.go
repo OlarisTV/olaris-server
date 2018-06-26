@@ -33,10 +33,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 			authHeader = r.Header.Get("Authorization")
 			if authHeader != "" {
 				tokenStr := strings.Split(authHeader, " ")[1]
-				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-					secret, err := tokenSecret()
-					return []byte(secret), err
-				})
+				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, JwtSecretFunc)
 				if err != nil {
 					writeError(fmt.Sprintf("Unauthorized: %s", err.Error()), w, http.StatusUnauthorized)
 				}
@@ -58,6 +55,10 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 // TODO Maran: Rotate secrets
 func tokenSecret() (string, error) {
 	tokenPath := path.Join(helpers.GetHome(), ".config", "bss", "token.secret")
+	err := helpers.EnsurePath(path.Dir(tokenPath))
+	if err != nil {
+		return "", err
+	}
 	if helpers.FileExists(tokenPath) {
 		secret, err := ioutil.ReadFile(tokenPath)
 		if err != nil {
@@ -67,8 +68,8 @@ func tokenSecret() (string, error) {
 		}
 	} else {
 		secret := randString(32)
-		ioutil.WriteFile(tokenPath, []byte(secret), 0700)
-		return secret, nil
+		err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
+		return secret, err
 	}
 }
 
