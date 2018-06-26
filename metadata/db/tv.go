@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"github.com/jinzhu/gorm"
 )
 
@@ -57,7 +56,11 @@ type EpisodeFile struct {
 	TvEpisode   *TvEpisode
 }
 
-func LoadEpisodes(episodes []*TvEpisode) {
+func CollectEpisodeData(episodes []TvEpisode, userID uint) {
+	for i, _ := range episodes {
+		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
+	}
 }
 
 func FindAllSeries() (series []TvSeries) {
@@ -68,24 +71,19 @@ func FindSeasonsForSeries(seriesID uint) (seasons []TvSeason) {
 	env.Db.Where("tv_series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
-func FindEpisodesForSeason(seasonID uint) (episodes []TvEpisode) {
+func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []TvEpisode) {
 	env.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
-	for i, _ := range episodes {
-		// TODO(Maran): DRY THIS SHIT UP
-		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
-	}
+	CollectEpisodeData(episodes, userID)
+
 	return episodes
 }
-func FindEpisodesInLibrary(ctx context.Context, libraryID uint) (episodes []TvEpisode) {
+func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []TvEpisode) {
 	env.Db.Where("library_id =?", libraryID).Find(&episodes)
-	for i, _ := range episodes {
-		// TODO(Maran): DRY THIS SHIT UP
-		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
-	}
+	CollectEpisodeData(episodes, userID)
+
 	return episodes
 }
+
 func FindSeriesByUUID(uuid *string) (series []TvSeries) {
 	env.Db.Where("uuid = ?", uuid).Find(&series)
 	return series
@@ -94,10 +92,9 @@ func FindSeasonByUUID(uuid *string) (season TvSeason) {
 	env.Db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
-func FindEpisodeByUUID(uuid *string) (episode TvEpisode) {
+func FindEpisodeByUUID(uuid *string, userID uint) (episode TvEpisode) {
 	env.Db.Where("uuid = ?", uuid).Find(&episode)
-	env.Db.Where("uuid = ?", uuid).Find(&episode.PlayState)
-	// TODO(Maran): DRY THIS SHIT UP
+	env.Db.Where("uuid = ? AND user_id = ?", uuid, userID).Find(&episode.PlayState)
 	env.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 	return episode
 }

@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type UuidArgs struct {
@@ -13,12 +14,13 @@ type MustUuidArgs struct {
 }
 
 func (r *Resolver) Movies(ctx context.Context, args *UuidArgs) []*MovieResolver {
+	userID := helpers.GetUserID(ctx)
 	var l []*MovieResolver
 	var movies []db.Movie
 	if args.Uuid != nil {
-		movies = db.FindMovieWithUUID(ctx, args.Uuid)
+		movies = db.FindMovieWithUUID(args.Uuid, userID)
 	} else {
-		movies = db.FindAllMovies(ctx)
+		movies = db.FindAllMovies(userID)
 	}
 	for _, movie := range movies {
 		if movie.Title != "" {

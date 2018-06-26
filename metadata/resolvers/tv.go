@@ -2,7 +2,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
@@ -17,18 +16,20 @@ type TvSeries struct {
 	Seasons []*SeasonResolver
 }
 
-func (r *Resolver) TvEpisode(args *MustUuidArgs) *EpisodeResolver {
-	dbepisode := db.FindEpisodeByUUID(&args.Uuid)
+func (r *Resolver) TvEpisode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
+	userID := helpers.GetUserID(ctx)
+	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 
 	return &EpisodeResolver{r: dbepisode}
 }
 
-func (r *Resolver) TvSeason(args *MustUuidArgs) *SeasonResolver {
+func (r *Resolver) TvSeason(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
+	userID := helpers.GetUserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
 	season := TvSeason{dbseason, nil}
 
 	// TODO(Maran): This part can be DRIED up and moved into it's own function
-	for _, episode := range db.FindEpisodesForSeason(season.ID) {
+	for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
 		season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
 	}
 
@@ -36,8 +37,7 @@ func (r *Resolver) TvSeason(args *MustUuidArgs) *SeasonResolver {
 }
 
 func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesResolver {
-	id := helpers.GetUserID(ctx)
-	fmt.Println(id)
+	userID := helpers.GetUserID(ctx)
 	var resolvers []*TvSeriesResolver
 	var series []db.TvSeries
 
@@ -48,18 +48,18 @@ func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesReso
 	}
 
 	for _, serie := range series {
-		serieResolver := CreateSeriesResolver(serie)
+		serieResolver := CreateSeriesResolver(serie, userID)
 		resolvers = append(resolvers, serieResolver)
 	}
 
 	return resolvers
 }
 
-func CreateSeriesResolver(dbserie db.TvSeries) *TvSeriesResolver {
+func CreateSeriesResolver(dbserie db.TvSeries, userID uint) *TvSeriesResolver {
 	serie := TvSeries{dbserie, nil}
 	for _, dbseason := range db.FindSeasonsForSeries(serie.ID) {
 		season := TvSeason{dbseason, nil}
-		for _, episode := range db.FindEpisodesForSeason(season.ID) {
+		for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
 			season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
 		}
 		serie.Seasons = append(serie.Seasons, &SeasonResolver{r: season})

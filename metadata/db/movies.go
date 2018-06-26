@@ -1,10 +1,8 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"strconv"
 )
 
@@ -44,22 +42,22 @@ func CollectMovieInfo(movies []Movie, userID uint) {
 	}
 }
 
-func FindAllMovies(ctx context.Context) (movies []Movie) {
+func FindAllMovies(userID uint) (movies []Movie) {
 	env.Db.Where("tmdb_id != 0").Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ctx))
+	CollectMovieInfo(movies, userID)
 
 	return movies
 }
-func FindMovieWithUUID(ctx context.Context, uuid *string) (movies []Movie) {
+func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
 	env.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ctx))
+	CollectMovieInfo(movies, userID)
 
 	return movies
 }
 
-func FindMoviesInLibrary(ctx context.Context, libraryID uint) (movies []Movie) {
+func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
 	env.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
-	CollectMovieInfo(movies, helpers.GetUserID(ctx))
+	CollectMovieInfo(movies, userID)
 
 	return movies
 }
