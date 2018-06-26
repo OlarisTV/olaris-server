@@ -8,7 +8,6 @@ import (
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"path"
 	"strings"
@@ -67,7 +66,7 @@ func tokenSecret() (string, error) {
 			return string(secret), nil
 		}
 	} else {
-		secret := randString(32)
+		secret := helpers.RandAlphaString(32)
 		err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
 		return secret, err
 	}
@@ -96,22 +95,4 @@ func createJWT(user *db.User) (string, error) {
 	}
 
 	return ss, nil
-}
-
-// Plucked from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-)
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := 0; i < n; {
-		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i++
-		}
-	}
-	return string(b)
 }

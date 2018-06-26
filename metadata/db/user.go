@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	"math/rand"
+	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"time"
 )
 
@@ -79,7 +79,7 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 	}
 
 	user := User{Login: login, Admin: admin}
-	user.SetPassword(password, randString(24))
+	user.SetPassword(password, helpers.RandAlphaString(24))
 	dbobj := env.Db.Create(&user)
 	if !env.Db.NewRecord(&user) {
 		invite.UserID = user.ID
@@ -97,22 +97,4 @@ func UserCount() int {
 	count := 0
 	env.Db.Find(&User{}).Count(&count)
 	return count
-}
-
-// Plucked from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-)
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := 0; i < n; {
-		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i++
-		}
-	}
-	return string(b)
 }
