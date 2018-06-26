@@ -1,22 +1,24 @@
 package auth
 
 import (
-	"net/http"
+	"context"
 	"fmt"
-	"strings"
 	"github.com/dgrijalva/jwt-go"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"github.com/golang/glog"
-	"path"
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io/ioutil"
-	"time"
 	"math/rand"
+	"net/http"
+	"path"
+	"strings"
+	"time"
 )
 
 type UserClaims struct {
-	Login string `json:"login"`
-	Admin bool   `json:"admin"`
+	Login  string `json:"login"`
+	UserID uint   `json:"user_id"`
+	Admin  bool   `json:"admin"`
 	jwt.StandardClaims
 }
 
@@ -36,8 +38,10 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 					return []byte(secret), err
 				})
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					fmt.Printf("%v %v", claims.Login, claims.StandardClaims.ExpiresAt)
-					h.ServeHTTP(w, r)
+					fmt.Printf("%v %v Expires at: %v\n", claims.Login, claims.UserID, claims.StandardClaims.ExpiresAt)
+					ctx := r.Context()
+					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
+					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				} else {
 					fmt.Println(err)
@@ -72,6 +76,7 @@ func createJWT(user *db.User) (string, error) {
 
 	claims := UserClaims{
 		user.Login,
+		user.ID,
 		user.Admin,
 		jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"},
 	}
