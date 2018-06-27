@@ -16,7 +16,7 @@ type CreateSTResponseResolver struct {
 	r CreateSTResponse
 }
 
-func (r *CreateSTResponseResolver) Ticket() string {
+func (r *CreateSTResponseResolver) StreamingPath() string {
 	return r.r.Ticket
 }
 func (r *CreateSTResponseResolver) Error() *ErrorResolver {

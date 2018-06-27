@@ -44,8 +44,8 @@ var SchemaTxt = `
 
 	interface CreateSTResponse {
 		error: Error
-		# JWT Token that will allow you access to the streaming server
-		ticket: String!
+		# Path with a JWT that will stream your file.
+		streamingPath: String!
 	}
 
 	interface Error {
