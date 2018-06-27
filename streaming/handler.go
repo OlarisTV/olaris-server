@@ -24,8 +24,7 @@ func GetHandler() http.Handler {
 	router.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
 	router.HandleFunc("/api/v1/files", serveFileIndex)
 	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
-	// Currently, we serve these as two different manifests because switching doesn't work at all with misaligned
-	// segments.
+
 	router.HandleFunc("/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	router.HandleFunc("/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	router.HandleFunc("/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)

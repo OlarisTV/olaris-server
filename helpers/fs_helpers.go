@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	"os"
 	"os/user"
 )
@@ -15,12 +16,12 @@ func GetHome() string {
 }
 
 func EnsurePath(pathName string) error {
-	fmt.Printf("Ensuring folder %s exists.\n", pathName)
+	glog.Infof("Ensuring folder %s exists.\n", pathName)
 	if _, err := os.Stat(pathName); os.IsNotExist(err) {
-		fmt.Println("Path does not exist, creating", pathName)
+		glog.Infof("Path %s does not exist, creating", pathName)
 		err = os.MkdirAll(pathName, 0755)
 		if err != nil {
-			fmt.Println("Could not create path.")
+			glog.Errorf("Could not create %s", pathName)
 			return err
 		}
 	}
@@ -28,10 +29,6 @@ func EnsurePath(pathName string) error {
 }
 
 func FileExists(pathName string) bool {
-	fmt.Println("Checking if path", pathName, "exists")
-	if _, err := os.Stat(pathName); err == nil {
-		return true
-	} else {
-		return false
-	}
+	_, err := os.Stat(pathName)
+	return err == nil
 }

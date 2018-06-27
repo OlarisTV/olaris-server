@@ -3,6 +3,7 @@ package streaming
 import (
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
 	"path"
 	"strconv"
 	"strings"
@@ -14,7 +15,13 @@ func buildMediaFileURL(fileLocator string) (string, error) {
 		return "", fmt.Errorf("Failed to split file locator \"%s\"", fileLocator)
 	}
 
-	if parts[0] == "remote" {
+	if parts[0] == "jwt" {
+		claims, err := auth.ValidateStreamingJWT(parts[1])
+		if err != nil {
+			return "", fmt.Errorf("Failed to validate JWT: %s", err.Error())
+		}
+		return "file://" + claims.FilePath, nil
+	} else if parts[0] == "remote" {
 		rcloneParts := strings.SplitN(parts[1], "/", 2)
 		if len(rcloneParts) != 2 {
 			return "", fmt.Errorf("Failed to split rclone path \"%s\"", rcloneParts)
@@ -23,7 +30,7 @@ func buildMediaFileURL(fileLocator string) (string, error) {
 			"rcloneRemote", rcloneParts[0],
 			"rclonePath", rcloneParts[1])
 		if err != nil {
-			return "", fmt.Errorf("Failed to build rclone URL: %s\n ", err.Error())
+			return "", fmt.Errorf("Failed to build rclone URL: %s", err.Error())
 
 		}
 		// TODO(Leon Handreke): Find a better way to do this
