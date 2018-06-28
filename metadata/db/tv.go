@@ -96,10 +96,12 @@ func FindSeasonByUUID(uuid *string) (season TvSeason) {
 	return season
 }
 func FindEpisodeByUUID(uuid *string, userID uint) (episode *TvEpisode) {
-	env.Db.Where("uuid = ?", uuid).Find(&episode)
-	if episode != nil {
+	var episodes []TvEpisode
+	env.Db.Where("uuid = ?", uuid).First(&episodes)
+	if len(episodes) == 1 {
+		episode = &episodes[0]
 		env.Db.Where("uuid = ? AND user_id = ?", uuid, userID).Find(&episode.PlayState)
-		env.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+		env.Db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 	}
 	return episode
 }

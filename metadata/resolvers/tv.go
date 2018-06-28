@@ -19,8 +19,12 @@ type TvSeries struct {
 func (r *Resolver) TvEpisode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
 	userID := helpers.GetUserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
+	if dbepisode != nil {
+		return &EpisodeResolver{r: *dbepisode}
+	} else {
+		return &EpisodeResolver{r: db.TvEpisode{}}
+	}
 
-	return &EpisodeResolver{r: *dbepisode}
 }
 
 func (r *Resolver) TvSeason(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
