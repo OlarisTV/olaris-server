@@ -4,3 +4,4 @@
 builds
 *test.db
 binaries
+cmd/bytesized-streaming-server/bsmds-linux

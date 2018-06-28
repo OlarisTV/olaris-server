@@ -45,12 +45,16 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 		panic(fmt.Sprintf("Could not start filesystem watcher: %s\n", err))
 	}
 
+	exitChan := make(chan int)
+
+	env = &MetadataContext{Db: db, Tmdb: tmdb, Watcher: watcher, ExitChan: exitChan}
+
 	libraryManager := NewLibraryManager(watcher)
+	env.LibraryManager = libraryManager
+
 	// Scan on start-up
 	go libraryManager.RefreshAll()
 
-	exitChan := make(chan int)
-	env = &MetadataContext{Db: db, Tmdb: tmdb, Watcher: watcher, ExitChan: exitChan, LibraryManager: libraryManager}
 	go env.StartWatcher(exitChan)
 
 	return env

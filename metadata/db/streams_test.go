@@ -1,5 +1,3 @@
-// +build !race
-
 package db
 
 import (
@@ -9,9 +7,9 @@ import (
 )
 
 func TestBeforeCreate(t *testing.T) {
-	ctx := NewMDContext("/tmp/", false)
+	NewMDContext("/tmp/", false)
 	stream := Stream{Stream: ffmpeg.Stream{Codecs: "test"}}
-	ctx.Db.Create(&stream)
+	env.Db.Create(&stream)
 	if stream.UUID == "" {
 		t.Errorf("Stream was created without a UUID\n")
 	}
