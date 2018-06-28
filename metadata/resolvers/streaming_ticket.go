@@ -9,15 +9,20 @@ import (
 )
 
 type CreateSTResponse struct {
-	Error  *ErrorResolver
-	Ticket string
+	Error         *ErrorResolver
+	Jwt           string
+	StreamingPath string
 }
 type CreateSTResponseResolver struct {
 	r CreateSTResponse
 }
 
 func (r *CreateSTResponseResolver) StreamingPath() string {
-	return r.r.Ticket
+	return r.r.StreamingPath
+}
+
+func (r *CreateSTResponseResolver) Jwt() string {
+	return r.r.Jwt
 }
 func (r *CreateSTResponseResolver) Error() *ErrorResolver {
 	return r.r.Error
@@ -43,5 +48,7 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	if err != nil {
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
-	return &CreateSTResponseResolver{CreateSTResponse{Error: nil, Ticket: token}}
+	StreamingPath := fmt.Sprintf("/s/jwt/%s/hls-manifest.m3u8", token)
+
+	return &CreateSTResponseResolver{CreateSTResponse{Error: nil, Jwt: token, StreamingPath: StreamingPath}}
 }

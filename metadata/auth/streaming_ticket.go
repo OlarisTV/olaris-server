@@ -32,7 +32,7 @@ func CreateStreamingJWT(userID uint, filePath string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("/s/jwt/%s/hls-manifest.m3u8", ss), nil
+	return ss, nil
 }
 
 func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {

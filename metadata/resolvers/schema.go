@@ -46,6 +46,7 @@ var SchemaTxt = `
 		error: Error
 		# Path with a JWT that will stream your file.
 		streamingPath: String!
+		jwt: String!
 	}
 
 	interface Error {
