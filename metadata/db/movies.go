@@ -39,7 +39,7 @@ func CollectMovieInfo(movies []Movie, userID uint) {
 	// Can't use 'movie' in range here as it won't modify the original object
 	// TODO(Maran): We might want to see if we can make these queries smarter somehow
 	for i, _ := range movies {
-		env.Db.Model(movies[i]).Association("MovieFiles").Find(&movies[i].MovieFiles)
+		env.Db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
 		env.Db.Where("uuid = ? AND user_id = ?", movies[i].UUID, userID).Find(&movies[i].PlayState)
 	}
 }

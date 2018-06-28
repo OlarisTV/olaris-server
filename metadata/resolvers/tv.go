@@ -20,7 +20,7 @@ func (r *Resolver) TvEpisode(ctx context.Context, args *MustUuidArgs) *EpisodeRe
 	userID := helpers.GetUserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 
-	return &EpisodeResolver{r: dbepisode}
+	return &EpisodeResolver{r: *dbepisode}
 }
 
 func (r *Resolver) TvSeason(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
@@ -194,4 +194,10 @@ func (r *EpisodeFileResolver) FileName() string {
 }
 func (r *EpisodeFileResolver) UUID() string {
 	return r.r.UUID
+}
+func (r *EpisodeFileResolver) Streams() (streams []*StreamResolver) {
+	for _, stream := range r.r.Streams {
+		streams = append(streams, &StreamResolver{stream})
+	}
+	return streams
 }

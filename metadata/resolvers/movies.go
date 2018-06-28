@@ -92,3 +92,9 @@ func (r *MovieFileResolver) FileName() string {
 func (r *MovieFileResolver) UUID() string {
 	return r.r.UUID
 }
+func (r *MovieFileResolver) Streams() (streams []*StreamResolver) {
+	for _, stream := range r.r.Streams {
+		streams = append(streams, &StreamResolver{stream})
+	}
+	return streams
+}

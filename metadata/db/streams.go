@@ -8,11 +8,16 @@ import (
 type Stream struct {
 	ffmpeg.Stream
 	gorm.Model
+	UUIDable
 	OwnerID   uint
 	OwnerType string
 }
 
-// TODO-NOW! UUIDs!
+func (self *Stream) BeforeCreate(tx *gorm.DB) (err error) {
+	self.SetUUID()
+	return
+}
+
 func CollectStreams(filePath string) []Stream {
 	videoStream, _ := ffmpeg.GetVideoStream(filePath)
 	audioStreams, _ := ffmpeg.GetAudioStreams(filePath)

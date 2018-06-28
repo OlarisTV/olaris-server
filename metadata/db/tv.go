@@ -1,6 +1,7 @@
 package db
 
 import (
+	_ "fmt"
 	"github.com/jinzhu/gorm"
 )
 
@@ -60,7 +61,7 @@ type EpisodeFile struct {
 
 func CollectEpisodeData(episodes []TvEpisode, userID uint) {
 	for i, _ := range episodes {
-		env.Db.Model(episodes[i]).Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
 		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
 	}
 }
@@ -94,9 +95,11 @@ func FindSeasonByUUID(uuid *string) (season TvSeason) {
 	env.Db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
-func FindEpisodeByUUID(uuid *string, userID uint) (episode TvEpisode) {
+func FindEpisodeByUUID(uuid *string, userID uint) (episode *TvEpisode) {
 	env.Db.Where("uuid = ?", uuid).Find(&episode)
-	env.Db.Where("uuid = ? AND user_id = ?", uuid, userID).Find(&episode.PlayState)
-	env.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+	if episode != nil {
+		env.Db.Where("uuid = ? AND user_id = ?", uuid, userID).Find(&episode.PlayState)
+		env.Db.Model(&episode).Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+	}
 	return episode
 }

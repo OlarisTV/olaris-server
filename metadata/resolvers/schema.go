@@ -16,7 +16,7 @@ var SchemaTxt = `
 		libraries(): [Library]!
 		tvseries(uuid: String): [TvSeries]!
 		tvseason(uuid: String!): Season!
-		tvepisode(uuid: String!): Episode!
+		tvepisode(uuid: String!): Episode
 		users(): [User]!
 	}
 
@@ -118,6 +118,26 @@ var SchemaTxt = `
 		# Absolute path to the filesystem
 		file_path: String!
 		uuid: String!
+		streams: [Stream]!
+	}
+
+	interface Stream {
+	  # Name of the codec used for encoding
+	  codec_name: String
+	  # Mimetype for the codec
+	  codec_mime: String
+	  # Encoding profile used for codec
+	  profile: String
+	  # Stream bitrate (not file)
+	  bit_rate: Int
+	  # Type of stream can be either 'video', 'audio' or 'subtitle'
+	  stream_type: String
+	  # Language used for audio or subtitle types
+	  language: String
+	  # Title for audio and subtitle streams
+	  title: String
+	  # Title for audio and subtitle streams
+	  resolution: String
 	}
 
 	# A movie file
@@ -151,6 +171,8 @@ var SchemaTxt = `
 		# Library ID
 		library_id: Int!
 		uuid: String!
+		# Stream information
+		streams: [Stream]!
 	}
 
 `
