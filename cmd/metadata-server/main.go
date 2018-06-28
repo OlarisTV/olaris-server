@@ -21,7 +21,7 @@ func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 
-	mctx := db.NewMDContext()
+	mctx := db.NewDefaultMDContext()
 	defer mctx.Db.Close()
 
 	r := mux.NewRouter()

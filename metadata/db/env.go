@@ -21,11 +21,15 @@ type MetadataContext struct {
 
 var env *MetadataContext
 
-func NewMDContext() *MetadataContext {
+func NewDefaultMDContext() *MetadataContext {
 	dbPath := path.Join(helpers.GetHome(), ".config", "bss", "metadb")
+	return NewMDContext(dbPath, true)
+}
+
+func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	helpers.EnsurePath(dbPath)
 	db, err := gorm.Open("sqlite3", path.Join(dbPath, "bsmdb_data.db"))
-	db.LogMode(true)
+	db.LogMode(dbLogMode)
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}

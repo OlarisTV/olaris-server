@@ -27,7 +27,7 @@ func main() {
 	r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 	defer streaming.Cleanup()
 
-	mctx := db.NewMDContext()
+	mctx := db.NewDefaultMDContext()
 	defer mctx.Db.Close()
 
 	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
