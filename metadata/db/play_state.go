@@ -6,7 +6,7 @@ import (
 
 type PlayState struct {
 	gorm.Model
-	UUID      string
+	UUIDable
 	UserID    uint
 	Finished  bool
 	Playtime  float64
@@ -16,7 +16,7 @@ type PlayState struct {
 
 func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) bool {
 	var ps PlayState
-	env.Db.FirstOrInit(&ps, PlayState{UUID: uuid, UserID: userID})
+	env.Db.FirstOrInit(&ps, PlayState{UUIDable: UUIDable{uuid}, UserID: userID})
 	ps.Finished = finished
 	ps.Playtime = playtime
 	env.Db.Save(&ps)
