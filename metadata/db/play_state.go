@@ -10,8 +10,8 @@ type PlayState struct {
 	UserID    uint
 	Finished  bool
 	Playtime  float64
-	MediaID   uint
-	MediaType string
+	OwnerID   uint
+	OwnerType string
 }
 
 func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) bool {
@@ -20,27 +20,25 @@ func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) 
 	ps.Finished = finished
 	ps.Playtime = playtime
 	env.Db.Save(&ps)
-	return true
 
-	/*
-		//TODO(Maran): I think we don't need actual polymorphism here so we can probably omit this
-		count := 0
-		var movie Movie
-		var episode TvEpisode
+	count := 0
+	var movie Movie
+	var episode TvEpisode
 
-		env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
-		if count > 0 {
-			movie.PlayState = ps
-			env.Db.Save(&movie)
-			return true
-		}
+	env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+	if count > 0 {
+		movie.PlayState = ps
+		env.Db.Save(&movie)
+		return true
+	}
 
-		count = 0
-		env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
-		if count > 0 {
-			episode.PlayState = ps
-			env.Db.Save(&episode)
-			return true
-		}
-	*/
+	count = 0
+	env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+	if count > 0 {
+		episode.PlayState = ps
+		env.Db.Save(&episode)
+		return true
+	}
+
+	return false
 }

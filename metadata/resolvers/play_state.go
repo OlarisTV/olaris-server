@@ -2,7 +2,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
@@ -23,8 +22,6 @@ func (self *CreatePSResponseResolver) Success() bool {
 
 func (r *Resolver) CreatePlayState(ctx context.Context, args *PlayStateArgs) *CreatePSResponseResolver {
 	userID := helpers.GetUserID(ctx)
-	fmt.Println("user ID:", userID)
-	fmt.Println("Playtime", args.Playtime)
 	ok := db.CreatePlayState(userID, args.UUID, args.Finished, args.Playtime)
 	// Supply simple struct with true or false only for now
 	return &CreatePSResponseResolver{success: ok}

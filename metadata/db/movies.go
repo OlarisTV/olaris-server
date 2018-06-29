@@ -24,7 +24,7 @@ type Movie struct {
 	OriginalTitle string
 	ImdbID        string
 	MovieFiles    []MovieFile
-	PlayState     PlayState `gorm:"polymorphic:Playstate;"`
+	PlayState     PlayState `gorm:"polymorphic:Owner;"`
 }
 
 func (self *MovieFile) String() string {
