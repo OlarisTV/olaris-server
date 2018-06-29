@@ -48,7 +48,7 @@ type TvEpisode struct {
 	StillPath    string
 	TvSeason     *TvSeason
 	EpisodeFiles []EpisodeFile
-	PlayState    PlayState `gorm:"polymorphic:Playstate;"`
+	PlayState    PlayState `gorm:"polymorphic:Owner;"`
 }
 
 type EpisodeFile struct {
@@ -62,7 +62,7 @@ type EpisodeFile struct {
 func CollectEpisodeData(episodes []TvEpisode, userID uint) {
 	for i, _ := range episodes {
 		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		env.Db.Where("uuid = ?", episodes[i].UUID).Find(&episodes[i].PlayState)
+		env.Db.Model(episodes[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodes[i].ID, "tv_episodes").First(&episodes[i].PlayState)
 	}
 }
 
@@ -100,8 +100,8 @@ func FindEpisodeByUUID(uuid *string, userID uint) (episode *TvEpisode) {
 	env.Db.Where("uuid = ?", uuid).First(&episodes)
 	if len(episodes) == 1 {
 		episode = &episodes[0]
-		env.Db.Where("uuid = ? AND user_id = ?", uuid, userID).Find(&episode.PlayState)
 		env.Db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+		env.Db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "tv_episodes").First(&episode.PlayState)
 	}
 	return episode
 }
