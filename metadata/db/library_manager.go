@@ -79,7 +79,6 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
 	if err == nil {
 		if fullEpisode != nil {
-			episode.SetUUID()
 			episode.AirDate = fullEpisode.AirDate
 			episode.Name = fullEpisode.Name
 			episode.TmdbID = fullEpisode.ID
@@ -120,7 +119,6 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 		fmt.Printf("Grabbing meta-data for season %d of series '%s'\n", season.SeasonNumber, tv.Name)
 		fullSeason, err := env.Tmdb.GetTvSeasonInfo(tv.TmdbID, season.SeasonNumber, nil)
 		if err == nil {
-			season.SetUUID()
 			season.AirDate = fullSeason.AirDate
 			season.Overview = fullSeason.Overview
 			season.Name = fullSeason.Name
@@ -160,7 +158,6 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 			} else {
 				fmt.Println("Could not get full results, only adding search results. Error:", err)
 			}
-			serie.SetUUID()
 			serie.TmdbID = tv.ID
 			serie.FirstAirDate = tv.FirstAirDate
 			serie.OriginalName = tv.OriginalName
@@ -202,7 +199,6 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 			} else {
 				fmt.Println("Could not get full results, only adding search results. Error:", err)
 			}
-			movie.SetUUID()
 			movie.TmdbID = mov.ID
 			movie.ReleaseDate = mov.ReleaseDate
 			movie.OriginalTitle = mov.OriginalTitle
@@ -296,7 +292,6 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 				LibraryID: library.ID,
 				Year:      yearInt,
 			}
-			mi.SetUUID()
 			var tv TvSeries
 			var tvs TvSeason
 
@@ -360,7 +355,6 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 			Year:      year,
 			LibraryID: library.ID,
 		}
-		mi.SetUUID()
 
 		movieFile := MovieFile{MediaItem: mi, MovieID: movie.ID}
 		movieFile.Streams = CollectStreams(filePath)

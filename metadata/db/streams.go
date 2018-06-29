@@ -13,11 +13,6 @@ type Stream struct {
 	OwnerType string
 }
 
-func (self *Stream) BeforeCreate(tx *gorm.DB) (err error) {
-	self.SetUUID()
-	return
-}
-
 func CollectStreams(filePath string) []Stream {
 	videoStream, _ := ffmpeg.GetVideoStream(filePath)
 	audioStreams, _ := ffmpeg.GetAudioStreams(filePath)

@@ -2,13 +2,20 @@ package db
 
 import (
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"github.com/satori/go.uuid"
 	"strconv"
 )
 
 type MediaType int
+
 type UUIDable struct {
 	UUID string `json:"uuid"`
+}
+
+func (self *UUIDable) BeforeCreate(tx *gorm.DB) (err error) {
+	self.SetUUID()
+	return
 }
 
 func (self *UUIDable) SetUUID() error {
