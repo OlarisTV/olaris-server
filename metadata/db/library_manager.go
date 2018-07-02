@@ -46,7 +46,7 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 		fmt.Println("Starting worker")
 		ep, ok := payload.(EpisodePayload)
 		if ok {
-			fmt.Printf("Worker in '%s', S%dE%s\n", ep.series.Name, ep.season.SeasonNumber, ep.episode.EpisodeNum)
+			fmt.Printf("Worker in '%s', S%vE%v\n", ep.series.Name, ep.season.SeasonNumber, ep.episode.EpisodeNum)
 			err := manager.UpdateEpisodeMD(ep.series, ep.season, ep.episode)
 			if err != nil {
 				fmt.Println("GOT AN ERROR UPDATING EPISODE")
@@ -70,7 +70,7 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 	}
 }
 func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
-	fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
+	fmt.Printf("Grabbing metadata for episode %v for series '%v'\n", episode.EpisodeNum, tv.Name)
 	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, episode.EpisodeNum, nil)
 	if err == nil {
 		if fullEpisode != nil {
