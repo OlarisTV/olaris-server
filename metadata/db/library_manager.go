@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/parsers"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -242,10 +240,10 @@ func (self *LibraryManager) AddWatcher(filePath string) {
 }
 
 func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
-	var title string
-	var year uint64
 	fmt.Println("Scanning file:", filePath)
 	fileInfo, err := os.Stat(filePath)
+	basename := fileInfo.Name()
+	name := strings.TrimSuffix(basename, filepath.Ext(basename))
 
 	if err != nil {
 		// This catches broken symlinks
@@ -257,7 +255,6 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	}
 	switch kind := library.Kind; kind {
 	case MediaTypeSeries:
-		name := fileInfo.Name()
 		parsedInfo := parsers.ParseSerieName(name)
 		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := MediaItem{
@@ -288,44 +285,17 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 		}
 
 	case MediaTypeMovie:
-
-		movieRe := regexp.MustCompile("(.*)\\((\\d{4})\\)")
-		res := movieRe.FindStringSubmatch(fileInfo.Name())
-
-		if len(res) > 1 {
-			title = helpers.Sanitize(res[1])
-		}
-		if len(res) > 2 {
-			year, err = strconv.ParseUint(res[2], 10, 32)
-			if err != nil {
-				fmt.Println("Could not parse year:", err)
-			}
-		}
-
-		if title == "" {
-			basename := fileInfo.Name()
-			name := strings.TrimSuffix(basename, filepath.Ext(basename))
-			fmt.Println("Could not parse title for:")
-			fmt.Println("Trying heavy sanitizing")
-			var yearStr string
-			title, yearStr = helpers.HeavySanitize(name)
-			year, err = strconv.ParseUint(yearStr, 10, 32)
-			if err != nil {
-				fmt.Println("Could not parse year:", err)
-			}
-			fmt.Println("attempted to find some stuff", title, year)
-		}
-
+		mvi := parsers.ParseMovieName(name)
 		// Create a movie stub so the metadata can get to work on it after probing
-		movie := Movie{Title: title, Year: year}
+		movie := Movie{Title: mvi.Title, Year: mvi.Year}
 		env.Db.FirstOrCreate(&movie, movie)
 
 		mi := MediaItem{
-			FileName:  fileInfo.Name(),
+			FileName:  name,
 			FilePath:  filePath,
 			Size:      fileInfo.Size(),
-			Title:     title,
-			Year:      year,
+			Title:     mvi.Title,
+			Year:      mvi.Year,
 			LibraryID: library.ID,
 		}
 

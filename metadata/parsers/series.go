@@ -37,6 +37,7 @@ func ParseSerieName(fileName string) *ParsedSeriesInfo {
 	// Find out episode numbers
 	res := seriesRegex.FindStringSubmatch(fileName)
 	if len(res) < 3 {
+		// Fall back to some rarer used formats like 03x03 for season/episode
 		res = seriesFallbackRegex.FindStringSubmatch(fileName)
 	}
 
