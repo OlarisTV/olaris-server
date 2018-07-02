@@ -105,7 +105,7 @@ var SchemaTxt = `
 		overview: String!
 		still_path: String!
 		air_date: String!
-		episode_number: String!
+		episode_number: Int!
 		tmdb_id: Int!
 		uuid: String!
 		files: [EpisodeFile]!

@@ -168,8 +168,8 @@ func (r *EpisodeResolver) StillPath() string {
 func (r *EpisodeResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
-func (r *EpisodeResolver) EpisodeNumber() string {
-	return r.r.EpisodeNum
+func (r *EpisodeResolver) EpisodeNumber() int32 {
+	return int32(r.r.EpisodeNum)
 }
 func (r *EpisodeResolver) PlayState() *PlayStateResolver {
 	return &PlayStateResolver{r: r.r.PlayState}

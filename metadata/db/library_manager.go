@@ -5,6 +5,7 @@ import (
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
+	"gitlab.com/bytesized/bytesized-streaming/metadata/parsers"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -72,11 +73,7 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 }
 func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
 	fmt.Printf("Grabbing metadata for episode %s for series '%s'\n", episode.EpisodeNum, tv.Name)
-	episodeInt, err := strconv.ParseInt(episode.EpisodeNum, 10, 32)
-	if err != nil {
-		fmt.Println("Could not parse season:", err)
-	}
-	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, int(episodeInt), nil)
+	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, episode.EpisodeNum, nil)
 	if err == nil {
 		if fullEpisode != nil {
 			episode.AirDate = fullEpisode.AirDate
@@ -245,9 +242,9 @@ func (self *LibraryManager) AddWatcher(filePath string) {
 }
 
 func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
-	fmt.Println("Scanning file:", filePath)
 	var title string
 	var year uint64
+	fmt.Println("Scanning file:", filePath)
 	fileInfo, err := os.Stat(filePath)
 
 	if err != nil {
@@ -260,52 +257,25 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	}
 	switch kind := library.Kind; kind {
 	case MediaTypeSeries:
-		var year string
-		fileName := fileInfo.Name()
-		// First figure out if there is a year in there, and if so parse it out.
-		yearRegex := regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?)")
-		ress := yearRegex.FindStringSubmatch(fileInfo.Name())
-		if len(ress) > 1 {
-			year = ress[2]
-			fmt.Println(year)
-			fileName = strings.Replace(fileName, ress[1], "", -1)
-		}
-		// Find out episode numbers
-		seriesRe := regexp.MustCompile("^(.*)S(\\d{2})E(\\d{2})")
-		res := seriesRe.FindStringSubmatch(fileName)
-
-		if len(res) > 2 {
-			yearInt, err := strconv.ParseUint(res[2], 10, 32)
-			if err != nil {
-				fmt.Println("Could not parse year:", err)
-			}
-
-			title := helpers.Sanitize(res[1])
-			season := res[2]
-			episode := res[3]
-			fmt.Printf("Found '%s' season %s episode %s\n", title, season, episode)
+		name := fileInfo.Name()
+		parsedInfo := parsers.ParseSerieName(name)
+		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := MediaItem{
-				FileName:  fileInfo.Name(),
+				FileName:  name,
 				FilePath:  filePath,
 				Size:      fileInfo.Size(),
-				Title:     title,
+				Title:     parsedInfo.Title,
 				LibraryID: library.ID,
-				Year:      yearInt,
+				Year:      parsedInfo.Year,
 			}
 			var tv TvSeries
 			var tvs TvSeason
 
-			seasonInt, err := strconv.ParseInt(season, 10, 32)
-			if err != nil {
-				fmt.Println("Could not parse season:", err)
-			}
-
-			env.Db.FirstOrCreate(&tv, TvSeries{Name: title})
-			newSeason := TvSeason{TvSeriesID: tv.ID, SeasonNumber: int(seasonInt)}
+			env.Db.FirstOrCreate(&tv, TvSeries{Name: parsedInfo.Title})
+			newSeason := TvSeason{TvSeriesID: tv.ID, SeasonNumber: parsedInfo.SeasonNum}
 			env.Db.FirstOrCreate(&tvs, newSeason)
-			fmt.Println("Found/created:", tvs)
 
-			ep := TvEpisode{SeasonNum: season, EpisodeNum: episode, TvSeasonID: tvs.ID}
+			ep := TvEpisode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, TvSeasonID: tvs.ID}
 			env.Db.FirstOrCreate(&ep, ep)
 
 			epFile := EpisodeFile{MediaItem: mi, TvEpisodeID: ep.ID}
@@ -313,7 +283,10 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 
 			// TODO(Maran) We might be adding double files in case it already exist
 			env.Db.Save(&epFile)
+		} else {
+			fmt.Printf("Could not discover enough information about %s to add it to the library\n", parsedInfo.Title)
 		}
+
 	case MediaTypeMovie:
 
 		movieRe := regexp.MustCompile("(.*)\\((\\d{4})\\)")

@@ -40,8 +40,8 @@ type TvEpisode struct {
 	gorm.Model
 	BaseItem
 	Name         string
-	SeasonNum    string
-	EpisodeNum   string
+	SeasonNum    int
+	EpisodeNum   int
 	TvSeasonID   uint
 	TmdbID       int
 	AirDate      string
