@@ -51,6 +51,10 @@ type TvEpisode struct {
 	PlayState    PlayState `gorm:"polymorphic:Owner;"`
 }
 
+func (self *TvEpisode) TimeStamp() int64 {
+	return self.CreatedAt.Unix()
+}
+
 type EpisodeFile struct {
 	gorm.Model
 	MediaItem

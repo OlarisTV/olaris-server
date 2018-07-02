@@ -71,3 +71,12 @@ func FindContentByUUID(uuid string) *MediaResult {
 
 	return &MediaResult{}
 }
+
+func RecentlyAddedMovies() (movies []*Movie) {
+	env.Db.Order("created_at DESC").Limit(10).Find(&movies)
+	return movies
+}
+func RecentlyAddedEpisodes() (eps []*TvEpisode) {
+	env.Db.Order("created_at DESC").Limit(10).Find(&eps)
+	return eps
+}

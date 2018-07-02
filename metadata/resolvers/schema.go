@@ -10,6 +10,9 @@ var SchemaTxt = `
 		query: Query
 		mutation: Mutation
 	}
+
+	union RecentlyAdded = Movie | Episode
+
 	# The query type, represents all of the entry points into our object graph
 	type Query {
 		movies(uuid: String): [Movie]!
@@ -18,6 +21,7 @@ var SchemaTxt = `
 		tvseason(uuid: String!): Season!
 		tvepisode(uuid: String!): Episode
 		users(): [User]!
+		recentlyAdded(): [RecentlyAdded]
 	}
 
 	type Mutation {
@@ -28,44 +32,45 @@ var SchemaTxt = `
 		createStreamingTicket(uuid: String!): CreateSTResponse!
 	}
 
-	interface LibRes {
+
+	type LibRes {
 		library: Library!
 		error: Error
 	}
 
-	interface CreateUserResponse {
+	type CreateUserResponse {
 		user: User!
 		error: Error
 	}
 
-	interface CreatePSResponse {
+	type CreatePSResponse {
 		success: Boolean!
 	}
 
-	interface CreateSTResponse {
+	type CreateSTResponse {
 		error: Error
 		# Path with a JWT that will stream your file.
 		streamingPath: String!
 		jwt: String!
 	}
 
-	interface Error {
+	type Error {
 		message: String!
 		hasError: Boolean!
 	}
 
-	interface User {
+	type User {
 		login: String!
 		admin: Boolean!
 	}
 
-	interface PlayState {
+	type PlayState {
 		finished: Boolean!
 		playtime: Float!
 	}
 
 	# A media library
-	interface Library {
+	type Library {
 		# Library Type (0 - movies)
 		kind: Int!
 		# Human readable name of the Library
@@ -76,7 +81,7 @@ var SchemaTxt = `
 		episodes: [Episode]!
 	}
 
-	interface TvSeries {
+	type TvSeries {
 		name: String!
 		overview: String!
 		first_air_date: String!
@@ -89,7 +94,7 @@ var SchemaTxt = `
 		uuid: String!
 	}
 
-	interface Season {
+	type Season {
 		name: String!
 		overview: String!
 		season_number: Int!
@@ -100,7 +105,7 @@ var SchemaTxt = `
 		uuid: String!
 	}
 
-	interface Episode {
+	type Episode {
 		name: String!
 		overview: String!
 		still_path: String!
@@ -112,7 +117,7 @@ var SchemaTxt = `
 		play_state: PlayState
 	}
 
-	interface EpisodeFile {
+	type EpisodeFile {
 		# Filename
 		file_name: String!
 		# Absolute path to the filesystem
@@ -121,7 +126,7 @@ var SchemaTxt = `
 		streams: [Stream]!
 	}
 
-	interface Stream {
+	type Stream {
 	  # Name of the codec used for encoding
 	  codec_name: String
 	  # Mimetype for the codec
@@ -141,7 +146,7 @@ var SchemaTxt = `
 	}
 
 	# A movie file
-	interface Movie {
+	type Movie {
 		# Title of the movie
 		title: String!
 		# Official Title
@@ -163,7 +168,7 @@ var SchemaTxt = `
 		play_state: PlayState
 	}
 
-	interface MovieFile {
+	type MovieFile {
 		# Filename
 		file_name: String!
 		# Absolute path to the filesystem

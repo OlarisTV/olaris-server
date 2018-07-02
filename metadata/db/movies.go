@@ -34,6 +34,9 @@ func (self *MovieFile) String() string {
 func (self *Movie) YearAsString() string {
 	return strconv.FormatUint(self.Year, 10)
 }
+func (self *Movie) TimeStamp() int64 {
+	return self.CreatedAt.Unix()
+}
 
 func CollectMovieInfo(movies []Movie, userID uint) {
 	// Can't use 'movie' in range here as it won't modify the original object
