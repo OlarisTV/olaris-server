@@ -11,7 +11,7 @@ var SchemaTxt = `
 		mutation: Mutation
 	}
 
-	union RecentlyAdded = Movie | Episode
+	union MediaItem = Movie | Episode
 
 	# The query type, represents all of the entry points into our object graph
 	type Query {
@@ -21,8 +21,8 @@ var SchemaTxt = `
 		tvseason(uuid: String!): Season!
 		tvepisode(uuid: String!): Episode
 		users(): [User]!
-		recentlyAdded(): [RecentlyAdded]
-		upNext(): [RecentlyAdded]
+		recentlyAdded(): [MediaItem]
+		upNext(): [MediaItem]
 	}
 
 	type Mutation {

@@ -7,7 +7,7 @@ import (
 	"sort"
 )
 
-func (r *Resolver) UpNext(ctx context.Context) *[]*RecentlyAddedResolver {
+func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
 	userID := helpers.GetUserID(ctx)
 	sortables := []sortable{}
 
@@ -21,14 +21,14 @@ func (r *Resolver) UpNext(ctx context.Context) *[]*RecentlyAddedResolver {
 	}
 	sort.Sort(ByCreationDate(sortables))
 
-	l := []*RecentlyAddedResolver{}
+	l := []*MediaItemResolver{}
 
 	for _, item := range sortables {
 		if res, ok := item.(*db.TvEpisode); ok {
-			l = append(l, &RecentlyAddedResolver{r: &EpisodeResolver{r: *res}})
+			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: *res}})
 		}
 		if res, ok := item.(*db.Movie); ok {
-			l = append(l, &RecentlyAddedResolver{r: &MovieResolver{r: *res}})
+			l = append(l, &MediaItemResolver{r: &MovieResolver{r: *res}})
 		}
 	}
 
