@@ -50,7 +50,7 @@ func (self *MediaItem) YearAsString() string {
 
 type MediaResult struct {
 	Movie     *MovieFile
-	TvEpisode *EpisodeFile
+	Episode *EpisodeFile
 }
 
 func FindContentByUUID(uuid string) *MediaResult {
@@ -66,7 +66,7 @@ func FindContentByUUID(uuid string) *MediaResult {
 	count = 0
 	env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
 	if count > 0 {
-		return &MediaResult{TvEpisode: &episode}
+		return &MediaResult{Episode: &episode}
 	}
 
 	return &MediaResult{}
@@ -76,7 +76,7 @@ func RecentlyAddedMovies() (movies []*Movie) {
 	env.Db.Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
-func RecentlyAddedEpisodes() (eps []*TvEpisode) {
+func RecentlyAddedEpisodes() (eps []*Episode) {
 	env.Db.Order("created_at DESC").Limit(10).Find(&eps)
 	return eps
 }

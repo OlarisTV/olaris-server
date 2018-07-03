@@ -36,8 +36,8 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	if mr.Movie != nil {
 		filePath = mr.Movie.FilePath
 	}
-	if mr.TvEpisode != nil {
-		filePath = mr.TvEpisode.FilePath
+	if mr.Episode != nil {
+		filePath = mr.Episode.FilePath
 	}
 
 	if filePath == "" {

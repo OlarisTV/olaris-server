@@ -6,31 +6,31 @@ import (
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
-type TvSeason struct {
-	db.TvSeason
+type Season struct {
+	db.Season
 	Episodes []*EpisodeResolver
 }
 
-type TvSeries struct {
-	db.TvSeries
+type Series struct {
+	db.Series
 	Seasons []*SeasonResolver
 }
 
-func (r *Resolver) TvEpisode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
+func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
 	userID := helpers.GetUserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 	if dbepisode != nil {
 		return &EpisodeResolver{r: *dbepisode}
 	} else {
-		return &EpisodeResolver{r: db.TvEpisode{}}
+		return &EpisodeResolver{r: db.Episode{}}
 	}
 
 }
 
-func (r *Resolver) TvSeason(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
+func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
 	userID := helpers.GetUserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
-	season := TvSeason{dbseason, nil}
+	season := Season{dbseason, nil}
 
 	// TODO(Maran): This part can be DRIED up and moved into it's own function
 	for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
@@ -40,10 +40,10 @@ func (r *Resolver) TvSeason(ctx context.Context, args *MustUuidArgs) *SeasonReso
 	return &SeasonResolver{r: season}
 }
 
-func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesResolver {
+func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver {
 	userID := helpers.GetUserID(ctx)
-	var resolvers []*TvSeriesResolver
-	var series []db.TvSeries
+	var resolvers []*SeriesResolver
+	var series []db.Series
 
 	if args.Uuid != nil {
 		series = db.FindSeriesByUUID(args.Uuid)
@@ -59,55 +59,55 @@ func (r *Resolver) TvSeries(ctx context.Context, args *UuidArgs) []*TvSeriesReso
 	return resolvers
 }
 
-func CreateSeriesResolver(dbserie db.TvSeries, userID uint) *TvSeriesResolver {
-	serie := TvSeries{dbserie, nil}
+func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
+	serie := Series{dbserie, nil}
 	for _, dbseason := range db.FindSeasonsForSeries(serie.ID) {
-		season := TvSeason{dbseason, nil}
+		season := Season{dbseason, nil}
 		for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
 			season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
 		}
 		serie.Seasons = append(serie.Seasons, &SeasonResolver{r: season})
 	}
-	return &TvSeriesResolver{r: serie}
+	return &SeriesResolver{r: serie}
 }
 
-type TvSeriesResolver struct {
-	r TvSeries
+type SeriesResolver struct {
+	r Series
 }
 
-func (r *TvSeriesResolver) Name() string {
+func (r *SeriesResolver) Name() string {
 	return r.r.Name
 }
-func (r *TvSeriesResolver) UUID() string {
+func (r *SeriesResolver) UUID() string {
 	return r.r.UUID
 }
-func (r *TvSeriesResolver) Overview() string {
+func (r *SeriesResolver) Overview() string {
 	return r.r.Overview
 }
-func (r *TvSeriesResolver) FirstAirDate() string {
+func (r *SeriesResolver) FirstAirDate() string {
 	return r.r.FirstAirDate
 }
-func (r *TvSeriesResolver) Status() string {
+func (r *SeriesResolver) Status() string {
 	return r.r.Status
 }
-func (r *TvSeriesResolver) Type() string {
+func (r *SeriesResolver) Type() string {
 	return r.r.Type
 }
-func (r *TvSeriesResolver) PosterPath() string {
+func (r *SeriesResolver) PosterPath() string {
 	return r.r.PosterPath
 }
-func (r *TvSeriesResolver) BackdropPath() string {
+func (r *SeriesResolver) BackdropPath() string {
 	return r.r.BackdropPath
 }
-func (r *TvSeriesResolver) TmdbID() int32 {
+func (r *SeriesResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
-func (r *TvSeriesResolver) Seasons() []*SeasonResolver {
+func (r *SeriesResolver) Seasons() []*SeasonResolver {
 	return r.r.Seasons
 }
 
 type SeasonResolver struct {
-	r TvSeason
+	r Season
 }
 
 func (r *SeasonResolver) Name() string {
@@ -138,7 +138,7 @@ func (r *SeasonResolver) Episodes() []*EpisodeResolver {
 }
 
 type EpisodeResolver struct {
-	r db.TvEpisode
+	r db.Episode
 }
 
 func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {

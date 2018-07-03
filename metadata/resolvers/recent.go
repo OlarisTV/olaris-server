@@ -34,7 +34,7 @@ func (r *Resolver) RecentlyAdded() *[]*MediaItemResolver {
 	l := []*MediaItemResolver{}
 
 	for _, item := range sortables {
-		if res, ok := item.(*db.TvEpisode); ok {
+		if res, ok := item.(*db.Episode); ok {
 			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: *res}})
 		}
 		if res, ok := item.(*db.Movie); ok {

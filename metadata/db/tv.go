@@ -12,7 +12,7 @@ type BaseItem struct {
 	PosterPath   string
 }
 
-type TvSeries struct {
+type Series struct {
 	BaseItem
 	gorm.Model
 	Name         string
@@ -22,86 +22,86 @@ type TvSeries struct {
 	Status       string
 	TmdbID       int
 	Type         string
-	TvSeasons    []*TvSeason
+	Seasons      []*Season
 }
 
-type TvSeason struct {
+type Season struct {
 	BaseItem
 	gorm.Model
 	Name         string
 	AirDate      string
 	SeasonNumber int
-	TvSeries     *TvSeries
-	TvEpisodes   []*TvEpisode
-	TvSeriesID   uint
+	Series       *Series
+	Episodes     []*Episode
+	SeriesID     uint
 	TmdbID       int
 }
 
-type TvEpisode struct {
+type Episode struct {
 	gorm.Model
 	BaseItem
 	Name         string
 	SeasonNum    int
 	EpisodeNum   int
-	TvSeasonID   uint
+	SeasonID     uint
 	TmdbID       int
 	AirDate      string
 	StillPath    string
-	TvSeason     *TvSeason
+	Season       *Season
 	EpisodeFiles []EpisodeFile
 	PlayState    PlayState `gorm:"polymorphic:Owner;"`
 }
 
-func (self *TvEpisode) TimeStamp() int64 {
+func (self *Episode) TimeStamp() int64 {
 	return self.CreatedAt.Unix()
 }
 
 type EpisodeFile struct {
 	gorm.Model
 	MediaItem
-	TvEpisodeID uint
-	TvEpisode   *TvEpisode
-	Streams     []Stream `gorm:"polymorphic:Owner"`
+	EpisodeID uint
+	Episode   *Episode
+	Streams   []Stream `gorm:"polymorphic:Owner"`
 }
 
-func CollectEpisodeData(episodes []TvEpisode, userID uint) {
+func CollectEpisodeData(episodes []Episode, userID uint) {
 	for i, _ := range episodes {
 		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
 		env.Db.Model(episodes[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodes[i].ID, "tv_episodes").First(&episodes[i].PlayState)
 	}
 }
 
-func FindAllSeries() (series []TvSeries) {
+func FindAllSeries() (series []Series) {
 	env.Db.Where("tmdb_id != 0").Find(&series)
 	return series
 }
-func FindSeasonsForSeries(seriesID uint) (seasons []TvSeason) {
-	env.Db.Where("tv_series_id = ?", seriesID).Find(&seasons)
+func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
+	env.Db.Where("series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
-func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []TvEpisode) {
-	env.Db.Where("tv_season_id = ?", seasonID).Find(&episodes)
+func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
+	env.Db.Where("season_id = ?", seasonID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
 }
-func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []TvEpisode) {
+func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 	env.Db.Where("library_id =?", libraryID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
 }
 
-func FindSeriesByUUID(uuid *string) (series []TvSeries) {
+func FindSeriesByUUID(uuid *string) (series []Series) {
 	env.Db.Where("uuid = ?", uuid).Find(&series)
 	return series
 }
-func FindSeasonByUUID(uuid *string) (season TvSeason) {
+func FindSeasonByUUID(uuid *string) (season Season) {
 	env.Db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
-func FindEpisodeByUUID(uuid *string, userID uint) (episode *TvEpisode) {
-	var episodes []TvEpisode
+func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
+	var episodes []Episode
 	env.Db.Where("uuid = ?", uuid).First(&episodes)
 	if len(episodes) == 1 {
 		episode = &episodes[0]

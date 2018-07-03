@@ -6,14 +6,14 @@ func createData() {
 	ps := PlayState{Finished: true, Playtime: 13, UserID: 1}
 	ps2 := PlayState{Finished: true, Playtime: 14, UserID: 1}
 
-	series := TvSeries{Name: "Test"}
-	episode := &TvEpisode{SeasonNum: 1, EpisodeNum: 1, Name: "Episode 1", PlayState: ps}
-	episode2 := &TvEpisode{SeasonNum: 1, EpisodeNum: 2, Name: "Episode 2", PlayState: ps2}
-	episode3 := &TvEpisode{SeasonNum: 1, EpisodeNum: 3, Name: "Episode 3"}
-	episode4 := &TvEpisode{SeasonNum: 1, EpisodeNum: 4, Name: "Episode 4"}
+	series := Series{Name: "Test"}
+	episode := &Episode{SeasonNum: 1, EpisodeNum: 1, Name: "Episode 1", PlayState: ps}
+	episode2 := &Episode{SeasonNum: 1, EpisodeNum: 2, Name: "Episode 2", PlayState: ps2}
+	episode3 := &Episode{SeasonNum: 1, EpisodeNum: 3, Name: "Episode 3"}
+	episode4 := &Episode{SeasonNum: 1, EpisodeNum: 4, Name: "Episode 4"}
 
-	season := TvSeason{Name: "Season 1", TvEpisodes: []*TvEpisode{episode, episode2, episode3, episode4}}
-	series.TvSeasons = []*TvSeason{&season}
+	season := Season{Name: "Season 1", Episodes: []*Episode{episode, episode2, episode3, episode4}}
+	series.Seasons = []*Season{&season}
 
 	env.Db.Create(&series)
 }
@@ -35,11 +35,11 @@ func TestAllPlayState(t *testing.T) {
 }
 
 func createSeries1() {
-	series2 := TvSeries{Name: "Test 2"}
-	ep := &TvEpisode{SeasonNum: 3, EpisodeNum: 3, Name: "Episode 3", PlayState: PlayState{Finished: false, Playtime: 33, UserID: 1}}
-	ep2 := &TvEpisode{SeasonNum: 3, EpisodeNum: 4, Name: "Episode 4"}
-	s := TvSeason{Name: "Season 3", TvEpisodes: []*TvEpisode{ep, ep2}}
-	series2.TvSeasons = []*TvSeason{&s}
+	series2 := Series{Name: "Test 2"}
+	ep := &Episode{SeasonNum: 3, EpisodeNum: 3, Name: "Episode 3", PlayState: PlayState{Finished: false, Playtime: 33, UserID: 1}}
+	ep2 := &Episode{SeasonNum: 3, EpisodeNum: 4, Name: "Episode 4"}
+	s := Season{Name: "Season 3", Episodes: []*Episode{ep, ep2}}
+	series2.Seasons = []*Season{&s}
 	env.Db.Create(&series2)
 }
 func TestContinueMovie(t *testing.T) {

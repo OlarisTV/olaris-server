@@ -31,9 +31,9 @@ type LibraryManager struct {
 }
 
 type EpisodePayload struct {
-	series  TvSeries
-	season  TvSeason
-	episode TvEpisode
+	series  Series
+	season  Season
+	episode Episode
 }
 
 func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
@@ -69,7 +69,7 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 		self.UpdateTvMD(library)
 	}
 }
-func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episode TvEpisode) error {
+func (self *LibraryManager) UpdateEpisodeMD(tv Series, season Season, episode Episode) error {
 	fmt.Printf("Grabbing metadata for episode %v for series '%v'\n", episode.EpisodeNum, tv.Name)
 	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, episode.EpisodeNum, nil)
 	if err == nil {
@@ -90,14 +90,14 @@ func (self *LibraryManager) UpdateEpisodeMD(tv TvSeries, season TvSeason, episod
 }
 
 func (self *LibraryManager) UpdateEpisodesMD() error {
-	episodes := []TvEpisode{}
+	episodes := []Episode{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&episodes)
 	for i := range episodes {
-		go func(episode *TvEpisode) {
-			var season TvSeason
-			var tv TvSeries
-			env.Db.Where("id = ?", episode.TvSeasonID).Find(&season)
-			env.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
+		go func(episode *Episode) {
+			var season Season
+			var tv Series
+			env.Db.Where("id = ?", episode.SeasonID).Find(&season)
+			env.Db.Where("id = ?", season.SeriesID).Find(&tv)
 			self.pool.Process(EpisodePayload{season: season, series: tv, episode: *episode})
 		}(&episodes[i])
 	}
@@ -105,11 +105,11 @@ func (self *LibraryManager) UpdateEpisodesMD() error {
 }
 
 func (self *LibraryManager) UpdateSeasonMD() error {
-	seasons := []TvSeason{}
+	seasons := []Season{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&seasons)
 	for _, season := range seasons {
-		var tv TvSeries
-		env.Db.Where("id = ?", season.TvSeriesID).Find(&tv)
+		var tv Series
+		env.Db.Where("id = ?", season.SeriesID).Find(&tv)
 
 		fmt.Printf("Grabbing meta-data for season %d of series '%s'\n", season.SeasonNumber, tv.Name)
 		fullSeason, err := env.Tmdb.GetTvSeasonInfo(tv.TmdbID, season.SeasonNumber, nil)
@@ -128,7 +128,7 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 }
 
 func (self *LibraryManager) UpdateTvMD(library *Library) error {
-	series := []TvSeries{}
+	series := []Series{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&series)
 	for _, serie := range series {
 		fmt.Println("Looking up meta-data for series:", serie.Name)
@@ -265,17 +265,17 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 				LibraryID: library.ID,
 				Year:      parsedInfo.Year,
 			}
-			var tv TvSeries
-			var tvs TvSeason
+			var tv Series
+			var tvs Season
 
-			env.Db.FirstOrCreate(&tv, TvSeries{Name: parsedInfo.Title})
-			newSeason := TvSeason{TvSeriesID: tv.ID, SeasonNumber: parsedInfo.SeasonNum}
+			env.Db.FirstOrCreate(&tv, Series{Name: parsedInfo.Title})
+			newSeason := Season{SeriesID: tv.ID, SeasonNumber: parsedInfo.SeasonNum}
 			env.Db.FirstOrCreate(&tvs, newSeason)
 
-			ep := TvEpisode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, TvSeasonID: tvs.ID}
+			ep := Episode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, SeasonID: tvs.ID}
 			env.Db.FirstOrCreate(&ep, ep)
 
-			epFile := EpisodeFile{MediaItem: mi, TvEpisodeID: ep.ID}
+			epFile := EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
 			epFile.Streams = CollectStreams(filePath)
 
 			// TODO(Maran) We might be adding double files in case it already exist

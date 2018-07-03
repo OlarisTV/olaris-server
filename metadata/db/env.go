@@ -35,7 +35,7 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	}
 
 	// Migrate the db-schema
-	db.AutoMigrate(&Movie{}, &MovieFile{}, &Library{}, &TvSeries{}, &TvSeason{}, &TvEpisode{}, &EpisodeFile{}, &User{}, &Invite{}, &PlayState{}, &Stream{})
+	db.AutoMigrate(&Movie{}, &MovieFile{}, &Library{}, &Series{}, &Season{}, &Episode{}, &EpisodeFile{}, &User{}, &Invite{}, &PlayState{}, &Stream{})
 
 	apiKey := "0cdacd9ab172ac6ff69c8d84b2c938a8"
 	tmdb := tmdb.Init(apiKey)

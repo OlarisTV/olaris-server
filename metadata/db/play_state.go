@@ -29,31 +29,31 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 	return movies
 }
 
-func UpNextEpisodes(userID uint) []*TvEpisode {
+func UpNextEpisodes(userID uint) []*Episode {
 	result := []LatestEpResult{}
-	eps := []*TvEpisode{}
-	env.Db.Raw("select tv_episodes.id as episode_id, tv_episodes.episode_num as episode_num, tv_episodes.season_num, tv_seasons.id as season_id, play_states.playtime, tv_series.id as series_id, play_states.finished, (tv_episodes.season_num*100)+tv_episodes.episode_num as height from play_states"+
-		" inner join tv_episodes ON tv_episodes.ID = play_states.owner_id AND play_states.owner_type = 'tv_episodes'"+
-		" inner join tv_seasons on tv_seasons.id = tv_episodes.tv_season_id"+
-		" inner join tv_series on tv_series.id = tv_seasons.tv_series_id"+
+	eps := []*Episode{}
+	env.Db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, (episodes.season_num*100)+episodes.episode_num as height from play_states"+
+		" inner join episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
+		" inner join seasons on seasons.id = episodes.season_id"+
+		" inner join series on series.id = seasons.series_id"+
 		" where play_states.user_id = ?"+
-		" GROUP BY tv_series.id"+
+		" GROUP BY series.id"+
 		" ORDER BY height DESC", userID).Scan(&result)
 	// TODO(Maran): I'm not 100% the order_by height here is being used 'before' the grouping, if not then we might not always pick the latest episode
 	for _, r := range result {
 		if r.Finished == false {
-			ep := TvEpisode{}
+			ep := Episode{}
 			env.Db.Where("ID = ?", r.EpisodeId).First(&ep)
 			eps = append(eps, &ep)
 		} else {
 			result := LatestEpResult{}
-			env.Db.Raw("select tv_episodes.id as episode_id, tv_series.id as tv_series_id"+
-				" from tv_episodes"+
-				" join tv_series ON tv_series.id = tv_seasons.tv_series_id"+
-				" join tv_seasons on tv_seasons.id = tv_episodes.tv_season_id"+
-				" where season_num >= ? AND episode_num > ?  AND tv_series_id = ?"+
+			env.Db.Raw("select episodes.id as episode_id, series.id as series_id"+
+				" from episodes"+
+				" join series ON series.id = seasons.series_id"+
+				" join seasons on seasons.id = episodes.season_id"+
+				" where season_num >= ? AND episode_num > ?  AND series_id = ?"+
 				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesId).Scan(&result)
-			ep := TvEpisode{}
+			ep := Episode{}
 			env.Db.Where("ID = ?", result.EpisodeId).First(&ep)
 			eps = append(eps, &ep)
 		}
@@ -76,7 +76,7 @@ func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) 
 
 	count := 0
 	var movie Movie
-	var episode TvEpisode
+	var episode Episode
 
 	env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
 	if count > 0 {

@@ -17,9 +17,9 @@ var SchemaTxt = `
 	type Query {
 		movies(uuid: String): [Movie]!
 		libraries(): [Library]!
-		tvseries(uuid: String): [TvSeries]!
-		tvseason(uuid: String!): Season!
-		tvepisode(uuid: String!): Episode
+		series(uuid: String): [Series]!
+		season(uuid: String!): Season!
+		episode(uuid: String!): Episode
 		users(): [User]!
 		recentlyAdded(): [MediaItem]
 		upNext(): [MediaItem]
@@ -82,7 +82,7 @@ var SchemaTxt = `
 		episodes: [Episode]!
 	}
 
-	type TvSeries {
+	type Series {
 		name: String!
 		overview: String!
 		first_air_date: String!
