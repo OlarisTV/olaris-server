@@ -49,7 +49,7 @@ func (r *MovieResolver) Title() string {
 func (r *MovieResolver) UUID() string {
 	return r.r.UUID
 }
-func (r *MovieResolver) OriginalTitle() string {
+func (r *MovieResolver) Name() string {
 	return r.r.OriginalTitle
 }
 

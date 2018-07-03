@@ -148,10 +148,10 @@ var SchemaTxt = `
 
 	# A movie file
 	type Movie {
-		# Title of the movie
+		# Official title according to the MovieDB
+		name: String!
+		# Title based on parsed filename
 		title: String!
-		# Official Title
-		original_title: String!
 		# Release year
 		year: String!
 		# Short description of the movie
