@@ -22,6 +22,7 @@ type TvSeries struct {
 	Status       string
 	TmdbID       int
 	Type         string
+	TvSeasons    []*TvSeason
 }
 
 type TvSeason struct {

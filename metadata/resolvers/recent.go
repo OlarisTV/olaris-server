@@ -5,6 +5,8 @@ import (
 	"sort"
 )
 
+type NextUpResolver RecentlyAddedResolver
+
 type RecentlyAddedResolver struct {
 	r interface{}
 }

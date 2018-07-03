@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"io/ioutil"
 	"os"
@@ -9,18 +10,22 @@ import (
 
 var movie Movie
 
+func createMovieData() {
+	mi := MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
+	stream := Stream{Stream: ffmpeg.Stream{CodecName: "test"}}
+	mf := MovieFile{MediaItem: mi, Streams: []Stream{stream}}
+
+	ps := PlayState{Finished: false, Playtime: 33, UserID: 1}
+
+	movie = Movie{Title: "Test", MovieFiles: []MovieFile{mf}, PlayState: ps}
+	env.Db.Create(&movie)
+}
+
 func setupTest(t *testing.T) func() {
 	tmp, err := ioutil.TempDir(os.TempDir(), "bss-test")
 	if err == nil {
+		fmt.Println("Creating DB in:", tmp)
 		NewMDContext(tmp, true)
-		t.Log("setupTest()")
-		mi := MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
-		stream := Stream{Stream: ffmpeg.Stream{CodecName: "test"}}
-		mf := MovieFile{MediaItem: mi, Streams: []Stream{stream}}
-		ps := PlayState{Finished: false, Playtime: 33, UserID: 1}
-		movie = Movie{Title: "Test", MovieFiles: []MovieFile{mf}, PlayState: ps}
-
-		env.Db.Create(&movie)
 	} else {
 		t.Error("Could not create tmpfile for database tests:", err)
 	}
@@ -28,12 +33,14 @@ func setupTest(t *testing.T) func() {
 	// Test teardown - return a closure for use by 'defer'
 	return func() {
 		// t is from the outer setupTest scope
-		t.Log("teardownTest()")
+		env.Db.Close()
 	}
 }
 
 func TestUUIDable(t *testing.T) {
 	defer setupTest(t)()
+
+	createMovieData()
 
 	if movie.UUID == "" || movie.MovieFiles[0].UUID == "" {
 		t.Errorf("Movie/File was created without a UUID\n")
@@ -44,6 +51,8 @@ func TestUUIDable(t *testing.T) {
 
 func TestCollectMovie(t *testing.T) {
 	defer setupTest(t)()
+
+	createMovieData()
 
 	var mov Movie
 	env.Db.First(&mov)

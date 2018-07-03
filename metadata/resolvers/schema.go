@@ -22,6 +22,7 @@ var SchemaTxt = `
 		tvepisode(uuid: String!): Episode
 		users(): [User]!
 		recentlyAdded(): [RecentlyAdded]
+		upNext(): [RecentlyAdded]
 	}
 
 	type Mutation {
