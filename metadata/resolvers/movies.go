@@ -23,10 +23,8 @@ func (r *Resolver) Movies(ctx context.Context, args *UuidArgs) []*MovieResolver 
 		movies = db.FindAllMovies(userID)
 	}
 	for _, movie := range movies {
-		if movie.Title != "" {
-			mov := MovieResolver{r: movie}
-			l = append(l, &mov)
-		}
+		mov := MovieResolver{r: movie}
+		l = append(l, &mov)
 	}
 	return l
 }
