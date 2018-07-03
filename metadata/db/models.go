@@ -49,7 +49,7 @@ func (self *MediaItem) YearAsString() string {
 }
 
 type MediaResult struct {
-	Movie     *MovieFile
+	Movie   *MovieFile
 	Episode *EpisodeFile
 }
 
@@ -73,10 +73,11 @@ func FindContentByUUID(uuid string) *MediaResult {
 }
 
 func RecentlyAddedMovies() (movies []*Movie) {
-	env.Db.Order("created_at DESC").Limit(10).Find(&movies)
+	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
+
 func RecentlyAddedEpisodes() (eps []*Episode) {
-	env.Db.Order("created_at DESC").Limit(10).Find(&eps)
+	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
 	return eps
 }
