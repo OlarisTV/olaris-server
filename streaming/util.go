@@ -1,52 +1,93 @@
 package streaming
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
-	"path"
 	"strconv"
 	"strings"
 )
 
-func buildMediaFileURL(fileLocator string) (string, error) {
-	parts := strings.SplitN(fileLocator, "/", 2)
+type fileLocator struct {
+	Location string
+	Path     string
+}
+
+var allowDirectFileAccessFlag = flag.Bool(
+	"allow_direct_file_access",
+	true,
+	"Whether accessing files directly by their path (without presending a valid JWT) is allowed")
+
+// getFileLocator parses the file that the client is trying to access from a string.
+// The passed string may either be in the form of "jwt/<streaming JWT>
+// or simply directly an absolute path.
+//
+// This function also checks whether the user is allowed to access this file, i.e. whether
+// the passed JWT is valid or whether accessing paths directly is allowed (controlled by a flag)
+func getFileLocator(fileLocatorStr string) (fileLocator, error) {
+	return _getFileLocator(fileLocatorStr, false)
+
+}
+
+func _getFileLocator(fileLocatorStr string, allowDirectFileAccess bool) (fileLocator, error) {
+	// Allow both with and without leading slash, but canonical version is without
+	if fileLocatorStr[0] == '/' {
+		fileLocatorStr = fileLocatorStr[1:]
+	}
+
+	parts := strings.SplitN(fileLocatorStr, "/", 2)
+
 	if len(parts) != 2 {
-		return "", fmt.Errorf("Failed to split file locator \"%s\"", fileLocator)
+		return fileLocator{},
+			fmt.Errorf("Failed to split file locator \"%s\"", fileLocatorStr)
 	}
 
 	if parts[0] == "jwt" {
 		claims, err := auth.ValidateStreamingJWT(parts[1])
 		if err != nil {
-			return "", fmt.Errorf("Failed to validate JWT: %s", err.Error())
+			return fileLocator{}, fmt.Errorf("Failed to validate JWT: %s", err.Error())
 		}
-		return "file://" + claims.FilePath, nil
-	} else if parts[0] == "remote" {
-		rcloneParts := strings.SplitN(parts[1], "/", 2)
-		if len(rcloneParts) != 2 {
-			return "", fmt.Errorf("Failed to split rclone path \"%s\"", rcloneParts)
-		}
-		rcloneURL, err := router.Get("rcloneFile").URL(
-			"rcloneRemote", rcloneParts[0],
-			"rclonePath", rcloneParts[1])
-		if err != nil {
-			return "", fmt.Errorf("Failed to build rclone URL: %s", err.Error())
-
-		}
-		// TODO(Leon Handreke): Find a better way to do this
-		return "http://127.0.0.1:8080/s" + rcloneURL.String(), nil
+		// Set authenticated to
+		return _getFileLocator(claims.FilePath, true)
 	}
 
-	return "file://" + path.Join(*mediaFilesDir, path.Clean(parts[1])), nil
+	if !(allowDirectFileAccess || *allowDirectFileAccessFlag) {
+		return fileLocator{}, errors.New("Direct file access is not allowed!")
+	}
+
+	if parts[0] == "rclone" {
+		return fileLocator{parts[0], "/" + parts[1]}, nil
+	}
+
+	// Don't require an explicit local prefix for now
+	return fileLocator{"local", "/" + fileLocatorStr}, nil
+
 }
 
-func buildStreamKey(fileLocator string, streamIdStr string) (ffmpeg.StreamKey, error) {
+func getMediaFileURL(fileLocatorStr string) (string, error) {
+	l, err := getFileLocator(fileLocatorStr)
+	if err != nil {
+		return "", err
+	}
+
+	if l.Location == "local" {
+		return "file://" + l.Path, nil
+	} else if l.Location == "rclone" {
+		// TODO(Leon Handreke): Find a better way to do this
+		return "http://127.0.0.1:8080/s/files/rclone/" + l.Path, nil
+	}
+	return "", fmt.Errorf("Could not build media file URL: Unknown file locator \"%s\"", l.Location)
+}
+
+func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, error) {
 	streamId, err := strconv.Atoi(streamIdStr)
 	if err != nil {
 		return ffmpeg.StreamKey{}, err
 	}
 
-	url, err := buildMediaFileURL(fileLocator)
+	url, err := getMediaFileURL(fileLocatorStr)
 	if err != nil {
 		return ffmpeg.StreamKey{}, err
 	}

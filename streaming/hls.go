@@ -9,7 +9,7 @@ import (
 )
 
 func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -61,7 +61,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -108,7 +108,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := buildMediaFileURL(mux.Vars(r)["fileLocator"])
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -163,7 +163,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
-	streamKey, err := buildStreamKey(
+	streamKey, err := getStreamKey(
 		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {

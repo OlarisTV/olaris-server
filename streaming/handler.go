@@ -25,18 +25,16 @@ func GetHandler() http.Handler {
 	router.HandleFunc("/api/v1/files", serveFileIndex)
 	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 
-	router.HandleFunc("/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
-	router.HandleFunc("/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
-	router.HandleFunc("/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
-	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
-	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
-	router.HandleFunc("/{fileLocator:.*}/{streamId}/{representationId}/init.mp4", serveInit)
+	router.HandleFunc("/files/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/init.mp4", serveInit)
 
-	router.HandleFunc("/rclone/{rcloneRemote}/{rclonePath:.*}", serveRcloneFile).
-		Name("rcloneFile")
-
-	//TODO: (Maran) This is probably not serving subfolders yet
-	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(*mediaFilesDir))))
+	// This handler just serves up the file for downloading. This is also used
+	// internally by ffmpeg to access rclone files.
+	router.HandleFunc("/files/{fileLocator:.*}", serveFile)
 
 	handler := cors.AllowAll().Handler(router)
 	return handler
