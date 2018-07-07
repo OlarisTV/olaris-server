@@ -9,7 +9,7 @@ import (
 )
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
-	streamKey, err := buildStreamKey(
+	streamKey, err := getStreamKey(
 		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {
@@ -43,7 +43,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	streamKey, err := buildStreamKey(
+	streamKey, err := getStreamKey(
 		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
 	if err != nil {
