@@ -242,9 +242,6 @@ func (self *LibraryManager) AddWatcher(filePath string) {
 func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	fmt.Println("Scanning file:", filePath)
 	fileInfo, err := os.Stat(filePath)
-	basename := fileInfo.Name()
-	name := strings.TrimSuffix(basename, filepath.Ext(basename))
-
 	if err != nil {
 		// This catches broken symlinks
 		if _, ok := err.(*os.PathError); ok {
@@ -253,6 +250,9 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 		}
 		return err
 	}
+	basename := fileInfo.Name()
+	name := strings.TrimSuffix(basename, filepath.Ext(basename))
+
 	switch kind := library.Kind; kind {
 	case MediaTypeSeries:
 		parsedInfo := parsers.ParseSerieName(name)
