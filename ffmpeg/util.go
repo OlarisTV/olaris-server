@@ -1,6 +1,9 @@
 package ffmpeg
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func GetTitleOrHumanizedLanguage(stream ProbeStream) string {
 	title := stream.Tags["title"]
@@ -35,4 +38,14 @@ func GetLanguageTag(stream ProbeStream) string {
 		return lang
 	}
 	return "unk"
+}
+
+func BuildConstantSegmentDurations(segmentDuration time.Duration, totalDuration time.Duration) []time.Duration {
+	numFullSegments := int64(totalDuration / segmentDuration)
+	segmentStartTimestamps := []time.Duration{}
+	for i := int64(0); i < numFullSegments+1; i++ {
+		segmentStartTimestamps = append(segmentStartTimestamps,
+			time.Duration(i*int64(segmentDuration)))
+	}
+	return segmentStartTimestamps
 }

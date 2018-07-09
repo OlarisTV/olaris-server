@@ -68,7 +68,10 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		},
 	}
 
-	if stream.StreamType == "video" || stream.StreamType == "audio" {
+	if stream.StreamType == "audio" {
+		representation.SegmentStartTimestamps = BuildConstantSegmentDurations(
+			MinTransmuxedSegDuration, stream.TotalDuration)
+	} else if stream.StreamType == "video" {
 		// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
 		// sometimes just a name. We need some other good descriptor for files,
 		// preferably including a checksum

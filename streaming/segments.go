@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
 	"net/http"
@@ -57,6 +58,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	session, _ := getOrStartTranscodingSession(streamRepresentation, segmentId)
 
 	segmentPath, err := session.GetSegment(segmentId, 20*time.Second)
+	glog.Info("Serving path ", segmentPath)
 	http.ServeFile(w, r, segmentPath)
 }
 
