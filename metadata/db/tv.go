@@ -23,7 +23,7 @@ type Series struct {
 	Status       string
 	TmdbID       int
 	Type         string
-	Seasons      []*Season `gorm:"PRELOAD:true"`
+	Seasons      []*Season
 }
 
 type Season struct {
@@ -35,7 +35,7 @@ type Season struct {
 	Series       *Series
 	SeriesID     uint
 	TmdbID       int
-	Episodes     []*Episode `gorm:"PRELOAD:true"`
+	Episodes     []*Episode
 }
 
 type Episode struct {
@@ -49,8 +49,8 @@ type Episode struct {
 	AirDate      string
 	StillPath    string
 	Season       *Season
-	EpisodeFiles []EpisodeFile `gorm:"PRELOAD:true"`
-	PlayState    PlayState     `gorm:"polymorphic:Owner;PRELOAD:true"`
+	PlayState    PlayState
+	EpisodeFiles []EpisodeFile
 }
 
 func (self *Episode) TimeStamp() int64 {
@@ -62,7 +62,7 @@ type EpisodeFile struct {
 	MediaItem
 	EpisodeID uint
 	Episode   *Episode
-	Streams   []Stream `gorm:"polymorphic:Owner;PRELOAD:true"`
+	Streams   []Stream `gorm:"polymorphic:Owner;"`
 }
 
 func CollectEpisodeData(episodes []Episode, userID uint) {
@@ -73,22 +73,27 @@ func CollectEpisodeData(episodes []Episode, userID uint) {
 }
 
 func FindAllSeries() (series []Series) {
-	env.Db.Where("tmdb_id != 0").Find(&series)
+	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)
 	return series
 }
 
 func SearchSeriesByTitle(userID uint, name string) (series []Series) {
-	env.Db.Where("name LIKE ?", "%"+name+"%").Find(&series)
+	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	return series
+}
+
+func FindSeriesByUUID(uuid *string) (series []Series) {
+	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
 	return series
 }
 
 func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
-	env.Db.Where("series_id = ?", seriesID).Find(&seasons)
+	env.Db.Preload("Episodes.EpisodeFiles.Streams").Where("series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
 
 func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
-	env.Db.Where("season_id = ?", seasonID).Find(&episodes)
+	env.Db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
@@ -101,14 +106,11 @@ func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 	return episodes
 }
 
-func FindSeriesByUUID(uuid *string) (series []Series) {
-	env.Db.Where("uuid = ?", uuid).Find(&series)
-	return series
-}
 func FindSeasonByUUID(uuid *string) (season Season) {
 	env.Db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
+
 func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
 	var episodes []Episode
 	env.Db.Where("uuid = ?", uuid).First(&episodes)

@@ -60,15 +60,23 @@ func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver
 }
 
 func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
-	serie := Series{dbserie, nil}
-	for _, dbseason := range db.FindSeasonsForSeries(serie.ID) {
-		season := Season{dbseason, nil}
-		for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
+	var seasons []*SeasonResolver
+
+	for _, dbseason := range dbserie.Seasons {
+		season := Season{*dbseason, nil}
+		var eps []db.Episode
+		for _, episode := range dbseason.Episodes {
+			eps = append(eps, *episode)
+		}
+		// Get personalised data in
+		db.CollectEpisodeData(eps, userID)
+
+		for _, episode := range eps {
 			season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
 		}
-		serie.Seasons = append(serie.Seasons, &SeasonResolver{r: season})
+		seasons = append(seasons, &SeasonResolver{r: season})
 	}
-	return &SeriesResolver{r: serie}
+	return &SeriesResolver{r: Series{dbserie, seasons}}
 }
 
 type SeriesResolver struct {
