@@ -15,7 +15,7 @@ RUN     apt-get install -y --no-install-recommends flite1-dev frei0r-plugins-dev
 RUN apt-get autoremove -y && \
         apt-get clean -y
 
-RUN git clone -b bytesized-streaming https://ndreke.de/~leon/dump/ffmpeg
+RUN git clone -b master https://gitlab.com/bytesized/ffmpeg.git
 
 ARG        PREFIX=/opt/ffmpeg
 ARG        MAKEFLAGS="-j4"
