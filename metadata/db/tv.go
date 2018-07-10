@@ -2,6 +2,7 @@ package db
 
 import (
 	_ "fmt"
+
 	"github.com/jinzhu/gorm"
 )
 
@@ -77,7 +78,7 @@ func FindAllSeries() (series []Series) {
 }
 
 func SearchSeriesByTitle(userID uint, name string) (series []Series) {
-	env.Db.Where("name LIKE ?", "%"+name+"%").Find(&series)
+	env.Db.Preload("Seasons").Where("name LIKE ?", "%"+name+"%").Find(&series)
 	return series
 }
 
