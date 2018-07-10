@@ -8,6 +8,17 @@ import (
 type MediaItemResolver struct {
 	r interface{}
 }
+
+func (r *MediaItemResolver) ToMovie() (*MovieResolver, bool) {
+	res, ok := r.r.(*MovieResolver)
+	return res, ok
+}
+
+func (r *MediaItemResolver) ToEpisode() (*EpisodeResolver, bool) {
+	res, ok := r.r.(*EpisodeResolver)
+	return res, ok
+}
+
 type sortable interface {
 	TimeStamp() int64
 }
@@ -43,14 +54,4 @@ func (r *Resolver) RecentlyAdded() *[]*MediaItemResolver {
 	}
 
 	return &l
-}
-
-func (r *MediaItemResolver) ToMovie() (*MovieResolver, bool) {
-	res, ok := r.r.(*MovieResolver)
-	return res, ok
-}
-
-func (r *MediaItemResolver) ToEpisode() (*EpisodeResolver, bool) {
-	res, ok := r.r.(*EpisodeResolver)
-	return res, ok
 }

@@ -75,16 +75,24 @@ func FindAllSeries() (series []Series) {
 	env.Db.Where("tmdb_id != 0").Find(&series)
 	return series
 }
+
+func SearchSeriesByTitle(userID uint, name string) (series []Series) {
+	env.Db.Where("name LIKE ?", "%"+name+"%").Find(&series)
+	return series
+}
+
 func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
 	env.Db.Where("series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
+
 func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 	env.Db.Where("season_id = ?", seasonID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
 }
+
 func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 	env.Db.Where("library_id =?", libraryID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)

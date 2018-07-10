@@ -17,7 +17,7 @@ func createMovieData() {
 
 	ps := PlayState{Finished: false, Playtime: 33, UserID: 1}
 
-	movie = Movie{Title: "Test", MovieFiles: []MovieFile{mf}, PlayState: ps}
+	movie = Movie{Title: "Test", OriginalTitle: "Mad Max: Road Fury", MovieFiles: []MovieFile{mf}, PlayState: ps}
 	env.Db.Create(&movie)
 }
 
@@ -46,6 +46,21 @@ func TestUUIDable(t *testing.T) {
 		t.Errorf("Movie/File was created without a UUID\n")
 	} else {
 		t.Log("Movie UUID:", movie.UUID)
+	}
+}
+
+func TestSearchMovieByTitle(t *testing.T) {
+	defer setupTest(t)()
+	createMovieData()
+	var movies []Movie
+	movies = SearchMovieByTitle(1, "max")
+	if len(movies) == 0 {
+		t.Error("Did not get any movies while searching")
+		return
+	}
+
+	if movies[0].OriginalTitle != "Mad Max: Road Fury" {
+		t.Error("Did not get the correct movie while searching")
 	}
 }
 

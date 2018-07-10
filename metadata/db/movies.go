@@ -60,6 +60,12 @@ func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
 	return movies
 }
 
+func SearchMovieByTitle(userID uint, name string) (movies []Movie) {
+	env.Db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
+	CollectMovieInfo(movies, userID)
+	return movies
+}
+
 func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
 	env.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
 	CollectMovieInfo(movies, userID)

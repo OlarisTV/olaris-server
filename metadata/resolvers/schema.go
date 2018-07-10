@@ -12,6 +12,7 @@ var SchemaTxt = `
 	}
 
 	union MediaItem = Movie | Episode
+	union SearchItem = Movie | Series
 
 	# The query type, represents all of the entry points into our object graph
 	type Query {
@@ -23,6 +24,7 @@ var SchemaTxt = `
 		users(): [User]!
 		recentlyAdded(): [MediaItem]
 		upNext(): [MediaItem]
+		search(name: String!): [SearchItem]
 	}
 
 	type Mutation {
