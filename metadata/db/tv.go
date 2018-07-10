@@ -49,7 +49,7 @@ type Episode struct {
 	AirDate      string
 	StillPath    string
 	Season       *Season
-	PlayState    PlayState
+	PlayState    PlayState `gorm:"polymorphic:Owner;"`
 	EpisodeFiles []EpisodeFile
 }
 
