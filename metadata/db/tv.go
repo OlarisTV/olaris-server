@@ -23,7 +23,7 @@ type Series struct {
 	Status       string
 	TmdbID       int
 	Type         string
-	Seasons      []*Season
+	Seasons      []*Season `gorm:"PRELOAD:true"`
 }
 
 type Season struct {
@@ -33,9 +33,9 @@ type Season struct {
 	AirDate      string
 	SeasonNumber int
 	Series       *Series
-	Episodes     []*Episode
 	SeriesID     uint
 	TmdbID       int
+	Episodes     []*Episode `gorm:"PRELOAD:true"`
 }
 
 type Episode struct {
@@ -49,8 +49,8 @@ type Episode struct {
 	AirDate      string
 	StillPath    string
 	Season       *Season
-	EpisodeFiles []EpisodeFile
-	PlayState    PlayState `gorm:"polymorphic:Owner;"`
+	EpisodeFiles []EpisodeFile `gorm:"PRELOAD:true"`
+	PlayState    PlayState     `gorm:"polymorphic:Owner;PRELOAD:true"`
 }
 
 func (self *Episode) TimeStamp() int64 {
@@ -62,7 +62,7 @@ type EpisodeFile struct {
 	MediaItem
 	EpisodeID uint
 	Episode   *Episode
-	Streams   []Stream `gorm:"polymorphic:Owner"`
+	Streams   []Stream `gorm:"polymorphic:Owner;PRELOAD:true"`
 }
 
 func CollectEpisodeData(episodes []Episode, userID uint) {
@@ -78,7 +78,7 @@ func FindAllSeries() (series []Series) {
 }
 
 func SearchSeriesByTitle(userID uint, name string) (series []Series) {
-	env.Db.Preload("Seasons").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	env.Db.Where("name LIKE ?", "%"+name+"%").Find(&series)
 	return series
 }
 
