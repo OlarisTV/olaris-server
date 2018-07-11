@@ -5,3 +5,5 @@ builds
 *test.db
 binaries
 cmd/bytesized-streaming-server/bsmds-linux
+app/build
+app/bindata.go

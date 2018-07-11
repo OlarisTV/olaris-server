@@ -11,11 +11,15 @@ variables:
 # repository in /go/src/gitlab.com/namespace/project
 # Thus, making a symbolic link corrects this.
 before_script:
+  - apt-get update
+  - apt-get install unzip
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -s $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
   - go get github.com/jteeuwen/go-bindata/...
   - go get github.com/elazarl/go-bindata-assetfs/...
+  - "curl -L --header 'PRIVATE-TOKEN: hHu5p8Ts3qmkAxqUmFdz' 'https://gitlab.com/api/v4/projects/bytesized%2Fbss-react/jobs/artifacts/develop/download?job=compile' > app/static.zip"
+  - unzip app/static.zip -d app/
   - go generate -v ./...
 
 stages:
@@ -37,4 +41,4 @@ compile:
     artifacts:
       paths:
         - binaries/
-      expire_in: 2 week  
+      expire_in: 2 week

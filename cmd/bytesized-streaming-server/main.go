@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/peak6/envflag"
+	"gitlab.com/bytesized/bytesized-streaming/app"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/streaming"
@@ -29,6 +30,8 @@ func main() {
 
 	mctx := db.NewDefaultMDContext()
 	defer mctx.Db.Close()
+
+	r.PathPrefix("/app").Handler(http.StripPrefix("/app", app.GetHandler(mctx)))
 
 	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
 
