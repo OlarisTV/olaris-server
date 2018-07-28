@@ -66,6 +66,7 @@ func NewVideoTranscodingSession(
 		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
+		numSegments:    segmentsPerSession,
 	}, nil
 }
 

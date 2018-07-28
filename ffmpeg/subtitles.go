@@ -35,6 +35,7 @@ func NewSubtitleSession(
 		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: 0,
+		numSegments:    1,
 	}, nil
 }
 

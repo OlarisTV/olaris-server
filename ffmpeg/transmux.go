@@ -19,12 +19,21 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 		return nil, err
 	}
 
-	startTimestamp := streamRepresentation.SegmentStartTimestamps[segmentOffset]
-	var endTimestamp time.Duration
-	if segmentOffset+segmentsPerSession >= len(streamRepresentation.SegmentStartTimestamps) {
+	var numSegments int
+	var startTimestamp, endTimestamp time.Duration
+
+	if streamRepresentation.Stream.StreamType == "video" {
+		startTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset]
+		if segmentOffset+segmentsPerSession >= len(streamRepresentation.SegmentStartTimestamps) {
+			endTimestamp = streamRepresentation.Stream.TotalDuration
+		} else {
+			endTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
+		}
+		numSegments = segmentsPerSession
+	} else { // audio
+		startTimestamp = streamRepresentation.SegmentStartTimestamps[0]
 		endTimestamp = streamRepresentation.Stream.TotalDuration
-	} else {
-		endTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
+		numSegments = len(streamRepresentation.SegmentStartTimestamps)
 	}
 
 	cmd := exec.Command("ffmpeg",
@@ -53,6 +62,7 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 		Stream:         streamRepresentation,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
+		numSegments:    numSegments,
 	}, nil
 }
 

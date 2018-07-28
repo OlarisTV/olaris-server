@@ -75,6 +75,7 @@ func NewAudioTranscodingSession(
 		Stream:         stream,
 		outputDir:      outputDir,
 		firstSegmentId: segmentOffset,
+		numSegments:    segmentsPerSession,
 	}, nil
 }
 

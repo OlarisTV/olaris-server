@@ -17,6 +17,7 @@ type TranscodingSession struct {
 	Stream         StreamRepresentation
 	outputDir      string
 	firstSegmentId int
+	numSegments    int
 }
 
 func (s *TranscodingSession) Start() error {
@@ -65,11 +66,7 @@ func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (
 }
 
 func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
-	if s.Stream.Representation.RepresentationId == "webvtt" {
-		return true
-	}
-
-	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+segmentsPerSession
+	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+s.numSegments
 }
 
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
