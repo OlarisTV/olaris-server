@@ -48,9 +48,9 @@ func NewAudioTranscodingSession(
 
 	args := []string{
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
+		"-ss", fmt.Sprintf("%.3f", runStartDuration.Seconds()),
 		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
+		"-to", fmt.Sprintf("%.3f", (runStartDuration + runDuration).Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
