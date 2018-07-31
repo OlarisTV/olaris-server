@@ -81,7 +81,7 @@ func NewAudioTranscodingSession(
 
 func GetTranscodedAudioRepresentation(stream Stream, representationId string, encoderParams EncoderParams) StreamRepresentation {
 	segmentStartTimestamps := BuildConstantSegmentDurations(
-		transcodedAudioSegmentDuration, stream.TotalDuration)
+		time.Duration(0), transcodedAudioSegmentDuration, stream.TotalDuration)
 
 	return StreamRepresentation{
 		Stream: stream,

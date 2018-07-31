@@ -40,12 +40,12 @@ func GetLanguageTag(stream ProbeStream) string {
 	return "unk"
 }
 
-func BuildConstantSegmentDurations(segmentDuration time.Duration, totalDuration time.Duration) []time.Duration {
+func BuildConstantSegmentDurations(start time.Duration, segmentDuration time.Duration, totalDuration time.Duration) []time.Duration {
 	numFullSegments := int64(totalDuration / segmentDuration)
-	segmentStartTimestamps := []time.Duration{}
-	for i := int64(0); i < numFullSegments+1; i++ {
+	segmentStartTimestamps := []time.Duration{start}
+	for i := int64(0); i < numFullSegments; i++ {
 		segmentStartTimestamps = append(segmentStartTimestamps,
-			time.Duration(i*int64(segmentDuration)))
+			segmentStartTimestamps[i]+segmentDuration)
 	}
 	return segmentStartTimestamps
 }

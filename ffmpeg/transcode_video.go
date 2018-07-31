@@ -76,6 +76,7 @@ func GetTranscodedVideoRepresentation(
 	encoderParams EncoderParams) StreamRepresentation {
 
 	segmentStartTimestamps := BuildConstantSegmentDurations(
+		time.Duration(0),
 		transcodedVideoSegmentDuration, stream.TotalDuration)
 
 	return StreamRepresentation{
