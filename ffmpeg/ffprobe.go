@@ -136,7 +136,9 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 		"-select_streams", "v",
 		// Use dts_time here because ffmpeg seeking works by DTS,
 		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
-		"-show_entries", "packet=dts_time,flags",
+		// TODO(Leon Handreke): We use PTS now because it seems to work better, investigate
+		// what is actually correct!
+		"-show_entries", "packet=pts_time,flags",
 		"-v", "quiet",
 		"-of", "csv",
 		fileURL)
