@@ -23,6 +23,14 @@ type TokenResponse struct {
 	JWT string `json:"jwt"`
 }
 
+func ReadyForSetup(w http.ResponseWriter, r *http.Request) {
+	if db.UserCount() == 0 {
+		w.Write([]byte("true"))
+	} else {
+		w.Write([]byte("false"))
+	}
+}
+
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	ur := UserRequest{}
 	b, err := ioutil.ReadAll(r.Body)

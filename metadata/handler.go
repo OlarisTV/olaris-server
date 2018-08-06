@@ -6,8 +6,8 @@ import (
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/resolvers"
 
-	"net/http"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
+	"net/http"
 )
 
 func GetHandler(menv *db.MetadataContext) http.Handler {
@@ -19,6 +19,7 @@ func GetHandler(menv *db.MetadataContext) http.Handler {
 	r.Handle("/v1/auth", http.HandlerFunc(auth.UserHandler)).Methods("POST")
 
 	r.Handle("/v1/user", http.HandlerFunc(auth.CreateUserHandler)).Methods("POST")
+	r.Handle("/v1/user/setup", http.HandlerFunc(auth.ReadyForSetup))
 
 	// TODO(Maran): This should be authenticated too.
 	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
