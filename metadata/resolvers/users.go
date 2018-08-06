@@ -11,7 +11,6 @@ type UserResolver struct {
 type CreateUserArgs struct {
 	Login    string
 	Password string
-	Admin    bool
 }
 
 type CreateUserResponse struct {

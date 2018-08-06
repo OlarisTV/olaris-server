@@ -69,7 +69,7 @@ func (self *User) HashPassword(password string, salt string) string {
 }
 
 // TODO Maran: Create a way to return all errors at once
-func CreateUser(login string, password string, admin bool, code string) (User, error) {
+func CreateUser(login string, password string, code string) (User, error) {
 	if len(login) < 3 {
 		return User{}, fmt.Errorf("Login should be at least 3 characters")
 	}
@@ -82,6 +82,7 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 	env.Db.Table("users").Count(&count)
 
 	invite := Invite{}
+	admin := false
 
 	// Not the first user, checking invite.
 	if count > 0 {
@@ -91,6 +92,8 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 			fmt.Println("Not a valid code or already used.")
 			return User{}, fmt.Errorf("Invite code invalid.")
 		}
+	} else {
+		admin = true
 	}
 
 	user := User{Login: login, Admin: admin}

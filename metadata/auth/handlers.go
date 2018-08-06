@@ -10,7 +10,6 @@ import (
 
 type UserRequest struct {
 	Login    string `json:"login"`
-	Admin    bool   `json:"admin"`
 	Code     string `json:"code"`
 	Password string `json:"password"`
 }
@@ -93,7 +92,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := db.CreateUser(ur.Login, ur.Password, ur.Admin, ur.Code)
+	user, err := db.CreateUser(ur.Login, ur.Password, ur.Code)
 	if err != nil {
 		writeError(err.Error(), w, http.StatusUnauthorized)
 		return
