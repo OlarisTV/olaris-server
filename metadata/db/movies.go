@@ -27,6 +27,16 @@ type Movie struct {
 	PlayState     PlayState `gorm:"polymorphic:Owner;"`
 }
 
+func (self *MovieFile) IsSingleFile() bool {
+	count := 0
+	env.Db.Model(&MovieFile{}).Where("movie_id = ?", self.MovieID).Count(&count)
+	if count <= 1 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (self *MovieFile) String() string {
 	return fmt.Sprintf("Movie: %s\nYear: %d\nPath:%s", self.Title, self.Year, self.FilePath)
 }
@@ -36,6 +46,12 @@ func (self *Movie) YearAsString() string {
 }
 func (self *Movie) TimeStamp() int64 {
 	return self.CreatedAt.Unix()
+}
+
+func FindAllMovieFiles() (movies []MovieFile) {
+	env.Db.Find(&movies)
+
+	return movies
 }
 
 func CollectMovieInfo(movies []Movie, userID uint) {
@@ -53,6 +69,7 @@ func FindAllMovies(userID uint) (movies []Movie) {
 
 	return movies
 }
+
 func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
 	env.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
 	CollectMovieInfo(movies, userID)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
+	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/parsers"
 	"os"
 	"path/filepath"
@@ -220,6 +221,9 @@ func (self *LibraryManager) Probe(library *Library) {
 func (self *LibraryManager) ProbeSeries(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if supportedExtensions[filepath.Ext(walkPath)] {
+			self.AddWatcher(walkPath)
+			self.AddWatcher(filepath.Dir(walkPath))
+
 			count := 0
 			env.Db.Where("file_path= ?", walkPath).Find(&EpisodeFile{}).Count(&count)
 			if count == 0 {
@@ -335,6 +339,83 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 	}
 }
 
+func (self *LibraryManager) CleanUpMovieMD(movieFile MovieFile) {
+	// Check there are no other copies of the movie around.
+	if movieFile.IsSingleFile() {
+		// Delete all stream information
+		env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &movieFile.ID)
+
+		env.Db.Where("id = ?", movieFile.MovieID).Find(&movieFile.Movie)
+
+		// Delete all PlayState information
+		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", movieFile.MovieID)
+
+		// Delete all file information
+		env.Db.Delete(&movieFile)
+
+		// Delete movie
+		env.Db.Delete(&movieFile.Movie)
+	}
+	// Else do nothing as there is still a moviefile associated with the movie
+}
+
+func (self *LibraryManager) CleanUpSeriesMD(episodeFile EpisodeFile) {
+	// Check there are no other copies of the episode around.
+	if episodeFile.IsSingleFile() {
+		// Delete all stream information
+		env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &episodeFile.ID)
+
+		// Delete all PlayState information
+		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episode_files'", episodeFile.EpisodeID)
+
+		var episode Episode
+		env.Db.First(&episode, episodeFile.EpisodeID)
+
+		// Delete all file information
+		env.Db.Delete(&episodeFile)
+
+		// Delete Episode
+		env.Db.Delete(&episode)
+
+		count := 0
+		var season Season
+		env.Db.First(&season, episode.SeasonID)
+
+		env.Db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
+
+		fmt.Println(count)
+		// If there are no more episodes to this season, delete the season.
+		if count == 0 {
+			env.Db.Delete(Season{}, "id = ?", episode.SeasonID)
+		}
+
+		// If there are no more seasons to this series, delete it.
+		count = 0
+		env.Db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
+		if count == 0 {
+			env.Db.Delete(Series{}, "id = ?", season.SeriesID)
+		}
+	}
+}
+
+func (self *LibraryManager) CheckRemovedFiles() {
+	for _, movieFile := range FindAllMovieFiles() {
+		fmt.Println("Checking if movie exists:", movieFile.Title)
+		if !helpers.FileExists(movieFile.FilePath) {
+			fmt.Println("Missing file, cleaning up MD", movieFile.FileName)
+			self.CleanUpMovieMD(movieFile)
+		}
+	}
+
+	for _, file := range FindAllEpisodeFiles() {
+		fmt.Println("Checking if episode exists:", file.FileName)
+		if !helpers.FileExists(file.FilePath) {
+			fmt.Println("Missing file, cleaning up MD", file.FileName)
+			self.CleanUpSeriesMD(file)
+		}
+	}
+}
+
 func (self *LibraryManager) RefreshAll() {
 	for _, lib := range AllLibraries() {
 		self.AddWatcher(lib.FilePath)
@@ -344,5 +425,7 @@ func (self *LibraryManager) RefreshAll() {
 
 		fmt.Println("Updating metadata for library:", lib.Name)
 		self.UpdateMD(&lib)
+
+		self.CheckRemovedFiles()
 	}
 }

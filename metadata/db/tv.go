@@ -65,6 +65,16 @@ type EpisodeFile struct {
 	Streams   []Stream `gorm:"polymorphic:Owner;"`
 }
 
+func (self *EpisodeFile) IsSingleFile() bool {
+	count := 0
+	env.Db.Model(&EpisodeFile{}).Where("episode_id = ?", self.EpisodeID).Count(&count)
+	if count <= 1 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func CollectEpisodeData(episodes []Episode, userID uint) {
 	for i, _ := range episodes {
 		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
@@ -120,4 +130,10 @@ func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
 		env.Db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "tv_episodes").First(&episode.PlayState)
 	}
 	return episode
+}
+
+func FindAllEpisodeFiles() (files []EpisodeFile) {
+	env.Db.Find(&files)
+
+	return files
 }

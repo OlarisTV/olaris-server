@@ -71,9 +71,14 @@ loop:
 			break loop
 		case event := <-self.Watcher.Events:
 			fmt.Println("event:", event)
+			if event.Op&fsnotify.Rename == fsnotify.Rename {
+				self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+			}
+
 			if event.Op&fsnotify.Remove == fsnotify.Remove {
 				fmt.Println("File removed, removing watcher")
 				self.Watcher.Remove(event.Name)
+				self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				fmt.Println("modified file:", event.Name)
