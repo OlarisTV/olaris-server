@@ -29,7 +29,19 @@ type Invite struct {
 	gorm.Model
 	Code   string
 	UserID uint
-	User   User
+	User   *User
+}
+
+func CreateInvite() Invite {
+	invite := Invite{Code: helpers.RandAlphaString(24)}
+	env.Db.Save(&invite)
+
+	return invite
+}
+
+func AllInvites() (invites []Invite) {
+	env.Db.Find(&invites)
+	return invites
 }
 
 func (self *User) ValidPassword(password string) bool {
@@ -58,32 +70,38 @@ func (self *User) HashPassword(password string, salt string) string {
 
 // TODO Maran: Create a way to return all errors at once
 func CreateUser(login string, password string, admin bool, code string) (User, error) {
-	invite := Invite{}
 	if len(login) < 3 {
 		return User{}, fmt.Errorf("Login should be at least 3 characters")
 	}
 
 	if len(password) < 8 {
-		return User{}, fmt.Errorf("Password should be at least 8 characters")
+		return User{}, fmt.Errorf("Password should be at least 8 characters.")
 	}
 
-	if code != "" {
-		count := 0
-		env.Db.Where("code = ? and user_id IS NULL", code).Find(&invite).Count(&count)
-		if count != 0 {
-			fmt.Println("Valid and unused code, creating account")
-		} else {
-			fmt.Println("Not a valid code or already used")
-			return User{}, fmt.Errorf("Invite code invalid")
+	count := 0
+	env.Db.Table("users").Count(&count)
+
+	invite := Invite{}
+
+	// Not the first user, checking invite.
+	if count > 0 {
+		env.Db.Where("code = ?", code).First(&invite)
+
+		if (invite.Code == "") || (invite.UserID != 0) {
+			fmt.Println("Not a valid code or already used.")
+			return User{}, fmt.Errorf("Invite code invalid.")
 		}
 	}
 
 	user := User{Login: login, Admin: admin}
 	user.SetPassword(password, helpers.RandAlphaString(24))
 	dbobj := env.Db.Create(&user)
-	if !env.Db.NewRecord(&user) {
-		invite.UserID = user.ID
-		env.Db.Save(&invite)
+
+	if count > 0 {
+		if !env.Db.NewRecord(&user) {
+			invite.UserID = user.ID
+			env.Db.Save(&invite)
+		}
 	}
 	return user, dbobj.Error
 }
@@ -91,6 +109,11 @@ func CreateUser(login string, password string, admin bool, code string) (User, e
 func AllUsers() (users []User) {
 	env.Db.Find(&users)
 	return users
+}
+
+func FindUser(id uint) (user User) {
+	env.Db.Find(&user, id)
+	return user
 }
 
 func UserCount() int {

@@ -30,15 +30,6 @@ func (r *CreateUserResponseResolver) User() *UserResolver {
 	return r.r.User
 }
 
-func (r *Resolver) CreateUser(args *CreateUserArgs) *CreateUserResponseResolver {
-	user, err := db.CreateUser(args.Login, args.Password, args.Admin, "")
-	if err != nil {
-		res := &CreateUserResponse{Error: CreateErrResolver(err), User: &UserResolver{db.User{}}}
-		return &CreateUserResponseResolver{res}
-	}
-	return &CreateUserResponseResolver{&CreateUserResponse{Error: nil, User: &UserResolver{user}}}
-}
-
 func (r *Resolver) Users() (users []*UserResolver) {
 	for _, user := range db.AllUsers() {
 		users = append(users, &UserResolver{user})

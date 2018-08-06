@@ -1,6 +1,9 @@
 package helpers
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
 // Plucked from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -10,6 +13,7 @@ const (
 )
 
 func RandAlphaString(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
 	b := make([]byte, n)
 	for i := 0; i < n; {
 		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {

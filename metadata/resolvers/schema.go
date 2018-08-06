@@ -25,13 +25,20 @@ var SchemaTxt = `
 		recentlyAdded(): [MediaItem]
 		upNext(): [MediaItem]
 		search(name: String!): [SearchItem]
+		invites(): [Invite]
 	}
 
 	type Mutation {
-		# Add a library to scan
+		# Tell the application to index all the supported files in the given directory.
 		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
-		createUser(login: String!, password: String!, admin: Boolean!): CreateUserResponse!
+
+		# Create a invite code so a user can register on the server
+		createUserInvite(): UserInviteResponse!
+
+		# Create a playstate for the given media item
 		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): CreatePSResponse!
+
+		# Request permission to play a certain file
 		createStreamingTicket(uuid: String!): CreateSTResponse!
 	}
 
@@ -41,8 +48,8 @@ var SchemaTxt = `
 		error: Error
 	}
 
-	type CreateUserResponse {
-		user: User!
+	type UserInviteResponse {
+		code: String!
 		error: Error
 	}
 
@@ -176,11 +183,16 @@ var SchemaTxt = `
 		file_name: String!
 		# Absolute path to the filesystem
 		file_path: String!
-		# Library ID
 		library_id: Int!
 		uuid: String!
-		# Stream information
+		# Stream information (subtitles / audio and video streams)
 		streams: [Stream]!
+	}
+
+	# Invite that can be used to allow other users access to your server.
+	type Invite {
+		code: String
+		user: User
 	}
 
 `
