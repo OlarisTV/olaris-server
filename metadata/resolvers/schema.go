@@ -30,7 +30,11 @@ var SchemaTxt = `
 
 	type Mutation {
 		# Tell the application to index all the supported files in the given directory.
+		# 'kind' can be 0 for movies and 1 for series.
 		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
+
+		# Delete a library and remove all collected metadata.
+		deleteLibrary(id: Int!): LibRes!
 
 		# Create a invite code so a user can register on the server
 		createUserInvite(): UserInviteResponse!
@@ -81,12 +85,18 @@ var SchemaTxt = `
 
 	# A media library
 	type Library {
+		# Primary ID
+		id: Int!
+
 		# Library Type (0 - movies)
 		kind: Int!
+
 		# Human readable name of the Library
 		name: String!
+
 		# Path that this library manages
 		file_path: String!
+
 		movies: [Movie]!
 		episodes: [Episode]!
 	}

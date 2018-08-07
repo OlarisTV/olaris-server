@@ -1,7 +1,7 @@
 package db
 
 import (
-	_ "fmt"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
 )
@@ -75,6 +75,45 @@ func (self *EpisodeFile) IsSingleFile() bool {
 	}
 }
 
+func (self *EpisodeFile) DeleteSelfAndMD() {
+	// Delete all stream information
+	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &self.ID)
+
+	var episode Episode
+	env.Db.First(&episode, self.EpisodeID)
+
+	if self.IsSingleFile() {
+		// Delete all PlayState information
+		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episode_files'", self.EpisodeID)
+
+		// Delete Episode
+		env.Db.Delete(&episode)
+
+		count := 0
+		var season Season
+		env.Db.First(&season, episode.SeasonID)
+
+		env.Db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
+
+		fmt.Println(count)
+		// If there are no more episodes to this season, delete the season.
+		if count == 0 {
+			env.Db.Delete(Season{}, "id = ?", episode.SeasonID)
+		}
+
+		// If there are no more seasons to this series, delete it.
+		count = 0
+		env.Db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
+		if count == 0 {
+			env.Db.Delete(Series{}, "id = ?", season.SeriesID)
+		}
+	}
+
+	// Delete all file information
+	env.Db.Delete(&self)
+
+}
+
 func CollectEpisodeData(episodes []Episode, userID uint) {
 	for i, _ := range episodes {
 		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
@@ -136,4 +175,12 @@ func FindAllEpisodeFiles() (files []EpisodeFile) {
 	env.Db.Find(&files)
 
 	return files
+}
+
+func DeleteEpisodesFromLibrary(libraryID uint) {
+	files := []EpisodeFile{}
+	env.Db.Where("library_id = ?", libraryID).Find(&files)
+	for _, file := range files {
+		file.DeleteSelfAndMD()
+	}
 }

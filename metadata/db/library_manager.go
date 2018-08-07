@@ -340,23 +340,19 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 }
 
 func (self *LibraryManager) CleanUpMovieMD(movieFile MovieFile) {
-	// Check there are no other copies of the movie around.
-	if movieFile.IsSingleFile() {
-		// Delete all stream information
-		env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &movieFile.ID)
+	// Delete all stream information
+	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &movieFile.ID)
 
-		env.Db.Where("id = ?", movieFile.MovieID).Find(&movieFile.Movie)
+	env.Db.Where("id = ?", movieFile.MovieID).Find(&movieFile.Movie)
 
-		// Delete all PlayState information
-		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", movieFile.MovieID)
+	// Delete all PlayState information
+	env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", movieFile.MovieID)
 
-		// Delete all file information
-		env.Db.Delete(&movieFile)
+	// Delete all file information
+	env.Db.Delete(&movieFile)
 
-		// Delete movie
-		env.Db.Delete(&movieFile.Movie)
-	}
-	// Else do nothing as there is still a moviefile associated with the movie
+	// Delete movie
+	env.Db.Delete(&movieFile.Movie)
 }
 
 func (self *LibraryManager) CleanUpSeriesMD(episodeFile EpisodeFile) {
@@ -403,7 +399,7 @@ func (self *LibraryManager) CheckRemovedFiles() {
 		fmt.Println("Checking if movie exists:", movieFile.Title)
 		if !helpers.FileExists(movieFile.FilePath) {
 			fmt.Println("Missing file, cleaning up MD", movieFile.FileName)
-			self.CleanUpMovieMD(movieFile)
+			movieFile.DeleteSelfAndMD()
 		}
 	}
 
@@ -411,7 +407,7 @@ func (self *LibraryManager) CheckRemovedFiles() {
 		fmt.Println("Checking if episode exists:", file.FileName)
 		if !helpers.FileExists(file.FilePath) {
 			fmt.Println("Missing file, cleaning up MD", file.FileName)
-			self.CleanUpSeriesMD(file)
+			file.DeleteSelfAndMD()
 		}
 	}
 }

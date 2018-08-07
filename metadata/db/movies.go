@@ -37,6 +37,25 @@ func (self *MovieFile) IsSingleFile() bool {
 	}
 }
 
+func (self *MovieFile) DeleteSelfAndMD() {
+	// Delete all stream information since it's only for this file
+	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &self.ID)
+
+	env.Db.Where("id = ?", self.MovieID).Find(&self.Movie)
+
+	if self.IsSingleFile() {
+		// Delete all PlayState information
+		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", self.MovieID)
+
+		// Delete movie
+		env.Db.Delete(&self.Movie)
+	}
+
+	// Delete all file information
+	env.Db.Delete(&self)
+
+}
+
 func (self *MovieFile) String() string {
 	return fmt.Sprintf("Movie: %s\nYear: %d\nPath:%s", self.Title, self.Year, self.FilePath)
 }
@@ -81,6 +100,14 @@ func SearchMovieByTitle(userID uint, name string) (movies []Movie) {
 	env.Db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
 	CollectMovieInfo(movies, userID)
 	return movies
+}
+
+func DeleteMoviesFromLibrary(libraryID uint) {
+	files := []MovieFile{}
+	env.Db.Where("library_id = ?", libraryID).Find(&files)
+	for _, file := range files {
+		file.DeleteSelfAndMD()
+	}
 }
 
 func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
