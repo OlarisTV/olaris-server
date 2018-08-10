@@ -5,6 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -136,9 +137,7 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 		"-select_streams", "v",
 		// Use dts_time here because ffmpeg seeking works by DTS,
 		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
-		// TODO(Leon Handreke): We use PTS now because it seems to work better, investigate
-		// what is actually correct!
-		"-show_entries", "packet=pts_time,flags",
+		"-show_entries", "packet=dts,flags",
 		"-v", "quiet",
 		"-of", "csv",
 		fileURL)
@@ -174,4 +173,36 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 
 	cmd.Wait()
 	return keyframes, nil
+}
+
+func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
+
+	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
+	// sometimes just a name. We need some other good descriptor for files,
+	// preferably including a checksum
+	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFileURL)
+	if err != nil {
+		return []Interval{}, err
+	}
+
+	keyframeTimestamps := []time.Duration{}
+	if keyframeCache != nil {
+		//glog.Infof("Reading keyframes for %s from cache", stream.MediaFileURL)
+		for _, v := range keyframeCache.KeyframeTimestamps {
+			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
+		}
+	} else {
+		keyframeTimestamps, err = ProbeKeyframes(stream.MediaFileURL)
+		if err != nil {
+			return []Interval{}, err
+		}
+
+		keyframeCache := db.KeyframeCache{Filename: stream.MediaFileURL}
+		for _, v := range keyframeTimestamps {
+			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
+		}
+		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
+	}
+
+	return buildIntervals(keyframeTimestamps, stream.TotalDuration), nil
 }

@@ -13,11 +13,10 @@ import (
 )
 
 type TranscodingSession struct {
-	cmd            *exec.Cmd
-	Stream         StreamRepresentation
-	outputDir      string
-	firstSegmentId int
-	numSegments    int
+	cmd       *exec.Cmd
+	Stream    StreamRepresentation
+	outputDir string
+	segments  SegmentList
 }
 
 func (s *TranscodingSession) Start() error {
@@ -66,7 +65,8 @@ func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (
 }
 
 func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
-	return s.firstSegmentId <= segmentId && segmentId < s.firstSegmentId+s.numSegments
+	return s.segments[0].SegmentId <= segmentId &&
+		segmentId <= s.segments[len(s.segments)-1].SegmentId
 }
 
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {

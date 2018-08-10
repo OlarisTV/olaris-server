@@ -4,6 +4,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"time"
@@ -30,14 +31,14 @@ type StreamRepresentation struct {
 	Stream         Stream
 	Representation Representation
 
-	SegmentStartTimestamps []time.Duration
+	SegmentStartTimestamps []SegmentList
 }
 
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
 // force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
 // segments.
-const MinTransmuxedSegDuration = 5000 * time.Millisecond
+const TransmuxedSegDuration = 5000 * time.Millisecond
 
 // fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
@@ -163,8 +164,20 @@ func StreamRepresentationFromRepresentationId(
 }
 
 func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingSession, error) {
+	var segments SegmentList
+
+	for _, s := range s.SegmentStartTimestamps {
+		if s.ContainsSegmentId(segmentId) {
+			segments = s
+			break
+		}
+	}
+	if segments == nil {
+		return nil, errors.New("Segment ID not found in StreamRepresentation")
+	}
+
 	if s.Representation.RepresentationId == "direct" {
-		session, err := NewTransmuxingSession(s, os.TempDir(), segmentId)
+		session, err := NewTransmuxingSession(s, segments, os.TempDir())
 		if err != nil {
 			return nil, err
 		}
@@ -174,13 +187,13 @@ func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingS
 		var err error
 
 		if s.Stream.StreamType == "video" {
-			session, err = NewVideoTranscodingSession(s, os.TempDir(), segmentId)
+			session, err = NewVideoTranscodingSession(s, segments, os.TempDir())
 			return session, nil
 		} else if s.Stream.StreamType == "audio" {
-			session, err = NewAudioTranscodingSession(s, os.TempDir(), segmentId)
+			session, err = NewAudioTranscodingSession(s, segments, os.TempDir())
 			return session, nil
 		} else if s.Stream.StreamType == "subtitle" {
-			session, err = NewSubtitleSession(s, os.TempDir())
+			session, err = NewSubtitleSession(s, segments, os.TempDir())
 		}
 		if err != nil {
 			return nil, err

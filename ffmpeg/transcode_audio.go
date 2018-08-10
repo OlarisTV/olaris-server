@@ -22,41 +22,42 @@ const transcodedAudioSegmentDuration = 4992 * time.Millisecond
 
 func NewAudioTranscodingSession(
 	stream StreamRepresentation,
-	outputDirBase string,
-	segmentOffset int) (*TranscodingSession, error) {
+	segments SegmentList,
+	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	startDuration := time.Duration(int64(transcodedAudioSegmentDuration) * int64(segmentOffset))
+	// TODO(Leon Handreke): Fix the prerun
+	startDuration := segments[0].StartTimestamp
+	endDuration := segments[len(segments)-1].EndTimestamp
 
 	// With AAC, we always encode an extra segment before to avoid encoder priming on the first segment we actually want
-	runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration
-	runStartDuration := startDuration - transcodedAudioSegmentDuration
-	startNumber := segmentOffset - 1
-
-	if runStartDuration < 0 {
-		runStartDuration = 0
-	}
-	if startNumber < 0 {
-		startNumber = 0
-	}
+	//runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration
+	//runStartDuration := startDuration - transcodedAudioSegmentDuration
+	//
+	//if runStartDuration < 0 {
+	//	runStartDuration = 0
+	//}
+	//if startNumber < 0 {
+	//	startNumber = 0
+	//}
 
 	encoderParams := stream.Representation.encoderParams
 
 	args := []string{
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", runStartDuration.Seconds()),
+		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
 		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", (runStartDuration + runDuration).Seconds()),
+		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", startNumber),
+		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
@@ -71,17 +72,18 @@ func NewAudioTranscodingSession(
 	cmd.Dir = outputDir
 
 	return &TranscodingSession{
-		cmd:            cmd,
-		Stream:         stream,
-		outputDir:      outputDir,
-		firstSegmentId: segmentOffset,
-		numSegments:    segmentsPerSession,
+		cmd:       cmd,
+		Stream:    stream,
+		outputDir: outputDir,
+		segments:  segments,
 	}, nil
 }
 
 func GetTranscodedAudioRepresentation(stream Stream, representationId string, encoderParams EncoderParams) StreamRepresentation {
+	keyFrameItervals, _ := GetKeyframeIntervals(stream)
+
 	segmentStartTimestamps := BuildConstantSegmentDurations(
-		time.Duration(0), transcodedAudioSegmentDuration, stream.TotalDuration)
+		keyFrameItervals, transcodedAudioSegmentDuration)
 
 	return StreamRepresentation{
 		Stream: stream,

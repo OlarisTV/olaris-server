@@ -22,23 +22,23 @@ const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,
-	outputDirBase string,
-	segmentOffset int) (*TranscodingSession, error) {
+	segments SegmentList,
+	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	startDuration := time.Duration(int64(transcodedVideoSegmentDuration) * int64(segmentOffset))
-	runDuration := segmentsPerSession * transcodedVideoSegmentDuration
+	startDuration := segments[0].StartTimestamp
+	endDuration := segments[len(segments)-1].EndTimestamp
 	encoderParams := stream.Representation.encoderParams
 
 	args := []string{
 		// -ss being before -i is important for fast seeking
 		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
 		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", (startDuration + runDuration).Seconds()),
+		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
@@ -47,12 +47,13 @@ func NewVideoTranscodingSession(
 		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segmentOffset),
+		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedVideoSegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u")}
+		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
+	}
 
 	cmd := exec.Command("ffmpeg", args...)
 	log.Println("ffmpeg initialized with", cmd.Args)
@@ -62,11 +63,10 @@ func NewVideoTranscodingSession(
 	cmd.Dir = outputDir
 
 	return &TranscodingSession{
-		cmd:            cmd,
-		Stream:         stream,
-		outputDir:      outputDir,
-		firstSegmentId: segmentOffset,
-		numSegments:    segmentsPerSession,
+		cmd:       cmd,
+		Stream:    stream,
+		outputDir: outputDir,
+		segments:  segments,
 	}, nil
 }
 
@@ -75,9 +75,10 @@ func GetTranscodedVideoRepresentation(
 	representationId string,
 	encoderParams EncoderParams) StreamRepresentation {
 
+	keyFrameItervals, _ := GetKeyframeIntervals(stream)
+
 	segmentStartTimestamps := BuildConstantSegmentDurations(
-		time.Duration(0),
-		transcodedVideoSegmentDuration, stream.TotalDuration)
+		keyFrameItervals, transcodedAudioSegmentDuration)
 
 	return StreamRepresentation{
 		Stream: stream,

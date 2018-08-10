@@ -40,12 +40,41 @@ func GetLanguageTag(stream ProbeStream) string {
 	return "unk"
 }
 
-func BuildConstantSegmentDurations(start time.Duration, segmentDuration time.Duration, totalDuration time.Duration) []time.Duration {
-	numFullSegments := int64(totalDuration / segmentDuration)
-	segmentStartTimestamps := []time.Duration{start}
-	for i := int64(0); i < numFullSegments; i++ {
-		segmentStartTimestamps = append(segmentStartTimestamps,
-			segmentStartTimestamps[i]+segmentDuration)
+func BuildConstantSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) []SegmentList {
+	totalDuration := keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp
+	numFullSegments := int(totalDuration / segmentDuration)
+
+	session := SegmentList{}
+	for i := 0; i < int(numFullSegments); i++ {
+		session = append(session,
+			Segment{
+				Interval{
+					// Casting time.Duration to int is OK here because segmentDuration is small
+					time.Duration(i * int(segmentDuration)),
+					time.Duration((i + 1) * int(segmentDuration))},
+				i,
+			})
 	}
-	return segmentStartTimestamps
+	session = append(session,
+		Segment{Interval{
+			session[len(session)-1].EndTimestamp,
+			totalDuration}, numFullSegments})
+	return []SegmentList{session}
+}
+
+func buildIntervals(startTimestamps []time.Duration, totalDuration time.Duration) []Interval {
+	intervals := []Interval{}
+
+	if len(startTimestamps) == 0 {
+		panic("startTimestamps must contain at least one element")
+	}
+
+	for i := 1; i < len(startTimestamps); i++ {
+		intervals = append(intervals,
+			Interval{startTimestamps[i-1], startTimestamps[i]})
+	}
+	intervals = append(intervals,
+		Interval{startTimestamps[len(startTimestamps)-1], totalDuration})
+
+	return intervals
 }

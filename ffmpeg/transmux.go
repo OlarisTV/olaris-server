@@ -2,41 +2,26 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/golang/glog"
-	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
-	"time"
 )
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
-func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirBase string, segmentOffset int) (*TranscodingSession, error) {
+func NewTransmuxingSession(
+	streamRepresentation StreamRepresentation,
+	segments SegmentList,
+	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
 		return nil, err
 	}
 
-	var numSegments int
-	var startTimestamp, endTimestamp time.Duration
-
-	if streamRepresentation.Stream.StreamType == "video" {
-		glog.Info("Segment start times: ", streamRepresentation.SegmentStartTimestamps)
-		startTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset]
-		if segmentOffset+segmentsPerSession >= len(streamRepresentation.SegmentStartTimestamps) {
-			endTimestamp = streamRepresentation.Stream.TotalDuration
-		} else {
-			endTimestamp = streamRepresentation.SegmentStartTimestamps[segmentOffset+segmentsPerSession]
-		}
-		numSegments = segmentsPerSession
-	} else { // audio
-		startTimestamp = streamRepresentation.SegmentStartTimestamps[0]
-		endTimestamp = streamRepresentation.Stream.TotalDuration
-		numSegments = len(streamRepresentation.SegmentStartTimestamps)
-	}
+	startTimestamp := segments[0].StartTimestamp
+	endTimestamp := segments[len(segments)-1].EndTimestamp
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
@@ -48,8 +33,8 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 		"-c:0", "copy",
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segmentOffset),
-		"-hls_time", fmt.Sprintf("%.3f", MinTransmuxedSegDuration.Seconds()),
+		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
+		"-hls_time", fmt.Sprintf("%.3f", TransmuxedSegDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		// We serve our own manifest, so we don't really care about this.
@@ -60,11 +45,10 @@ func NewTransmuxingSession(streamRepresentation StreamRepresentation, outputDirB
 	cmd.Dir = outputDir
 
 	return &TranscodingSession{
-		cmd:            cmd,
-		Stream:         streamRepresentation,
-		outputDir:      outputDir,
-		firstSegmentId: segmentOffset,
-		numSegments:    numSegments,
+		cmd:       cmd,
+		Stream:    streamRepresentation,
+		outputDir: outputDir,
+		segments:  segments,
 	}, nil
 }
 
@@ -80,56 +64,64 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		},
 	}
 
-	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
-	// sometimes just a name. We need some other good descriptor for files,
-	// preferably including a checksum
-	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFileURL)
+	keyframeIntervals, err := GetKeyframeIntervals(stream)
 	if err != nil {
 		return StreamRepresentation{}, err
 	}
 
-	keyframeTimestamps := []time.Duration{}
-
-	if keyframeCache != nil {
-		//glog.Infof("Reading keyframes for %s from cache", stream.MediaFileURL)
-		for _, v := range keyframeCache.KeyframeTimestamps {
-			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
-		}
-	} else {
-		keyframeTimestamps, err = ProbeKeyframes(stream.MediaFileURL)
-		if err != nil {
-			return StreamRepresentation{}, err
-		}
-
-		keyframeCache := db.KeyframeCache{Filename: stream.MediaFileURL}
-		for _, v := range keyframeTimestamps {
-			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
-		}
-		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
-	}
-
 	if stream.StreamType == "audio" {
 		representation.SegmentStartTimestamps = BuildConstantSegmentDurations(
-			keyframeTimestamps[0], MinTransmuxedSegDuration, stream.TotalDuration)
+			keyframeIntervals, TransmuxedSegDuration)
 	} else if stream.StreamType == "video" {
-		representation.SegmentStartTimestamps = guessTransmuxedSegmentStartTimestamps(keyframeTimestamps)
+		representation.SegmentStartTimestamps = guessTransmuxedSegmentList(keyframeIntervals)
 	}
 
 	return representation, nil
 }
 
-func guessTransmuxedSegmentStartTimestamps(keyframeTimestamps []time.Duration) []time.Duration {
-	segmentTimestamps := []time.Duration{
-		// First keyframe should equal first frame, but who knows, video is weird...
-		keyframeTimestamps[0],
-	}
+func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
+	segmentId := 0
+	sessions := []SegmentList{}
 
-	for _, keyframe := range keyframeTimestamps {
-		d := keyframe - segmentTimestamps[len(segmentTimestamps)-1]
-		if d > MinTransmuxedSegDuration {
-			segmentTimestamps = append(segmentTimestamps, keyframe)
+	earliestNextCut := keyframeIntervals[0].StartTimestamp + TransmuxedSegDuration
+	session := []Segment{
+		{
+			Interval{
+				keyframeIntervals[0].StartTimestamp,
+				keyframeIntervals[0].StartTimestamp},
+			segmentId,
+		}}
+	segmentId++
+
+	for _, keyframeInterval := range keyframeIntervals {
+		if session[len(session)-1].EndTimestamp >= earliestNextCut {
+			session = append(session,
+				Segment{
+					Interval{
+						keyframeInterval.StartTimestamp,
+						keyframeInterval.StartTimestamp},
+					segmentId})
+			segmentId++
+
+		} else {
+			session[len(session)-1].EndTimestamp = keyframeInterval.EndTimestamp
+		}
+
+		if len(session) >= segmentsPerSession {
+			sessions = append(sessions, session)
+			session = []Segment{
+				{
+					Interval{
+						keyframeInterval.StartTimestamp,
+						keyframeInterval.StartTimestamp},
+					segmentId,
+				},
+			}
+			segmentId++
+			earliestNextCut = keyframeInterval.StartTimestamp + TransmuxedSegDuration
 		}
 	}
+	sessions = append(sessions, session)
 
-	return segmentTimestamps
+	return sessions
 }
