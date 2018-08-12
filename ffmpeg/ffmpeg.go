@@ -45,18 +45,14 @@ const TransmuxedSegDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
-func ComputeSegmentDurations(
-	segmentStartTimestamps []time.Duration,
-	totalDuration time.Duration) []time.Duration {
-
-	// Insert dummy keyframe timestamp at the end so that the last segment duration is correctly reported
-	segmentStartTimestamps = append(segmentStartTimestamps, totalDuration)
-
+func ComputeSegmentDurations(sessions []SegmentList) []time.Duration {
 	segmentDurations := []time.Duration{}
 
-	for i := 1; i < len(segmentStartTimestamps); i++ {
-		segmentDurations = append(segmentDurations,
-			segmentStartTimestamps[i]-segmentStartTimestamps[i-1])
+	for _, session := range sessions {
+		for _, segment := range session {
+			segmentDurations = append(segmentDurations, segment.Duration())
+
+		}
 	}
 
 	return segmentDurations

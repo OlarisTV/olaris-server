@@ -31,8 +31,8 @@ func NewAudioTranscodingSession(
 	}
 
 	// TODO(Leon Handreke): Fix the prerun
-	startDuration := segments[0].StartTimestamp
-	endDuration := segments[len(segments)-1].EndTimestamp
+	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
+	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
 
 	// With AAC, we always encode an extra segment before to avoid encoder priming on the first segment we actually want
 	//runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration

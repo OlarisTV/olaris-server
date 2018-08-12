@@ -41,6 +41,8 @@ type ProbeStream struct {
 	Extradata     string            `json:"extradata"`
 	Tags          map[string]string `json:"tags"`
 	Disposition   map[string]int    `json:"disposition"`
+	TimeBase      string            `json:"time_base"`
+	DurationTs    int               `json:"duration_ts"`
 }
 
 func FilterProbeStreamByCodecType(streams []ProbeStream, codecType string) []ProbeStream {
@@ -131,16 +133,16 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	return &v, nil
 }
 
-// ProbeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
-func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
+// probeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
+func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 	cmd := exec.Command("ffprobe",
-		"-select_streams", "v",
+		"-select_streams", strconv.Itoa(int(s.StreamId)),
 		// Use dts_time here because ffmpeg seeking works by DTS,
 		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
 		"-show_entries", "packet=dts,flags",
 		"-v", "quiet",
 		"-of", "csv",
-		fileURL)
+		s.MediaFileURL)
 	cmd.Stderr = os.Stderr
 
 	rawReader, err := cmd.StdoutPipe()
@@ -153,7 +155,7 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 		return nil, err
 	}
 
-	keyframes := []time.Duration{}
+	keyframes := []DtsTimestamp{}
 	scanner := bufio.NewScanner(rawReader)
 	for scanner.Scan() {
 		// Each line has the format "packet,4.223000,K_"
@@ -163,11 +165,11 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 			continue
 		}
 		if line[2][0] == 'K' {
-			pts, err := strconv.ParseFloat(line[1], 64)
+			dts, err := strconv.ParseInt(line[1], 10, 64)
 			if err != nil {
 				return nil, err
 			}
-			keyframes = append(keyframes, time.Duration(pts*float64(time.Second)))
+			keyframes = append(keyframes, DtsTimestamp(dts))
 		}
 	}
 
@@ -176,7 +178,6 @@ func ProbeKeyframes(fileURL string) ([]time.Duration, error) {
 }
 
 func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
-
 	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
 	// sometimes just a name. We need some other good descriptor for files,
 	// preferably including a checksum
@@ -185,14 +186,14 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 		return []Interval{}, err
 	}
 
-	keyframeTimestamps := []time.Duration{}
+	keyframeTimestamps := []DtsTimestamp{}
 	if keyframeCache != nil {
 		//glog.Infof("Reading keyframes for %s from cache", stream.MediaFileURL)
 		for _, v := range keyframeCache.KeyframeTimestamps {
-			keyframeTimestamps = append(keyframeTimestamps, time.Duration(v))
+			keyframeTimestamps = append(keyframeTimestamps, DtsTimestamp(v))
 		}
 	} else {
-		keyframeTimestamps, err = ProbeKeyframes(stream.MediaFileURL)
+		keyframeTimestamps, err = probeKeyframes(stream.StreamKey)
 		if err != nil {
 			return []Interval{}, err
 		}
@@ -204,5 +205,13 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
 	}
 
-	return buildIntervals(keyframeTimestamps, stream.TotalDuration), nil
+	return buildIntervals(keyframeTimestamps, stream.TotalDurationDts, stream.TimeBase), nil
+}
+
+func parseTimeBaseString(timeBaseString string) (int64, error) {
+	// TODO(Leon Handreke): This is very primitive, maybe just parse the whole fraction and use 1/result?
+	if !strings.HasPrefix(timeBaseString, "1/") {
+		return 0, fmt.Errorf("%s does not look like a timebase", timeBaseString)
+	}
+	return strconv.ParseInt(timeBaseString[2:], 10, 64)
 }

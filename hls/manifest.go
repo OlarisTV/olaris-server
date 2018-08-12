@@ -89,7 +89,7 @@ func BuildMasterPlaylistFromFile(
 }
 
 func BuildTranscodingMediaPlaylistFromFile(sr ffmpeg.StreamRepresentation) string {
-	segmentDurations := ffmpeg.ComputeSegmentDurations(sr.SegmentStartTimestamps, sr.Stream.TotalDuration)
+	segmentDurations := ffmpeg.ComputeSegmentDurations(sr.SegmentStartTimestamps)
 	segmentDurationsSeconds := []float64{}
 	for _, d := range segmentDurations {
 		segmentDurationsSeconds = append(segmentDurationsSeconds, d.Seconds())

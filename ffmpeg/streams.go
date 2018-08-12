@@ -17,6 +17,9 @@ type Stream struct {
 	StreamKey
 
 	TotalDuration time.Duration
+
+	TimeBase         int64
+	TotalDurationDts DtsTimestamp
 	// codecs string ready for DASH/HLS serving
 	Codecs    string
 	CodecName string
@@ -48,6 +51,11 @@ func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
 		}
 		bitrate, _ := strconv.Atoi(stream.BitRate)
 
+		timeBase, err := parseTimeBaseString(stream.TimeBase)
+		if err != nil {
+			return []Stream{}, err
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
@@ -57,10 +65,12 @@ func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
 				Codecs:           stream.GetMime(),
 				BitRate:          int64(bitrate),
 				TotalDuration:    container.Format.Duration(),
+				TotalDurationDts: DtsTimestamp(stream.DurationTs),
 				StreamType:       stream.CodecType,
 				Language:         GetLanguageTag(stream),
 				Title:            GetTitleOrHumanizedLanguage(stream),
 				EnabledByDefault: stream.Disposition["default"] != 0,
+				TimeBase:         timeBase,
 			})
 	}
 
@@ -93,20 +103,27 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 		}
 		bitrate, _ := strconv.Atoi(stream.BitRate)
 
+		timeBase, err := parseTimeBaseString(stream.TimeBase)
+		if err != nil {
+			return []Stream{}, err
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
 					MediaFileURL: mediaFilePath,
 					StreamId:     int64(stream.Index),
 				},
-				Codecs:        stream.GetMime(),
-				BitRate:       int64(bitrate),
-				Width:         stream.Width,
-				Height:        stream.Height,
-				TotalDuration: container.Format.Duration(),
-				StreamType:    stream.CodecType,
-				CodecName:     stream.CodecName,
-				Profile:       stream.Profile,
+				Codecs:           stream.GetMime(),
+				BitRate:          int64(bitrate),
+				Width:            stream.Width,
+				Height:           stream.Height,
+				TotalDuration:    container.Format.Duration(),
+				TotalDurationDts: DtsTimestamp(stream.DurationTs),
+				TimeBase:         timeBase,
+				StreamType:       stream.CodecType,
+				CodecName:        stream.CodecName,
+				Profile:          stream.Profile,
 			})
 	}
 
@@ -125,6 +142,11 @@ func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
 			continue
 		}
 
+		timeBase, err := parseTimeBaseString(stream.TimeBase)
+		if err != nil {
+			return []Stream{}, err
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
@@ -132,6 +154,8 @@ func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
 					StreamId:     int64(stream.Index),
 				},
 				TotalDuration:    container.Format.Duration(),
+				TotalDurationDts: DtsTimestamp(stream.DurationTs),
+				TimeBase:         timeBase,
 				StreamType:       "subtitle",
 				Language:         GetLanguageTag(stream),
 				Title:            GetTitleOrHumanizedLanguage(stream),

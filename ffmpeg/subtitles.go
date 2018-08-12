@@ -47,7 +47,11 @@ func GetSubtitleStreamRepresentation(stream Stream) StreamRepresentation {
 		SegmentStartTimestamps: []SegmentList{
 			SegmentList{
 				Segment{
-					Interval:  Interval{0, stream.TotalDuration},
+					Interval: Interval{
+						stream.TimeBase,
+						0,
+						stream.TotalDurationDts,
+					},
 					SegmentId: 0},
 			},
 		},

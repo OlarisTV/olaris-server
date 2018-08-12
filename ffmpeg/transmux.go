@@ -11,7 +11,7 @@ import (
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
 func NewTransmuxingSession(
-	streamRepresentation StreamRepresentation,
+	stream StreamRepresentation,
 	segments SegmentList,
 	outputDirBase string) (*TranscodingSession, error) {
 
@@ -20,16 +20,16 @@ func NewTransmuxingSession(
 		return nil, err
 	}
 
-	startTimestamp := segments[0].StartTimestamp
-	endTimestamp := segments[len(segments)-1].EndTimestamp
+	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
+	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
 
 	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startTimestamp.Seconds()),
-		"-i", streamRepresentation.Stream.MediaFileURL,
+		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
+		"-i", stream.Stream.MediaFileURL,
 		"-copyts",
-		"-to", fmt.Sprintf("%.3f", endTimestamp.Seconds()),
-		"-map", fmt.Sprintf("0:%d", streamRepresentation.Stream.StreamId),
+		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
+		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "copy",
 		"-threads", "2",
 		"-f", "hls",
@@ -46,7 +46,7 @@ func NewTransmuxingSession(
 
 	return &TranscodingSession{
 		cmd:       cmd,
-		Stream:    streamRepresentation,
+		Stream:    stream,
 		outputDir: outputDir,
 		segments:  segments,
 	}, nil
@@ -80,13 +80,17 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 }
 
 func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
+	//fmt.Println(keyframeIntervals)
 	segmentId := 0
 	sessions := []SegmentList{}
+	timeBase := keyframeIntervals[0].TimeBase
+	segDurationTs := DtsTimestamp(TransmuxedSegDuration.Seconds() * float64(timeBase))
 
-	earliestNextCut := keyframeIntervals[0].StartTimestamp + TransmuxedSegDuration
+	earliestNextCut := keyframeIntervals[0].StartTimestamp + segDurationTs
 	session := []Segment{
 		{
 			Interval{
+				timeBase,
 				keyframeIntervals[0].StartTimestamp,
 				keyframeIntervals[0].StartTimestamp},
 			segmentId,
@@ -98,11 +102,12 @@ func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
 			session = append(session,
 				Segment{
 					Interval{
+						timeBase,
 						keyframeInterval.StartTimestamp,
-						keyframeInterval.StartTimestamp},
+						keyframeInterval.EndTimestamp},
 					segmentId})
 			segmentId++
-
+			earliestNextCut += segDurationTs
 		} else {
 			session[len(session)-1].EndTimestamp = keyframeInterval.EndTimestamp
 		}
@@ -112,16 +117,18 @@ func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
 			session = []Segment{
 				{
 					Interval{
-						keyframeInterval.StartTimestamp,
-						keyframeInterval.StartTimestamp},
+						timeBase,
+						keyframeInterval.EndTimestamp,
+						keyframeInterval.EndTimestamp},
 					segmentId,
 				},
 			}
 			segmentId++
-			earliestNextCut = keyframeInterval.StartTimestamp + TransmuxedSegDuration
+			earliestNextCut = keyframeInterval.EndTimestamp + segDurationTs
 		}
 	}
 	sessions = append(sessions, session)
 
+	//fmt.Println(sessions)
 	return sessions
 }

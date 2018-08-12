@@ -87,7 +87,7 @@ func BuildTransmuxingManifestFromFile(filePath string) string {
 
 	totalDuration := probeData.Format.Duration().Round(time.Millisecond)
 
-	//keyframes, err := ffmpeg.ProbeKeyframes(filePath)
+	//keyframes, err := ffmpeg.probeKeyframes(filePath)
 	//if err != nil {
 	//	log.Fatal("Failed to ffprobe", filePath)
 	//}

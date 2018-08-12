@@ -41,28 +41,40 @@ func GetLanguageTag(stream ProbeStream) string {
 }
 
 func BuildConstantSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) []SegmentList {
-	totalDuration := keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp
+	// We just assume that the time_base is the same for all.
+	timeBase := keyframeIntervals[0].TimeBase
+	totalInterval := Interval{
+		timeBase,
+		keyframeIntervals[0].StartTimestamp,
+		keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp,
+	}
+	totalDuration := totalInterval.Duration()
+	segmentDurationDts := int64(segmentDuration.Seconds() * float64(timeBase))
 	numFullSegments := int(totalDuration / segmentDuration)
 
 	session := SegmentList{}
-	for i := 0; i < int(numFullSegments); i++ {
+	for i := 0; i < numFullSegments; i++ {
 		session = append(session,
 			Segment{
 				Interval{
+					timeBase,
 					// Casting time.Duration to int is OK here because segmentDuration is small
-					time.Duration(i * int(segmentDuration)),
-					time.Duration((i + 1) * int(segmentDuration))},
-				i,
+					DtsTimestamp(int64(i) * segmentDurationDts),
+					DtsTimestamp(int64(i+1) * segmentDurationDts),
+				},
+				int(i),
 			})
 	}
 	session = append(session,
 		Segment{Interval{
+			timeBase,
 			session[len(session)-1].EndTimestamp,
-			totalDuration}, numFullSegments})
+			keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp},
+			numFullSegments})
 	return []SegmentList{session}
 }
 
-func buildIntervals(startTimestamps []time.Duration, totalDuration time.Duration) []Interval {
+func buildIntervals(startTimestamps []DtsTimestamp, totalDuration DtsTimestamp, timeBase int64) []Interval {
 	intervals := []Interval{}
 
 	if len(startTimestamps) == 0 {
@@ -71,10 +83,14 @@ func buildIntervals(startTimestamps []time.Duration, totalDuration time.Duration
 
 	for i := 1; i < len(startTimestamps); i++ {
 		intervals = append(intervals,
-			Interval{startTimestamps[i-1], startTimestamps[i]})
+			Interval{timeBase, startTimestamps[i-1], startTimestamps[i]})
 	}
 	intervals = append(intervals,
-		Interval{startTimestamps[len(startTimestamps)-1], totalDuration})
+		Interval{timeBase, startTimestamps[len(startTimestamps)-1], totalDuration})
 
 	return intervals
+}
+
+func timestampToDuration(ts DtsTimestamp, timeBase int64) time.Duration {
+	return time.Duration(float64(time.Second) * float64(ts) / float64(timeBase))
 }
