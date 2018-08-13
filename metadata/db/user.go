@@ -19,7 +19,7 @@ type CommonModelFields struct {
 type User struct {
 	UUIDable
 	CommonModelFields
-	Login        string `gorm:"not null;unique" json:"login"`
+	Username        string `gorm:"not null;unique" json:"username"`
 	Admin        bool   `gorm:"not null" json:"admin"`
 	PasswordHash string `gorm:"not null" json:"-"`
 	Salt         string `gorm:"not null" json:"-"`
@@ -45,7 +45,7 @@ func AllInvites() (invites []Invite) {
 }
 
 func (self *User) ValidPassword(password string) bool {
-	env.Db.Where("login = ?", self.Login).Find(self)
+	env.Db.Where("username = ?", self.Username).Find(self)
 	if self.HashPassword(password, self.Salt) == self.PasswordHash {
 		return true
 	} else {
@@ -69,9 +69,9 @@ func (self *User) HashPassword(password string, salt string) string {
 }
 
 // TODO Maran: Create a way to return all errors at once
-func CreateUser(login string, password string, code string) (User, error) {
-	if len(login) < 3 {
-		return User{}, fmt.Errorf("Login should be at least 3 characters")
+func CreateUser(username string, password string, code string) (User, error) {
+	if len(username) < 3 {
+		return User{}, fmt.Errorf("Username should be at least 3 characters")
 	}
 
 	if len(password) < 8 {
@@ -96,7 +96,7 @@ func CreateUser(login string, password string, code string) (User, error) {
 		admin = true
 	}
 
-	user := User{Login: login, Admin: admin}
+	user := User{Username: username, Admin: admin}
 	user.SetPassword(password, helpers.RandAlphaString(24))
 	dbobj := env.Db.Create(&user)
 

@@ -15,7 +15,7 @@ import (
 )
 
 type UserClaims struct {
-	Login  string `json:"login"`
+	Username  string `json:"username"`
 	UserID uint   `json:"user_id"`
 	Admin  bool   `json:"admin"`
 	jwt.StandardClaims
@@ -38,7 +38,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 				}
 
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					fmt.Printf("%v %v Expires at: %v\n", claims.Login, claims.UserID, claims.StandardClaims.ExpiresAt)
+					fmt.Printf("%v %v Expires at: %v\n", claims.Username, claims.UserID, claims.StandardClaims.ExpiresAt)
 					ctx := r.Context()
 					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
 					ctx = context.WithValue(ctx, "is_admin", &claims.Admin)
@@ -78,7 +78,7 @@ func createJWT(user *db.User) (string, error) {
 	expiresAt := time.Now().Add(time.Hour * 24).Unix()
 
 	claims := UserClaims{
-		user.Login,
+		user.Username,
 		user.ID,
 		user.Admin,
 		jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"},

@@ -9,7 +9,7 @@ import (
 )
 
 type UserRequest struct {
-	Login    string `json:"login"`
+	Username    string `json:"username"`
 	Code     string `json:"code"`
 	Password string `json:"password"`
 }
@@ -44,8 +44,8 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ur.Login == "" {
-		writeError("No login supplied", w, http.StatusBadRequest)
+	if ur.Username == "" {
+		writeError("No username supplied", w, http.StatusBadRequest)
 		return
 	}
 
@@ -54,7 +54,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := db.User{Login: ur.Login}
+	u := db.User{Username: ur.Username}
 
 	if u.ValidPassword(ur.Password) == true {
 		token, err := createJWT(&u)
@@ -92,7 +92,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := db.CreateUser(ur.Login, ur.Password, ur.Code)
+	user, err := db.CreateUser(ur.Username, ur.Password, ur.Code)
 	if err != nil {
 		writeError(err.Error(), w, http.StatusUnauthorized)
 		return

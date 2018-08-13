@@ -45,7 +45,7 @@ var SchemaTxt = `
 		# Request permission to play a certain file
 		createStreamingTicket(uuid: String!): CreateSTResponse!
 
-		# Delete a user from the database, please note that the user will be able to login until the JWT expires.
+		# Delete a user from the database, please note that the user will be able to username until the JWT expires.
 		deleteUser(id: Int!): UserResponse!
 
 
@@ -84,7 +84,7 @@ var SchemaTxt = `
 	}
 
 	type User {
-		login: String!
+		username: String!
 		admin: Boolean!
 	}
 

@@ -9,8 +9,8 @@ type UserResolver struct {
 	r db.User
 }
 
-func (r *UserResolver) Login() string {
-	return r.r.Login
+func (r *UserResolver) Username() string {
+	return r.r.Username
 }
 func (r *UserResolver) Admin() bool {
 	return r.r.Admin
