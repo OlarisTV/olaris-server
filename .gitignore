@@ -4,6 +4,9 @@
 builds
 *test.db
 binaries
+bin
+node_modules
 cmd/bytesized-streaming-server/bsmds-linux
 app/build
 app/bindata.go
+yarn.lock

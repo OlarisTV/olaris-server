@@ -1,3 +1,0 @@
-#!/bin/bash
-echo "Building Linux"
-docker run --rm -v "$PWD":/go/src/gitlab.com/bytesized/bytesized-streaming -w /go/src/gitlab.com/bytesized/bytesized-streaming golang:1.10 bash -c "go get github.com/jteeuwen/go-bindata/... && go get github.com/elazarl/go-bindata-assetfs/... && go generate -v ./... && go build -o builds/bss-linux ./server/bindata.go ./server/main.go"
