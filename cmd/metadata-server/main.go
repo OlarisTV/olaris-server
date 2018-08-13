@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/app"
+	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"net/http"
@@ -15,6 +16,10 @@ import (
 )
 
 var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path used if no libraries exist for the default library")
+
+func init() {
+	helpers.InitLoggers()
+}
 
 func main() {
 	flag.Parse()
@@ -34,7 +39,7 @@ func main() {
 
 	// Wait for termination signal
 	<-stopChan
-	fmt.Println("Stopping services and cleaning up")
+	log.Println("Stopping services and cleaning up.")
 
 	mctx.ExitChan <- 1
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

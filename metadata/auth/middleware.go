@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io/ioutil"
@@ -15,19 +15,19 @@ import (
 )
 
 type UserClaims struct {
-	Username  string `json:"username"`
-	UserID uint   `json:"user_id"`
-	Admin  bool   `json:"admin"`
+	Username string `json:"username"`
+	UserID   uint   `json:"user_id"`
+	Admin    bool   `json:"admin"`
 	jwt.StandardClaims
 }
 
 func AuthMiddleWare(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if db.UserCount() == 0 {
-			glog.Warning("No users present, no auth required!")
+			log.Warnln("No users present, no auth required!")
 			h.ServeHTTP(w, r)
 		} else {
-			glog.Info("Users present Auth required")
+			log.Debugln("Users present auth required from this point on.")
 			var authHeader string
 			authHeader = r.Header.Get("Authorization")
 			if authHeader != "" {
@@ -38,7 +38,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 				}
 
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					fmt.Printf("%v %v Expires at: %v\n", claims.Username, claims.UserID, claims.StandardClaims.ExpiresAt)
+					log.Debugf("User: '%v' (%v). Expires at: %v.", claims.Username, claims.UserID, claims.StandardClaims.ExpiresAt)
 					ctx := r.Context()
 					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
 					ctx = context.WithValue(ctx, "is_admin", &claims.Admin)

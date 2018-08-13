@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
 	}
 
 	if claims, ok := token.Claims.(*StreamingClaims); ok && token.Valid {
-		fmt.Printf("%v %v Expires at: %v\n", claims.FilePath, claims.UserID, claims.StandardClaims.ExpiresAt)
+		log.Debugf("Incoming streaming ticket for '%v' (User %v). Expires at: %v", claims.FilePath, claims.UserID, claims.StandardClaims.ExpiresAt)
 		return claims, nil
 	} else {
 		return nil, fmt.Errorf("Could not validate ticket.")

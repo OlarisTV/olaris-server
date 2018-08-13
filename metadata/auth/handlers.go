@@ -2,7 +2,7 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"io/ioutil"
 	"net/http"
@@ -35,7 +35,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		fmt.Println("Could not read request body")
+		log.Warnln("Could not read incoming request body.")
 		return
 	}
 
@@ -64,7 +64,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 			tokenRes := TokenResponse{JWT: token}
 			jtoken, err := json.Marshal(tokenRes)
 			if err != nil {
-				fmt.Println("error during token creation josn :p")
+				log.Warnln("Could not marshall JWT token:", err)
 			}
 			w.Write(jtoken)
 		}
@@ -78,12 +78,12 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		fmt.Println("Could not read request body")
+		log.Warnln("Could not read incoming request body.")
 		return
 	}
 
 	if err := json.Unmarshal(b, &ur); err != nil {
-		fmt.Println("Could not parse request")
+		log.Warnln("Could not parse request:", err)
 		return
 	}
 
@@ -108,7 +108,7 @@ func writeError(errStr string, w http.ResponseWriter, code int) {
 	urr := UserRequestRes{true, errStr}
 	jres, err := json.Marshal(urr)
 	if err != nil {
-		fmt.Println("error during error creation :p")
+		log.Warnln("How is this for meta errors: There was an error while creating an error:", err)
 	}
 	w.Write(jres)
 }

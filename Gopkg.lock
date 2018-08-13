@@ -38,10 +38,10 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
-  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
-  version = "v3.2.0"
+  revision = "0b96aaa707760d6ab28d9b9d1913ff5993328bae"
 
 [[projects]]
   name = "github.com/djherbis/times"
@@ -203,6 +203,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/pytimer/mux-logrus"
+  packages = ["."]
+  revision = "cf75012ca41b36a52c9df40ed236cdb87e3178cf"
+
+[[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
   revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
@@ -219,6 +225,12 @@
   name = "github.com/satori/go.uuid"
   packages = ["."]
   revision = "36e9d2ebbde5e3f13ab2e25625fd453271d6522e"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
+  version = "v1.0.6"
 
 [[projects]]
   branch = "master"
@@ -352,6 +364,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "af9be907ff54003c29ec610954a932c28941846b79de66bd06496b21485753e2"
+  inputs-digest = "b8f8e93f37be74572426ae5743919750180cb674a845bf1297e133b6c02eca4c"
   solver-name = "gps-cdcl"
   solver-version = 1
