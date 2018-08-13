@@ -29,6 +29,8 @@ func NewDefaultMDContext() *MetadataContext {
 }
 
 func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
+	helpers.InitLoggers()
+	log.Printf("Olaris-server - v%s", helpers.Version())
 	helpers.EnsurePath(dbPath)
 	db, err := gorm.Open("sqlite3", path.Join(dbPath, "metadata.db"))
 	db.LogMode(dbLogMode)

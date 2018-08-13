@@ -17,10 +17,6 @@ import (
 
 var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path used if no libraries exist for the default library")
 
-func init() {
-	helpers.InitLoggers()
-}
-
 func main() {
 	flag.Parse()
 

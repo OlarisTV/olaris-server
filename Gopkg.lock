@@ -203,12 +203,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/pytimer/mux-logrus"
-  packages = ["."]
-  revision = "cf75012ca41b36a52c9df40ed236cdb87e3178cf"
-
-[[projects]]
   name = "github.com/rs/cors"
   packages = ["."]
   revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
@@ -364,6 +358,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b8f8e93f37be74572426ae5743919750180cb674a845bf1297e133b6c02eca4c"
+  inputs-digest = "79fc377df69a262c0ac0c0b4f8556ce57cfab91bd93161f5977bc4da352308f7"
   solver-name = "gps-cdcl"
   solver-version = 1
