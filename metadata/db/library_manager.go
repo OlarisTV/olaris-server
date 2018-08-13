@@ -71,7 +71,7 @@ func (self *LibraryManager) UpdateMD(library *Library) {
 	}
 }
 func (self *LibraryManager) UpdateEpisodeMD(tv Series, season Season, episode Episode) error {
-	log.Debugln("Grabbing metadata for episode %v for series '%v'\n", episode.EpisodeNum, tv.Name)
+	log.Debugf("Grabbing metadata for episode %v for series '%v'", episode.EpisodeNum, tv.Name)
 	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, episode.EpisodeNum, nil)
 	if err == nil {
 		if fullEpisode != nil {
