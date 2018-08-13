@@ -8,6 +8,7 @@ import (
 	"github.com/ryanbradynd05/go-tmdb"
 	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -70,29 +71,32 @@ loop:
 			self.Watcher.Close()
 			break loop
 		case event := <-self.Watcher.Events:
-			fmt.Println("event:", event)
-			if event.Op&fsnotify.Rename == fsnotify.Rename {
-				self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
-			}
+			//fmt.Println("event:", event)
+			if supportedExtensions[filepath.Ext(event.Name)] {
+				fmt.Println("Got filesystem notification for valid media file")
+				if event.Op&fsnotify.Rename == fsnotify.Rename {
+					self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+				}
 
-			if event.Op&fsnotify.Remove == fsnotify.Remove {
-				fmt.Println("File removed, removing watcher")
-				self.Watcher.Remove(event.Name)
-				self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
-			}
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				fmt.Println("modified file:", event.Name)
-			}
-			if event.Op&fsnotify.Create == fsnotify.Create {
-				fmt.Println("Added file:", event.Name)
-				self.Watcher.Add(event.Name)
-				fmt.Println("asking lib to scan")
-				for _, lib := range AllLibraries() {
-					if strings.Contains(event.Name, lib.FilePath) {
-						fmt.Println("Scanning file for lib:", lib.Name)
-						self.LibraryManager.ProbeFile(&lib, event.Name)
-						// We can probably only get the MD for the recently added file here
-						self.LibraryManager.UpdateMD(&lib)
+				if event.Op&fsnotify.Remove == fsnotify.Remove {
+					fmt.Println("File removed, removing watcher")
+					self.Watcher.Remove(event.Name)
+					self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					fmt.Println("modified file:", event.Name)
+				}
+				if event.Op&fsnotify.Create == fsnotify.Create {
+					fmt.Println("Added file:", event.Name)
+					self.Watcher.Add(event.Name)
+					fmt.Println("asking lib to scan")
+					for _, lib := range AllLibraries() {
+						if strings.Contains(event.Name, lib.FilePath) {
+							fmt.Println("Scanning file for lib:", lib.Name)
+							self.LibraryManager.ProbeFile(&lib, event.Name)
+							// We can probably only get the MD for the recently added file here
+							self.LibraryManager.UpdateMD(&lib)
+						}
 					}
 				}
 			}

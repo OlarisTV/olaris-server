@@ -1,6 +1,8 @@
 package resolvers
 
 import (
+	"context"
+	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 )
 
@@ -44,7 +46,12 @@ func (r *UserInviteResponseResolver) Code() string {
 	return r.r.Code
 }
 
-func (r *Resolver) CreateUserInvite() *UserInviteResponseResolver {
-	invite := db.CreateInvite()
-	return &UserInviteResponseResolver{&UserInviteResponse{Error: nil, Code: invite.Code}}
+func (r *Resolver) CreateUserInvite(ctx context.Context) *UserInviteResponseResolver {
+	admin := GetUserAdmin(ctx)
+	if admin {
+		invite := db.CreateInvite()
+		return &UserInviteResponseResolver{&UserInviteResponse{Error: nil, Code: invite.Code}}
+	} else {
+		return &UserInviteResponseResolver{&UserInviteResponse{Error: CreateErrResolver(fmt.Errorf("Permission denied.")), Code: ""}}
+	}
 }

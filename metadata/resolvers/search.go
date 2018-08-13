@@ -3,7 +3,6 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type SearchItemResolver struct {
@@ -24,7 +23,7 @@ type SearchArgs struct {
 }
 
 func (r *Resolver) Search(ctx context.Context, args *SearchArgs) *[]*SearchItemResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	var l []*SearchItemResolver
 
 	for _, movie := range db.SearchMovieByTitle(userID, args.Name) {

@@ -3,7 +3,6 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type Season struct {
@@ -17,7 +16,7 @@ type Series struct {
 }
 
 func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 	if dbepisode != nil {
 		return &EpisodeResolver{r: *dbepisode}
@@ -28,7 +27,7 @@ func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeReso
 }
 
 func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
 	season := Season{dbseason, nil}
 
@@ -41,7 +40,7 @@ func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolv
 }
 
 func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	var resolvers []*SeriesResolver
 	var series []db.Series
 

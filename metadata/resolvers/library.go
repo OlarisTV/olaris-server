@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type Library struct {
@@ -87,7 +86,7 @@ type LibRes struct {
 }
 
 func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	var l []*LibraryResolver
 	libraries := db.AllLibraries()
 	for _, library := range libraries {

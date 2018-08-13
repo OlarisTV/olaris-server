@@ -41,6 +41,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 					fmt.Printf("%v %v Expires at: %v\n", claims.Login, claims.UserID, claims.StandardClaims.ExpiresAt)
 					ctx := r.Context()
 					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
+					ctx = context.WithValue(ctx, "is_admin", &claims.Admin)
 					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				} else {

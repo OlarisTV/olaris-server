@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 )
 
 type CreateSTResponse struct {
@@ -29,7 +28,7 @@ func (r *CreateSTResponseResolver) Error() *ErrorResolver {
 }
 
 func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID string }) *CreateSTResponseResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	mr := db.FindContentByUUID(args.UUID)
 	var filePath string
 

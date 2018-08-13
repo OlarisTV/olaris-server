@@ -3,12 +3,11 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"sort"
 )
 
 func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
-	userID := helpers.GetUserID(ctx)
+	userID := GetUserID(ctx)
 	sortables := []sortable{}
 
 	for _, movie := range db.UpNextMovies(userID) {
