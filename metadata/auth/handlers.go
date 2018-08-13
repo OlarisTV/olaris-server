@@ -9,7 +9,7 @@ import (
 )
 
 type UserRequest struct {
-	Username    string `json:"username"`
+	Username string `json:"username"`
 	Code     string `json:"code"`
 	Password string `json:"password"`
 }
