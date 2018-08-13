@@ -5,6 +5,7 @@ import (
 	"github.com/golang/glog"
 	"os"
 	"os/user"
+	"path"
 )
 
 func GetHome() string {
@@ -31,4 +32,8 @@ func EnsurePath(pathName string) error {
 func FileExists(pathName string) bool {
 	_, err := os.Stat(pathName)
 	return err == nil
+}
+
+func MetadataConfigPath() string {
+	return path.Join(GetHome(), ".config", "olaris", "metadb")
 }
