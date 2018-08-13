@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/app"
-	"gitlab.com/bytesized/bytesized-streaming/helpers"
 	"gitlab.com/bytesized/bytesized-streaming/metadata"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
 	"net/http"
