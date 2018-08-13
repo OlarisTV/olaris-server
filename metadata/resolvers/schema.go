@@ -31,10 +31,10 @@ var SchemaTxt = `
 	type Mutation {
 		# Tell the application to index all the supported files in the given directory.
 		# 'kind' can be 0 for movies and 1 for series.
-		createLibrary(name: String!, file_path: String!, kind: Int!): LibRes!
+		createLibrary(name: String!, file_path: String!, kind: Int!): LibraryResponse!
 
 		# Delete a library and remove all collected metadata.
-		deleteLibrary(id: Int!): LibRes!
+		deleteLibrary(id: Int!): LibraryResponse!
 
 		# Create a invite code so a user can register on the server
 		createUserInvite(): UserInviteResponse!
@@ -44,11 +44,21 @@ var SchemaTxt = `
 
 		# Request permission to play a certain file
 		createStreamingTicket(uuid: String!): CreateSTResponse!
+
+		# Delete a user from the database, please note that the user will be able to login until the JWT expires.
+		deleteUser(id: Int!): UserResponse!
+
+
 	}
 
 
-	type LibRes {
-		library: Library!
+	type LibraryResponse {
+		library: Library
+		error: Error
+	}
+
+	type UserResponse{
+		user: User
 		error: Error
 	}
 

@@ -124,3 +124,14 @@ func UserCount() int {
 	env.Db.Find(&User{}).Count(&count)
 	return count
 }
+
+func DeleteUser(id int) (User, error) {
+	user := User{}
+	env.Db.Find(&user, id)
+
+	if user.ID != 0 {
+		obj := env.Db.Unscoped().Delete(&user)
+		return user, obj.Error
+	}
+	return user, fmt.Errorf("User could not be found, not deleted.")
+}

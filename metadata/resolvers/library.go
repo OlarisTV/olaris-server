@@ -43,34 +43,47 @@ type CreateLibraryArgs struct {
 	Kind     int32
 }
 
-func (r *Resolver) DeleteLibrary(args struct{ ID int32 }) *libResResolv {
+func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *libResResolv {
+	err := IfAdmin(ctx)
+	if err != nil {
+		return &libResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
+	}
+
 	library, err := db.DeleteLibrary(int(args.ID))
-	var libRes LibRes
+	var libRes LibraryResponse
 	// TODO(Maran): Dry up resolver creation here and in CreateLibrary
 	if err == nil {
-		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
+		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
-		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}
+		libRes = LibraryResponse{Error: CreateErrResolver(err)}
 	}
 	return &libResResolv{libRes}
 }
 
-func (r *Resolver) CreateLibrary(args *CreateLibraryArgs) *libResResolv {
-	library, err := db.AddLibrary(args.Name, args.FilePath, db.MediaType(args.Kind))
-	var libRes LibRes
+func (r *Resolver) CreateLibrary(ctx context.Context, args *CreateLibraryArgs) *libResResolv {
+	var library db.Library
+	var err error
+	var libRes LibraryResponse
+
+	err = IfAdmin(ctx)
+	if err != nil {
+		return &libResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
+	}
+
 	if err == nil {
-		fmt.Println("Scaninng library")
+		library, err = db.AddLibrary(args.Name, args.FilePath, db.MediaType(args.Kind))
+		fmt.Println("Scanning library")
 		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
 		go db.NewLibraryManager(r.env.Watcher).RefreshAll()
-		libRes = LibRes{Error: &ErrorResolver{Error{hasError: false}}, Library: &LibraryResolver{Library{library, nil, nil}}}
+		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
-		libRes = LibRes{Error: &ErrorResolver{Error{hasError: true, message: err.Error()}}, Library: &LibraryResolver{Library{}}}
+		libRes = LibraryResponse{Error: CreateErrResolver(err)}
 	}
 	return &libResResolv{libRes}
 }
 
 type libResResolv struct {
-	r LibRes
+	r LibraryResponse
 }
 
 func (r *libResResolv) Library() *LibraryResolver {
@@ -80,7 +93,7 @@ func (r *libResResolv) Error() *ErrorResolver {
 	return r.r.Error
 }
 
-type LibRes struct {
+type LibraryResponse struct {
 	Error   *ErrorResolver
 	Library *LibraryResolver
 }
