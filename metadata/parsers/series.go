@@ -1,7 +1,7 @@
 package parsers
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"regexp"
 	"strconv"
@@ -20,18 +20,21 @@ type ParsedSeriesInfo struct {
 }
 
 func ParseSerieName(fileName string) *ParsedSeriesInfo {
+	log.Debugf("Parsing filename '%s' for episode information.", fileName)
 	var err error
 	var psi = ParsedSeriesInfo{}
 
 	yearResult := yearRegex.FindStringSubmatch(fileName)
 	if len(yearResult) > 1 {
 		yearString := yearResult[2]
+		log.Debugf("Found release year '%s'", yearString)
 		// Remove Year data from original fileName
 		fileName = strings.Replace(fileName, yearResult[1], "", -1)
 		psi.Year, err = strconv.ParseUint(yearString, 10, 32)
 		if err != nil {
-			fmt.Println("Could not convert year to int:", err)
+			log.Warnln("Could not convert year to uint:", err)
 		}
+		log.Debugf("Removed year from episode information, resulting in '%s'", fileName)
 	}
 
 	// Find out episode numbers
@@ -45,16 +48,17 @@ func ParseSerieName(fileName string) *ParsedSeriesInfo {
 	if len(res) > 2 {
 		psi.SeasonNum, err = strconv.Atoi(res[2])
 		if err != nil {
-			fmt.Println("Could not convert season to int:", err)
+			log.Warnln("Could not convert season to uint:", err)
 		}
 		psi.EpisodeNum, err = strconv.Atoi(res[3])
 		if err != nil {
-			fmt.Println("Could not convert episode to int:", err)
+			log.Warnln("Could not convert episode to uint:", err)
 		}
 		psi.Title = helpers.Sanitize(res[1])
 	} else {
 		psi.Title = helpers.Sanitize(fileName)
 	}
+	log.Debugf("Done parsing found season '%d' episode '%d' for series '%s'", psi.SeasonNum, psi.EpisodeNum, psi.Title)
 
 	return &psi
 }

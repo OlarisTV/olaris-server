@@ -1,7 +1,7 @@
 package parsers
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
 	"regexp"
 	"strconv"
@@ -15,12 +15,12 @@ type ParsedMovieInfo struct {
 var movieRe = regexp.MustCompile("(.*)\\((\\d{4})\\)")
 
 func ParseMovieName(fileName string) *ParsedMovieInfo {
+	log.Debugf("Parsing filename '%s' for movie information.", fileName)
 	psi := ParsedMovieInfo{}
 	var err error
 
 	res := movieRe.FindStringSubmatch(fileName)
 
-	// No year has been parsed
 	if len(res) > 1 {
 		psi.Title = helpers.Sanitize(res[1])
 	}
@@ -29,18 +29,22 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 	if len(res) > 2 {
 		psi.Year, err = strconv.ParseUint(res[2], 10, 32)
 		if err != nil {
-			fmt.Println("Could not convert year to i:", err)
+			log.Warnln("Could not convert year to uint:", err)
 		}
+		log.Debugf("Found release year '%v'.", psi.Year)
 	}
 
 	if psi.Title == "" {
-		fmt.Println("Could not parse title, going to try some heavy lifting")
+		log.Warnln("Could not parse title, doing some heavy sanitizing and trying it again.")
 		var yearStr string
 		psi.Title, yearStr = helpers.HeavySanitize(fileName)
-		psi.Year, err = strconv.ParseUint(yearStr, 10, 32)
-		if err != nil {
-			fmt.Println("Could not convert year:", err)
+		if yearStr != "" {
+			psi.Year, err = strconv.ParseUint(yearStr, 10, 32)
+			if err != nil {
+				log.Warnln("Could not convert year to uint:", err)
+			}
 		}
 	}
+	log.Debugf("Parsed title is '%s'.", psi.Title)
 	return &psi
 }
