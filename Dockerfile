@@ -98,7 +98,9 @@ WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
 RUN go get github.com/jteeuwen/go-bindata/...
 RUN go get github.com/elazarl/go-bindata-assetfs/...
-RUN go generate -x ./...
+RUN apt-get install -y curl apt-transport-https && curl -sL https://deb.nodesource.com/setup_8.x | bash -&&  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get install nodejs yarn -y
+RUN make
 
 RUN go get github.com/oxequa/realize
 

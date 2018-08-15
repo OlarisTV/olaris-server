@@ -10,13 +10,13 @@ BINARY_NAME=$(BIN_LOC)olaris-server
 BINARY_UNIX=$(BINARY_NAME)-unix
 GODEP=dep
 CMD_SERVER_PATH=cmd/olaris-server/main.go
-REACT_REPO=git@gitlab.com:olaris/olaris-react.git
+REACT_REPO=https://gitlab.com/olaris/olaris-react.git
 SRC_PATH=gitlab.com/olaris/olaris-server
 LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
 GIT_REV := $(shell git rev-list -1 HEAD)
 REACT_BUILD_DIR=./app/build
 
-all: update-react generate test vet build
+all: update-react generate test vet
 
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
@@ -37,6 +37,8 @@ generate:
 	$(GOGENERATE) -v ./...
 run: build
 	./$(BINARY_NAME)
+build-docker:
+	docker build -t olaris-server .
 build-linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v $(CMD_SERVER_PATH)
 build-arm6:

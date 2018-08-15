@@ -3,8 +3,8 @@
 
 ## Running with Docker
 
-    docker build -t olaris-server .
-    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/olaris/olaris-server -v ~/Videos:/var/media -v ~/.config/olaris:/root/.config/olaris -t olaris-server
+    `make build-docker`
+    `docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/olaris/olaris-server -v ~/Videos:/var/media -v ~/.config/olaris:/root/.config/olaris -t olaris-server`
 
 
 This mounts your local development directory inside the Docker container, allowing you to make changes to the application without rebuilding the container. The container features auto-reload functionality - just save a file, wait a few seconds and reload in your browser!
