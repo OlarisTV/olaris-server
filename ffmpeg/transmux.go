@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 )
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
@@ -20,25 +19,22 @@ func NewTransmuxingSession(
 		return nil, err
 	}
 
-	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
-	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
+	splitTimes := []string{}
+	for _, s := range segments[1:] {
+		splitTimes = append(splitTimes, fmt.Sprintf("%d", s.StartTimestamp))
+	}
 
-	cmd := exec.Command("ffmpeg",
-		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.Stream.MediaFileURL,
-		"-copyts",
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
-		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
-		"-c:0", "copy",
-		"-threads", "2",
-		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
-		"-hls_time", fmt.Sprintf("%.3f", TransmuxedSegDuration.Seconds()),
-		"-hls_segment_type", "1", // fMP4
-		"-hls_segment_filename", "stream0_%d.m4s",
-		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u"))
+	args := []string{
+		stream.Stream.MediaFileURL,
+		outputDir,
+		fmt.Sprintf("%d", stream.Stream.StreamId),
+		fmt.Sprintf("%d", segments[0].StartTimestamp),
+		fmt.Sprintf("%d", segments[len(segments)-1].EndTimestamp),
+		fmt.Sprintf("%d", segments[0].SegmentId),
+	}
+	args = append(args, splitTimes...)
+
+	cmd := exec.Command("ffchunk", args...)
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
