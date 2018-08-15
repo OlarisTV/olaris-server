@@ -6,7 +6,7 @@ import Grid from 'material-ui/Grid';
 import CssBaseline from 'material-ui/CssBaseline';
 
 class ServerInput extends React.Component {
-	state = {serverAddress: "http://localhost:8080", connected: false}
+	state = {serverAddress: window.location.origin, connected: false}
 
 	onChange = (event) => {
 		this.setState({serverAddress: event.target.value})
