@@ -2,7 +2,7 @@ package streaming
 
 import (
 	"encoding/json"
-	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
+	"gitlab.com/olaris/olaris-server/streaming/db"
 	"net/http"
 )
 

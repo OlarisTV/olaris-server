@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/golang/glog"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 )
 
 var filepath = flag.String("filepath", "", "Filepath to generate a token for")

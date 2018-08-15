@@ -6,7 +6,7 @@ import (
 	"flag"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
 	"sync"
 )

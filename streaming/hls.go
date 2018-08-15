@@ -2,8 +2,8 @@ package streaming
 
 import (
 	"github.com/gorilla/mux"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
-	"gitlab.com/bytesized/bytesized-streaming/hls"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/hls"
 	"net/http"
 	"strconv"
 )

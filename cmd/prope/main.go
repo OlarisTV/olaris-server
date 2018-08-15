@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"os"
 )
 

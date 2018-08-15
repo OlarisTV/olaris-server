@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/dash"
+	"gitlab.com/olaris/olaris-server/dash"
 	"os"
 )
 

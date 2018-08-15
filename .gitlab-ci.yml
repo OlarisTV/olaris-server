@@ -2,7 +2,7 @@
 image: golang:latest
 
 variables:
-  REPO_NAME: gitlab.com/bytesized/bytesized-streaming
+  REPO_NAME: gitlab.com/olaris/olaris-server
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -18,7 +18,7 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
   - go get github.com/jteeuwen/go-bindata/...
   - go get github.com/elazarl/go-bindata-assetfs/...
-  - "curl -L --header 'PRIVATE-TOKEN: hHu5p8Ts3qmkAxqUmFdz' 'https://gitlab.com/api/v4/projects/bytesized%2Fbss-react/jobs/artifacts/develop/download?job=compile' > app/static.zip"
+  - "curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > app/static.zip"
   - unzip app/static.zip -d app/
   - go generate -v ./...
 
@@ -36,8 +36,8 @@ format:
 compile:
     stage: build
     script:
-      - go build -o binaries/bytesized-streaming-server-linux cmd/bytesized-streaming-server/main.go
-      #- GOOS=windows GOARCH=amd64 go build -o binaries/bytesized-streaming-server.exe cmd/bytesized-streaming-server/main.go
+      - go build -o binaries/olaris-server-linux cmd/olaris-server/main.go
+      #- GOOS=windows GOARCH=amd64 go build -o binaries/olaris-server.exe cmd/olaris-server/main.go
     artifacts:
       paths:
         - binaries/

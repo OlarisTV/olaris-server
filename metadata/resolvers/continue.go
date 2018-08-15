@@ -2,7 +2,7 @@ package resolvers
 
 import (
 	"context"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"sort"
 )
 

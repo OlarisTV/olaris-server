@@ -1,10 +1,10 @@
-# Bytesized Streaming Server
+# Olaris Server
 
 
 ## Running with Docker
 
-    docker build -t bytesized-streaming .
-    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/bytesized/bytesized-streaming -v ~/Videos:/var/media -v ~/.config/bss:/root/.config/bss -t bytesized-streaming
+    docker build -t olaris-server .
+    docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/olaris/olaris-server -v ~/Videos:/var/media -v ~/.config/olaris:/root/.config/olaris -t olaris-server
 
 
 This mounts your local development directory inside the Docker container, allowing you to make changes to the application without rebuilding the container. The container features auto-reload functionality - just save a file, wait a few seconds and reload in your browser!
@@ -13,36 +13,27 @@ Use your own media directory to mount at `/var/media` obviously.
 
 ## Running manually
 
-### Dependencies
-
-	go get github.com/jteeuwen/go-bindata/...
-	go get github.com/elazarl/go-bindata-assetfs/...
+### Build dependencies
+  * Install Go
+	* go get github.com/jteeuwen/go-bindata/...
+	* go get github.com/elazarl/go-bindata-assetfs/...
 
 ### Running
 
-	go generate ./... && go run bytesized-streaming-server/bindata.go bytesized-streaming-server/main.go --media_files_dir ~/Videos
+	`make run`
 
-## Building React
+## Building
 
-  Install prereqs
+  `make build` to build for your local platform.
 
-  `npm install create-react-app`
-  `cd bytesized-streaming-server/react && yarn install`
-  `yarn start` and `yarn sass:watch`
-
-  Development on http://localhost:3000/ once done you can build it so
-  the golang app can serve it with `yarn build` and then restarting the
-  go app.
-
-  TODO: There is probably a better way to serve and deal with this
-
+  `build-with-react` to build and pull in the latest web-interface.
 
 ## Custom ffmpeg
 
-Bytesized Streaming Server currently requires a patched version of ffmpeg to
+Olaris-server currently requires a patched version of ffmpeg to
 work correctly.
 
-	git clone -b bytesized-streaming https://ndreke.de/~leon/dump/ffmpeg
+	git clone https://gitlab.com/olaris/ffmpeg.git
 	cd ffmpeg
 
 On Debian Linux, I have successfully used the following command line to build a working binary
@@ -52,20 +43,6 @@ On Debian Linux, I have successfully used the following command line to build a 
 
 For macOS, see https://trac.ffmpeg.org/wiki/CompilationGuide/macOS
 
-To make Bytesized Streaming Server use your binary, put the ffmpeg source directory (which will then contain the binary) in your `PATH`. For development, just do
+To make Olaris Server use your binary, put the ffmpeg source directory (which will then contain the binary) in your `PATH`. For development, just do
 
 	export PATH=/path/to/your/ffmpeg:$PATH
-
-## Test movies
-
-### Sintel
-
-wget https://download.blender.org/durian/movies/Sintel.2010.720p.mkv && \
-wget https://download.blender.org/durian/movies/Sintel.2010.1080p.mkv && \
-wget https://download.blender.org/durian/movies/Sintel.2010.4k.mkv
-
-### Big Buck Bunny
-
-wget http://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_surround-fix.avi && \
-wget http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_60fps_normal.mp4  && \
-wget http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_2160p_30fps_normal.mp4

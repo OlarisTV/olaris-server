@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gorilla/mux"
-	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"io"
 	"io/ioutil"
 	"net/http"

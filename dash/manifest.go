@@ -3,7 +3,7 @@ package dash
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"log"
 	"text/template"
 	"time"

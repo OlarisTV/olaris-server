@@ -3,10 +3,10 @@ package metadata
 import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/resolvers"
+	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/resolvers"
 
-	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
 )
 

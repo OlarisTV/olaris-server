@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"time"
 )
 

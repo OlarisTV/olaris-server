@@ -3,7 +3,7 @@ package db
 import (
 	"testing"
 
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
 func TestBeforeCreate(t *testing.T) {

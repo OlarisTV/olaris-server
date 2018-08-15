@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"io/ioutil"
 	"os"
 	"testing"

@@ -5,7 +5,7 @@ package app
 import (
 	_ "github.com/gorilla/mux"
 	"github.com/rs/cors"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"net/http"
 )
 

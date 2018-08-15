@@ -9,21 +9,22 @@ BIN_LOC=bin/
 BINARY_NAME=$(BIN_LOC)olaris-server
 BINARY_UNIX=$(BINARY_NAME)-unix
 GODEP=dep
-CMD_SERVER_PATH=cmd/bytesized-streaming-server/main.go
-REACT_REPO=git@gitlab.com:bytesized/bss-react.git
-SRC_PATH=gitlab.com/bytesized/bytesized-streaming
+CMD_SERVER_PATH=cmd/olaris-server/main.go
+REACT_REPO=git@gitlab.com:olaris/olaris-react.git
+SRC_PATH=gitlab.com/olaris/olaris-server
 LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
 GIT_REV := $(shell git rev-list -1 HEAD)
+REACT_BUILD_DIR=./app/build
 
+all: update-react generate test vet build
 
-all: test vet build
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
 	cd builds ; git checkout develop; git pull ; yarn install ; yarn build
 	cp -r builds/build ./app/
 build:
 	$(GOBUILD) -o $(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
-build-with-react: update-react generate build
+#build-with-react: update-react generate build
 test:
 	$(GOTEST) -v ./...
 vet:
@@ -43,4 +44,4 @@ build-arm6:
 build-arm7:
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) -o $(BINARY_NAME)-arm7 -v $(CMD_SERVER_PATH)
 
-build-all: update-react generate build-arm6 build-arm7 build-linux
+build-all: generate build-arm6 build-arm7 build-linux

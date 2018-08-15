@@ -3,7 +3,7 @@ package streaming
 import (
 	"github.com/golang/glog"
 	"github.com/gorilla/mux"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
 	"strconv"
 	"time"

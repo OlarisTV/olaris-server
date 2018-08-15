@@ -3,7 +3,7 @@ package auth
 import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"io/ioutil"
 	"net/http"
 )

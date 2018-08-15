@@ -4,8 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"strconv"
 	"strings"
 )

@@ -7,7 +7,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/bytesized/bytesized-streaming/helpers"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"path"
 	"path/filepath"
 	"strings"

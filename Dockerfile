@@ -15,7 +15,7 @@ RUN     apt-get install -y --no-install-recommends flite1-dev frei0r-plugins-dev
 RUN apt-get autoremove -y && \
         apt-get clean -y
 
-RUN git clone -b master https://gitlab.com/bytesized/ffmpeg.git
+RUN git clone -b master https://gitlab.com/olaris/ffmpeg.git
 
 ARG        PREFIX=/opt/ffmpeg
 ARG        MAKEFLAGS="-j4"
@@ -91,10 +91,10 @@ RUN apt-get -y install golang-1.10-go git
 ENV GOPATH="/go"
 ENV PATH="/usr/lib/go-1.10/bin:${GOPATH}/bin:${PATH}"
 
-ADD . /go/src/gitlab.com/bytesized/bytesized-streaming
+ADD . /go/src/gitlab.com/olaris/olaris-server
 RUN mkdir /var/media
 
-WORKDIR /go/src/gitlab.com/bytesized/bytesized-streaming
+WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
 RUN go get github.com/jteeuwen/go-bindata/...
 RUN go get github.com/elazarl/go-bindata-assetfs/...

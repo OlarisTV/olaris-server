@@ -2,7 +2,7 @@ package hls
 
 import (
 	"bytes"
-	"gitlab.com/bytesized/bytesized-streaming/ffmpeg"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"text/template"
 )
 

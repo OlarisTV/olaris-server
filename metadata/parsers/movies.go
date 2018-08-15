@@ -2,7 +2,7 @@ package parsers
 
 import (
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/helpers"
+	"gitlab.com/olaris/olaris-server/metadata/helpers"
 	"regexp"
 	"strconv"
 )

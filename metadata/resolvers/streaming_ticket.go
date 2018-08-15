@@ -3,8 +3,8 @@ package resolvers
 import (
 	"context"
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/auth"
-	"gitlab.com/bytesized/bytesized-streaming/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
 type CreateSTResponse struct {

@@ -3,17 +3,17 @@ settings:
     force: false
     interval: 0s
 schema:
-- name: bytesized-streaming-server
+- name: olaris-server
   path: .
   commands:
     generate:
       status: true
     build:
       status: true
-      dir: cmd/bytesized-streaming-server
+      dir: cmd/olaris-server
     run:
       status: true
-      path: cmd/bytesized-streaming-server
+      path: cmd/olaris-server
   watcher:
     extensions:
     - go

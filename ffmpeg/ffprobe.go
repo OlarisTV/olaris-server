@@ -5,7 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
-	"gitlab.com/bytesized/bytesized-streaming/streaming/db"
+	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
 	"os"
 	"os/exec"
