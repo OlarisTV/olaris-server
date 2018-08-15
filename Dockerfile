@@ -4,13 +4,9 @@ FROM base as ffmpeg-build
 
 WORKDIR     /tmp/workdir
 
-RUN     apt-get -y update && \
-        apt-get install -y --no-install-recommends ca-certificates expat libgomp1 git build-essential
-
-#RUN     apt-get -y build-dep ffmpeg
-
 # Roughly apt-get build-dep ffmpeg
-RUN     apt-get install -y --no-install-recommends flite1-dev frei0r-plugins-dev ladspa-sdk libass-dev libbluray-dev libbs2b-dev libbz2-dev libcaca-dev libcdio-paranoia-dev libcrystalhd-dev libdc1394-22-dev libfontconfig1-dev libfreetype6-dev libfribidi-dev libgl1-mesa-dev libgme-dev libgnutls-dev libgsm1-dev libiec61883-dev libavc1394-dev libjack-jackd2-dev liblzma-dev libmodplug-dev libmp3lame-dev libopenal-dev libopencore-amrnb-dev libopencore-amrwb-dev libopenjpeg-dev libopus-dev libpulse-dev librtmp-dev libsctp-dev libsdl-dev libshine-dev libsnappy-dev libsoxr-dev libspeex-dev libssh-gcrypt-dev libtheora-dev libtwolame-dev libvdpau-dev libvo-aacenc-dev libvo-amrwbenc-dev libvorbis-dev libvpx-dev libwavpack-dev libwebp-dev libx264-dev yasm libopenjp2-7-dev libx265-dev libxvidcore-dev libzmq3-dev libzvbi-dev libxml2-dev libomxil-bellagio-dev
+RUN     apt-get -y update && \
+        apt-get install -y --no-install-recommends ca-certificates expat libgomp1 git build-essential flite1-dev frei0r-plugins-dev ladspa-sdk libass-dev libbluray-dev libbs2b-dev libbz2-dev libcaca-dev libcdio-paranoia-dev libcrystalhd-dev libdc1394-22-dev libfontconfig1-dev libfreetype6-dev libfribidi-dev libgl1-mesa-dev libgme-dev libgnutls-dev libgsm1-dev libiec61883-dev libavc1394-dev libjack-jackd2-dev liblzma-dev libmodplug-dev libmp3lame-dev libopenal-dev libopencore-amrnb-dev libopencore-amrwb-dev libopenjpeg-dev libopus-dev libpulse-dev librtmp-dev libsctp-dev libsdl-dev libshine-dev libsnappy-dev libsoxr-dev libspeex-dev libssh-gcrypt-dev libtheora-dev libtwolame-dev libvdpau-dev libvo-aacenc-dev libvo-amrwbenc-dev libvorbis-dev libvpx-dev libwavpack-dev libwebp-dev libx264-dev yasm libopenjp2-7-dev libx265-dev libxvidcore-dev libzmq3-dev libzvbi-dev libxml2-dev libomxil-bellagio-dev
 
 RUN apt-get autoremove -y && \
         apt-get clean -y
@@ -82,30 +78,10 @@ RUN     apt-get -y update && \
 
 # To test
 RUN ffmpeg --help
-
-RUN apt-get -y install software-properties-common
-RUN add-apt-repository ppa:gophers/archive
-RUN apt-get update
-RUN apt-get -y install golang-1.10-go git
-
-ENV GOPATH="/go"
-ENV PATH="/usr/lib/go-1.10/bin:${GOPATH}/bin:${PATH}"
-
-ADD . /go/src/gitlab.com/olaris/olaris-server
-RUN mkdir /var/media
-
-WORKDIR /go/src/gitlab.com/olaris/olaris-server
-
-RUN go get github.com/jteeuwen/go-bindata/...
-RUN go get github.com/elazarl/go-bindata-assetfs/...
-RUN apt-get install -y curl apt-transport-https && curl -sL https://deb.nodesource.com/setup_8.x | bash -&&  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt-get update && apt-get install nodejs yarn -y
-RUN make
-
-RUN go get github.com/oxequa/realize
-
+RUN apt-get install -y curl unzip
+RUN curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-server/jobs/artifacts/master/download?job=compile' > build.zip && unzip build.zip && cp ./binaries/olaris-server-linux /opt/
 EXPOSE 8080
 
 ENV LOGTOSTDERR=1
 ENV V=4
-ENTRYPOINT realize start --generate
+ENTRYPOINT /opt/olaris-server-linux
