@@ -8,9 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-
 	"os"
-	"os/user"
 	"path"
 )
 
@@ -19,12 +17,7 @@ type ImageManager struct {
 }
 
 func NewImageManager() *ImageManager {
-	// DRY this up (context.go)
-	usr, err := user.Current()
-	if err != nil {
-		fmt.Println("Failed to determine user's home directory: ", err.Error())
-	}
-	cachePath := path.Join(usr.HomeDir, ".config", "bss", "metadb", "cache", "images")
+	cachePath := path.Join(helpers.MetadataConfigPath(), "cache", "images")
 	helpers.EnsurePath(cachePath)
 	return &ImageManager{cachePath: cachePath}
 }

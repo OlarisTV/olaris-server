@@ -54,7 +54,7 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 
 // TODO Maran: Rotate secrets
 func tokenSecret() (string, error) {
-	tokenPath := path.Join(helpers.GetHome(), ".config", "bss", "token.secret")
+	tokenPath := path.Join(helpers.BaseConfigPath(), "token.secret")
 	err := helpers.EnsurePath(path.Dir(tokenPath))
 	if err != nil {
 		return "", err

@@ -34,6 +34,10 @@ func FileExists(pathName string) bool {
 	return err == nil
 }
 
+func BaseConfigPath() string {
+	return path.Join(GetHome(), ".config", "olaris")
+}
+
 func MetadataConfigPath() string {
-	return path.Join(GetHome(), ".config", "olaris", "metadb")
+	return path.Join(BaseConfigPath(), "metadb")
 }

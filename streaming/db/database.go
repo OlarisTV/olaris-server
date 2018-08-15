@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/syndtr/goleveldb/leveldb"
-	"os/user"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"path"
 	"sync"
 )
@@ -30,15 +30,12 @@ var sharedDb struct {
 }
 
 func GetSharedDB() *DB {
+	var err error
 	sharedDb.Lock()
 	defer sharedDb.Unlock()
 
 	if sharedDb.db == nil {
-		usr, err := user.Current()
-		if err != nil {
-			glog.Exit("Failed to determine user's home directory: ", err.Error())
-		}
-		sharedDb.db, err = NewDb(path.Join(usr.HomeDir, ".config", "bss", "db"))
+		sharedDb.db, err = NewDb(path.Join(helpers.BaseConfigPath(), "keyframedb"))
 		if err != nil {
 			glog.Exit("Failed to open database: ", err.Error())
 		}
