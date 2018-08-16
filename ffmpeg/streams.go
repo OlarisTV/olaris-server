@@ -56,6 +56,11 @@ func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
 			return []Stream{}, err
 		}
 
+		totalDurationTs := DtsTimestamp(stream.DurationTs)
+		if stream.DurationTs == 0 {
+			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
@@ -65,7 +70,7 @@ func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
 				Codecs:           stream.GetMime(),
 				BitRate:          int64(bitrate),
 				TotalDuration:    container.Format.Duration(),
-				TotalDurationDts: DtsTimestamp(stream.DurationTs),
+				TotalDurationDts: totalDurationTs,
 				StreamType:       stream.CodecType,
 				Language:         GetLanguageTag(stream),
 				Title:            GetTitleOrHumanizedLanguage(stream),
@@ -108,6 +113,11 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 			return []Stream{}, err
 		}
 
+		totalDurationTs := DtsTimestamp(stream.DurationTs)
+		if stream.DurationTs == 0 {
+			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
@@ -119,7 +129,7 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 				Width:            stream.Width,
 				Height:           stream.Height,
 				TotalDuration:    container.Format.Duration(),
-				TotalDurationDts: DtsTimestamp(stream.DurationTs),
+				TotalDurationDts: totalDurationTs,
 				TimeBase:         timeBase,
 				StreamType:       stream.CodecType,
 				CodecName:        stream.CodecName,

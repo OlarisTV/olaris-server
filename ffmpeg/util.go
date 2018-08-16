@@ -65,10 +65,11 @@ func BuildConstantSegmentDurations(keyframeIntervals []Interval, segmentDuration
 				int(i),
 			})
 	}
+	lastEndTimestamp := session[len(session)-1].EndTimestamp
 	session = append(session,
 		Segment{Interval{
 			timeBase,
-			session[len(session)-1].EndTimestamp,
+			lastEndTimestamp,
 			keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp},
 			numFullSegments})
 	return []SegmentList{session}
