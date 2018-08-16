@@ -6,28 +6,35 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+type mustUUIDArgs struct {
+	Uuid string
+}
+
+// Season wrapper object around db.Season so it can hold episode resolvers.
 type Season struct {
 	db.Season
 	Episodes []*EpisodeResolver
 }
 
+// Series wrapper object around db.Series so it can hold seasons resolvers.
 type Series struct {
 	db.Series
 	Seasons []*SeasonResolver
 }
 
-func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
+// Episode returns episode.
+func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
 	userID, _ := auth.UserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 	if dbepisode != nil {
 		return &EpisodeResolver{r: *dbepisode}
-	} else {
-		return &EpisodeResolver{r: db.Episode{}}
 	}
+	return &EpisodeResolver{r: db.Episode{}}
 
 }
 
-func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
+// Season returns season.
+func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	userID, _ := auth.UserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
 	season := Season{dbseason, nil}
@@ -40,7 +47,8 @@ func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolv
 	return &SeasonResolver{r: season}
 }
 
-func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver {
+// Series return series.
+func (r *Resolver) Series(ctx context.Context, args *uuidArgs) []*SeriesResolver {
 	userID, _ := auth.UserID(ctx)
 	var resolvers []*SeriesResolver
 	var series []db.Series
@@ -59,6 +67,7 @@ func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver
 	return resolvers
 }
 
+// CreateSeriesResolver wrapper to create complete series information based on a series.
 func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
 	var seasons []*SeasonResolver
 
@@ -79,76 +88,112 @@ func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
 	return &SeriesResolver{r: Series{dbserie, seasons}}
 }
 
+// SeriesResolver resolvers a serie.
 type SeriesResolver struct {
 	r Series
 }
 
+// Name returns name.
 func (r *SeriesResolver) Name() string {
 	return r.r.Name
 }
+
+// UUID returns uuid.
 func (r *SeriesResolver) UUID() string {
 	return r.r.UUID
 }
+
+// Overview returns overview.
 func (r *SeriesResolver) Overview() string {
 	return r.r.Overview
 }
+
+// FirstAirDate returns air date.
 func (r *SeriesResolver) FirstAirDate() string {
 	return r.r.FirstAirDate
 }
+
+// Status returns serie status.
 func (r *SeriesResolver) Status() string {
 	return r.r.Status
 }
+
+// Type returns content type.
 func (r *SeriesResolver) Type() string {
 	return r.r.Type
 }
+
+// PosterPath resturn uri to poster.
 func (r *SeriesResolver) PosterPath() string {
 	return r.r.PosterPath
 }
+
+// BackdropPath returns uri to backdrop.
 func (r *SeriesResolver) BackdropPath() string {
 	return r.r.BackdropPath
 }
+
+// TmdbID returns tmdb id
 func (r *SeriesResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
+
+// Seasons returns all seasons.
 func (r *SeriesResolver) Seasons() []*SeasonResolver {
 	return r.r.Seasons
 }
 
+// SeasonResolver resolves season
 type SeasonResolver struct {
 	r Season
 }
 
+// Name returns name.
 func (r *SeasonResolver) Name() string {
 	return r.r.Name
 }
 
+// UUID returns uuid.
 func (r *SeasonResolver) UUID() string {
 	return r.r.UUID
 }
+
+// Overview returns season overview.
 func (r *SeasonResolver) Overview() string {
 	return r.r.Overview
 }
+
+// AirDate returns seasonal air date.
 func (r *SeasonResolver) AirDate() string {
 	return r.r.AirDate
 }
+
+// PosterPath resturn uri to poster.
 func (r *SeasonResolver) PosterPath() string {
 	return r.r.PosterPath
 }
+
+// TmdbID returns tmdb id.
 func (r *SeasonResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
 
+// SeasonNumber returns season number.
 func (r *SeasonResolver) SeasonNumber() int32 {
 	return int32(r.r.SeasonNumber)
 }
+
+// Episodes returns seasonal episodes.
 func (r *SeasonResolver) Episodes() []*EpisodeResolver {
 	return r.r.Episodes
 }
 
+// EpisodeResolver resolves episode.
 type EpisodeResolver struct {
 	r db.Episode
 }
 
+// Files return all files for this episode.
 func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {
 	for _, episode := range r.r.EpisodeFiles {
 		files = append(files, &EpisodeFileResolver{r: episode})
@@ -156,57 +201,82 @@ func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {
 	return files
 }
 
+// Name returns name.
 func (r *EpisodeResolver) Name() string {
 	return r.r.Name
 }
 
+// UUID returns uuid.
 func (r *EpisodeResolver) UUID() string {
 	return r.r.UUID
 }
 
+// Overview returns overview.
 func (r *EpisodeResolver) Overview() string {
 	return r.r.Overview
 }
+
+// AirDate returns air date.
 func (r *EpisodeResolver) AirDate() string {
 	return r.r.AirDate
 }
+
+// StillPath returns uri to still image.
 func (r *EpisodeResolver) StillPath() string {
 	return r.r.StillPath
 }
+
+// TmdbID returns tmdb id.
 func (r *EpisodeResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
+
+// EpisodeNumber returns episode number.
 func (r *EpisodeResolver) EpisodeNumber() int32 {
 	return int32(r.r.EpisodeNum)
 }
+
+// PlayState returns episode playstate information.
 func (r *EpisodeResolver) PlayState() *PlayStateResolver {
 	return &PlayStateResolver{r: r.r.PlayState}
 }
 
+// PlayStateResolver resolves playstate
 type PlayStateResolver struct {
 	r db.PlayState
 }
 
+// Finished returns a bool when content has been watched.
 func (r *PlayStateResolver) Finished() bool {
 	return r.r.Finished
 }
+
+// Playtime current playtime.
 func (r *PlayStateResolver) Playtime() float64 {
 	return r.r.Playtime
 }
 
+// EpisodeFileResolver resolves episodefile.
 type EpisodeFileResolver struct {
 	r db.EpisodeFile
 }
 
+// FilePath returns filesystem path to file.
 func (r *EpisodeFileResolver) FilePath() string {
 	return r.r.FilePath
 }
+
+// FileName returns filename.
 func (r *EpisodeFileResolver) FileName() string {
 	return r.r.FileName
 }
+
+// UUID returns uuid.
 func (r *EpisodeFileResolver) UUID() string {
 	return r.r.UUID
 }
+
+// Streams return stream information.
 func (r *EpisodeFileResolver) Streams() (streams []*StreamResolver) {
 	for _, stream := range r.r.Streams {
 		streams = append(streams, &StreamResolver{stream})

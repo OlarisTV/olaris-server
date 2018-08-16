@@ -5,23 +5,27 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+// InviteResolver is a resolver for the invite model.
 type InviteResolver struct {
 	r db.Invite
 }
 
-func (self *InviteResolver) Code() *string {
-	return &self.r.Code
+// Code returns the invite code.
+func (ir *InviteResolver) Code() *string {
+	return &ir.r.Code
 }
 
-func (self *InviteResolver) User() (user *UserResolver) {
-	if self.r.UserID != 0 {
-		user := db.FindUser(self.r.UserID)
+// User returns the user who redeemed this invite.
+func (ir *InviteResolver) User() (user *UserResolver) {
+	if ir.r.UserID != 0 {
+		user := db.FindUser(ir.r.UserID)
 		return &UserResolver{user}
 	}
 
 	return nil
 }
 
+// Invites returns all current invites.
 func (r *Resolver) Invites() *[]*InviteResolver {
 	var invites []*InviteResolver
 	for _, invite := range db.AllInvites() {
@@ -30,28 +34,34 @@ func (r *Resolver) Invites() *[]*InviteResolver {
 	return &invites
 }
 
+// UserInviteResponse response when creating a new invite.
 type UserInviteResponse struct {
 	Error *ErrorResolver
 	Code  string
 }
+
+// UserInviteResponseResolver resolver.
 type UserInviteResponseResolver struct {
 	r *UserInviteResponse
 }
 
+// Error returns the error for the given object.
 func (r *UserInviteResponseResolver) Error() *ErrorResolver {
 	return r.r.Error
 }
+
+// Code returns the given invite code.
 func (r *UserInviteResponseResolver) Code() string {
 	return r.r.Code
 }
 
-//TODO(Maran): Refactor all this error/not-error response stuff.
+// CreateUserInvite creates a new invite code.
 func (r *Resolver) CreateUserInvite(ctx context.Context) *UserInviteResponseResolver {
-	err := IfAdmin(ctx)
+	//TODO(Maran): Refactor all this error/not-error response stuff.
+	err := ifAdmin(ctx)
 	if err == nil {
 		invite := db.CreateInvite()
 		return &UserInviteResponseResolver{&UserInviteResponse{Error: nil, Code: invite.Code}}
-	} else {
-		return &UserInviteResponseResolver{&UserInviteResponse{Error: CreateErrResolver(err), Code: ""}}
 	}
+	return &UserInviteResponseResolver{&UserInviteResponse{Error: CreateErrResolver(err), Code: ""}}
 }

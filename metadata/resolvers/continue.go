@@ -7,6 +7,7 @@ import (
 	"sort"
 )
 
+// UpNext returns episode/movie that could populate a dashboard.
 func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
 	userID, _ := auth.UserID(ctx)
 	sortables := []sortable{}

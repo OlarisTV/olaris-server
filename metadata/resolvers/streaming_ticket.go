@@ -7,26 +7,34 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+// CreateSTResponse  holds new jwt data.
 type CreateSTResponse struct {
 	Error         *ErrorResolver
 	Jwt           string
 	StreamingPath string
 }
+
+// CreateSTResponseResolver resolves CreateSTResponse.
 type CreateSTResponseResolver struct {
 	r CreateSTResponse
 }
 
+// StreamingPath returns URI to HLS manifest.
 func (r *CreateSTResponseResolver) StreamingPath() string {
 	return r.r.StreamingPath
 }
 
+// Jwt returns streaming token.
 func (r *CreateSTResponseResolver) Jwt() string {
 	return r.r.Jwt
 }
+
+// Error returns error.
 func (r *CreateSTResponseResolver) Error() *ErrorResolver {
 	return r.r.Error
 }
 
+// CreateStreamingTicket create a new streaming request for the given content.
 func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID string }) *CreateSTResponseResolver {
 	userID, _ := auth.UserID(ctx)
 	mr := db.FindContentByUUID(args.UUID)

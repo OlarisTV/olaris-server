@@ -7,47 +7,59 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+// Library wrapper around the db.Library package so it can contain related resolvers.
 type Library struct {
 	db.Library
 	Movies   []*MovieResolver
 	Episodes []*EpisodeResolver
 }
 
+// LibraryResolver resolver for Library.
 type LibraryResolver struct {
 	r Library
 }
 
+// Name returns library name
 func (r *LibraryResolver) Name() string {
 	return r.r.Name
 }
 
+// ID returns library ID
 func (r *LibraryResolver) ID() int32 {
 	return int32(r.r.ID)
 }
 
+// Movies returns movies in Library.
 func (r *LibraryResolver) Movies() []*MovieResolver {
 	return r.r.Movies
 }
+
+// Episodes returns episodes in Library.
 func (r *LibraryResolver) Episodes() []*EpisodeResolver {
 	return r.r.Episodes
 }
+
+// FilePath returns filesystem path for library.
 func (r *LibraryResolver) FilePath() string {
 	return r.r.FilePath
 }
+
+// Kind returns library type.
 func (r *LibraryResolver) Kind() int32 {
 	return int32(r.r.Kind)
 }
 
-type CreateLibraryArgs struct {
+type createLibraryArgs struct {
 	Name     string
 	FilePath string
 	Kind     int32
 }
 
-func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *libResResolv {
-	err := IfAdmin(ctx)
+// DeleteLibrary deletes a library.
+func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *LibResResolv {
+	err := ifAdmin(ctx)
 	if err != nil {
-		return &libResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
+		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
 
 	library, err := db.DeleteLibrary(int(args.ID))
@@ -58,17 +70,18 @@ func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *
 	} else {
 		libRes = LibraryResponse{Error: CreateErrResolver(err)}
 	}
-	return &libResResolv{libRes}
+	return &LibResResolv{libRes}
 }
 
-func (r *Resolver) CreateLibrary(ctx context.Context, args *CreateLibraryArgs) *libResResolv {
+// CreateLibrary creates a library.
+func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *LibResResolv {
 	var library db.Library
 	var err error
 	var libRes LibraryResponse
 
-	err = IfAdmin(ctx)
+	err = ifAdmin(ctx)
 	if err != nil {
-		return &libResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
+		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
 
 	if err == nil {
@@ -80,25 +93,31 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *CreateLibraryArgs) *
 	} else {
 		libRes = LibraryResponse{Error: CreateErrResolver(err)}
 	}
-	return &libResResolv{libRes}
+	return &LibResResolv{libRes}
 }
 
-type libResResolv struct {
+// LibResResolv holds a library response.
+type LibResResolv struct {
 	r LibraryResponse
 }
 
-func (r *libResResolv) Library() *LibraryResolver {
+// Library returns the library.
+func (r *LibResResolv) Library() *LibraryResolver {
 	return r.r.Library
 }
-func (r *libResResolv) Error() *ErrorResolver {
+
+// Error returns an error.
+func (r *LibResResolv) Error() *ErrorResolver {
 	return r.r.Error
 }
 
+// LibraryResponse generic response.
 type LibraryResponse struct {
 	Error   *ErrorResolver
 	Library *LibraryResolver
 }
 
+// Libraries return all libraries.
 func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
 	userID, _ := auth.UserID(ctx)
 	var l []*LibraryResolver

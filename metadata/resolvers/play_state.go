@@ -6,21 +6,24 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-type PlayStateArgs struct {
+type playStateArgs struct {
 	UUID     string
 	Finished bool
 	Playtime float64
 }
 
+// CreatePSResponseResolver returns whether the playstate was created.
 type CreatePSResponseResolver struct {
 	success bool
 }
 
-func (self *CreatePSResponseResolver) Success() bool {
-	return self.success
+// Success returns true if successfully created.
+func (res *CreatePSResponseResolver) Success() bool {
+	return res.success
 }
 
-func (r *Resolver) CreatePlayState(ctx context.Context, args *PlayStateArgs) *CreatePSResponseResolver {
+// CreatePlayState creates a new playstate (or overwrite an existing one) for the given media.
+func (r *Resolver) CreatePlayState(ctx context.Context, args *playStateArgs) *CreatePSResponseResolver {
 	userID, _ := auth.UserID(ctx)
 	ok := db.CreatePlayState(userID, args.UUID, args.Finished, args.Playtime)
 	// Supply simple struct with true or false only for now

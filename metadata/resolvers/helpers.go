@@ -6,15 +6,15 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 )
 
+// CreateNoAuthorisationError returns a standard error for unauthorised requests.
 func CreateNoAuthorisationError() error {
-	return fmt.Errorf("You are not authorised for this action.")
+	return fmt.Errorf("you are not authorised for this action")
 }
 
-func IfAdmin(ctx context.Context) error {
+func ifAdmin(ctx context.Context) error {
 	admin, ok := auth.UserAdmin(ctx)
 	if ok && admin {
 		return nil
-	} else {
-		return CreateNoAuthorisationError()
 	}
+	return CreateNoAuthorisationError()
 }

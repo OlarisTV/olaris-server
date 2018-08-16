@@ -5,6 +5,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+// SchemaTxt defines the graphql schema.
 var SchemaTxt = `
 	schema {
 		query: Query
@@ -217,6 +218,7 @@ var SchemaTxt = `
 
 `
 
+// InitSchema inits the graphql schema.
 func InitSchema(env *db.MetadataContext) *graphql.Schema {
 	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{env: env})
 	return Schema
