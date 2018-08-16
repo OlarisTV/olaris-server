@@ -7,32 +7,38 @@ import (
 	"strconv"
 )
 
+// MediaType describes the type of media in a library.
 type MediaType int
 
+// UUIDable ensures a UUID is added to each model this is embedded in.
 type UUIDable struct {
 	UUID string `json:"uuid"`
 }
 
-func (self *UUIDable) BeforeCreate(tx *gorm.DB) (err error) {
-	self.SetUUID()
+// BeforeCreate ensures a UUID is set before model creation.
+func (ud *UUIDable) BeforeCreate(tx *gorm.DB) (err error) {
+	ud.SetUUID()
 	return
 }
 
-func (self *UUIDable) SetUUID() error {
+// SetUUID creates a new v4 UUID.
+func (ud *UUIDable) SetUUID() error {
 	uuid, err := uuid.NewV4()
 
 	if err != nil {
 		fmt.Println("Could not generate unique UID", err)
 		return err
 	}
-	self.UUID = uuid.String()
+	ud.UUID = uuid.String()
 	return nil
 }
 
-func (self *UUIDable) GetUUID() string {
-	return self.UUID
+// GetUUID returns the model's UUID.
+func (ud *UUIDable) GetUUID() string {
+	return ud.UUID
 }
 
+// MediaItem is an embeddeable struct that holds information about filesystem files (episode or movies).
 type MediaItem struct {
 	UUIDable
 	Title     string
@@ -44,15 +50,18 @@ type MediaItem struct {
 	LibraryID uint
 }
 
-func (self *MediaItem) YearAsString() string {
-	return strconv.FormatUint(self.Year, 10)
+// YearAsString converts the year to string (no surprise there huh.)
+func (mi *MediaItem) YearAsString() string {
+	return strconv.FormatUint(mi.Year, 10)
 }
 
+// MediaResult is a struct that can either contain a movie or episode file.
 type MediaResult struct {
 	Movie   *MovieFile
 	Episode *EpisodeFile
 }
 
+// FindContentByUUID can retrieve episode or movie data based on a UUID.
 func FindContentByUUID(uuid string) *MediaResult {
 	count := 0
 	var movie MovieFile
@@ -72,11 +81,13 @@ func FindContentByUUID(uuid string) *MediaResult {
 	return &MediaResult{}
 }
 
+// RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
 func RecentlyAddedMovies() (movies []*Movie) {
 	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
 
+// RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
 func RecentlyAddedEpisodes() (eps []*Episode) {
 	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
 	return eps

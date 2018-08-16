@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
+	// Import sqlite dialect
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ import (
 	"strings"
 )
 
+// MetadataContext is a container for all important vars.
 type MetadataContext struct {
 	Db             *gorm.DB
 	Tmdb           *tmdb.TMDb
@@ -23,11 +25,13 @@ type MetadataContext struct {
 
 var env *MetadataContext
 
+// NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
 	return NewMDContext(dbPath, false)
 }
 
+// NewMDContext lets you create a more custom environment.
 func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	helpers.InitLoggers()
 	log.Printf("Olaris-server - v%s", helpers.Version())
@@ -59,32 +63,32 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	// Scan once on start-up
 	go libraryManager.RefreshAll()
 
-	go env.StartWatcher(exitChan)
+	go env.startWatcher(exitChan)
 
 	return env
 }
 
-func (self *MetadataContext) StartWatcher(exitChan chan int) {
+func (env *MetadataContext) startWatcher(exitChan chan int) {
 	log.Println("Starting fsnotify watchers.")
 loop:
 	for {
 		select {
 		case <-exitChan:
 			log.Println("Stopping fsnotify watchers.")
-			self.Watcher.Close()
+			env.Watcher.Close()
 			break loop
-		case event := <-self.Watcher.Events:
+		case event := <-env.Watcher.Events:
 			//fmt.Println("event:", event)
 			if supportedExtensions[filepath.Ext(event.Name)] {
 				log.Debugln("Got filesystem notification for valid media file.")
 				if event.Op&fsnotify.Rename == fsnotify.Rename {
-					self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
 				}
 
 				if event.Op&fsnotify.Remove == fsnotify.Remove {
 					log.Debugln("File removed, removing watcher")
-					self.Watcher.Remove(event.Name)
-					self.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+					env.Watcher.Remove(event.Name)
+					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
 				}
 				/*
 					if event.Op&fsnotify.Write == fsnotify.Write {
@@ -92,18 +96,18 @@ loop:
 					}*/
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					log.Debugln("File added:", event.Name)
-					self.Watcher.Add(event.Name)
+					env.Watcher.Add(event.Name)
 					log.Debugln("Requesting full library rescan.")
 					for _, lib := range AllLibraries() {
 						if strings.Contains(event.Name, lib.FilePath) {
-							self.LibraryManager.ProbeFile(&lib, event.Name)
+							env.LibraryManager.ProbeFile(&lib, event.Name)
 							// We can probably only get the MD for the recently added file here
-							self.LibraryManager.UpdateMD(&lib)
+							env.LibraryManager.UpdateMD(&lib)
 						}
 					}
 				}
 			}
-		case err := <-self.Watcher.Errors:
+		case err := <-env.Watcher.Errors:
 			log.Warnln("fsnotify watcher error:", err)
 		}
 	}

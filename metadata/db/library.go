@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// Library is a struct containing information about filesystem folders.
 type Library struct {
 	gorm.Model
 	Kind     MediaType
@@ -12,12 +13,14 @@ type Library struct {
 	Name     string
 }
 
+// AllLibraries returns all libraries from the database.
 func AllLibraries() []Library {
 	var libraries []Library
 	env.Db.Find(&libraries)
 	return libraries
 }
 
+// DeleteLibrary deletes a library from the database.
 func DeleteLibrary(id int) (Library, error) {
 	library := Library{}
 	env.Db.Find(&library, id)
@@ -32,11 +35,12 @@ func DeleteLibrary(id int) (Library, error) {
 			}
 		}
 		return library, obj.Error
-	} else {
-		return library, fmt.Errorf("Library not found, could not be deleted.")
 	}
+
+	return library, fmt.Errorf("library not found, could not be deleted")
 }
 
+// AddLibrary adds a filesystem folder and starts tracking media inside the folders.
 func AddLibrary(name string, filePath string, kind MediaType) (Library, error) {
 	fmt.Printf("Add library '%s' with path '%s', type: '%d'\n", name, filePath, kind)
 	lib := Library{Name: name, FilePath: filePath, Kind: kind}

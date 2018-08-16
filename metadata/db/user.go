@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// CommonModelFields is a list of all fields that should be present on all models.
 type CommonModelFields struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -16,15 +17,17 @@ type CommonModelFields struct {
 	DeletedAt *time.Time `json:"deleted_at"`
 }
 
+// User defines a user model.
 type User struct {
 	UUIDable
 	CommonModelFields
-	Username        string `gorm:"not null;unique" json:"username"`
+	Username     string `gorm:"not null;unique" json:"username"`
 	Admin        bool   `gorm:"not null" json:"admin"`
 	PasswordHash string `gorm:"not null" json:"-"`
 	Salt         string `gorm:"not null" json:"-"`
 }
 
+// Invite is a model used to invite users to your server.
 type Invite struct {
 	gorm.Model
 	Code   string
@@ -32,6 +35,7 @@ type Invite struct {
 	User   *User
 }
 
+// CreateInvite creates an invite code that can be redeemed by new users.
 func CreateInvite() Invite {
 	invite := Invite{Code: helpers.RandAlphaString(24)}
 	env.Db.Save(&invite)
@@ -39,28 +43,30 @@ func CreateInvite() Invite {
 	return invite
 }
 
+// AllInvites returns all invites from the db.
 func AllInvites() (invites []Invite) {
 	env.Db.Find(&invites)
 	return invites
 }
 
-func (self *User) ValidPassword(password string) bool {
-	env.Db.Where("username = ?", self.Username).Find(self)
-	if self.HashPassword(password, self.Salt) == self.PasswordHash {
+// ValidPassword checks if the given password is valid for the user.
+func (user *User) ValidPassword(password string) bool {
+	env.Db.Where("username = ?", user.Username).Find(user)
+	if user.hashPassword(password, user.Salt) == user.PasswordHash {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
-func (self *User) SetPassword(password string, salt string) string {
-	self.Salt = salt
-	self.PasswordHash = self.HashPassword(password, self.Salt)
+// SetPassword sets a (new) password for the given user.
+func (user *User) SetPassword(password string, salt string) string {
+	user.Salt = salt
+	user.PasswordHash = user.hashPassword(password, user.Salt)
 
-	return self.PasswordHash
+	return user.PasswordHash
 }
 
-func (self *User) HashPassword(password string, salt string) string {
+func (user *User) hashPassword(password string, salt string) string {
 	h := sha256.New()
 	h.Write([]byte(salt))
 	h.Write([]byte(password))
@@ -68,14 +74,15 @@ func (self *User) HashPassword(password string, salt string) string {
 	return hashedStr
 }
 
-// TODO Maran: Create a way to return all errors at once
+// CreateUser creates a new user. The invite code will be ignored if no other users exist yet.
 func CreateUser(username string, password string, code string) (User, error) {
+	// TODO Maran: Create a way to return all errors at once
 	if len(username) < 3 {
-		return User{}, fmt.Errorf("Username should be at least 3 characters")
+		return User{}, fmt.Errorf("username should be at least 3 characters")
 	}
 
 	if len(password) < 8 {
-		return User{}, fmt.Errorf("Password should be at least 8 characters.")
+		return User{}, fmt.Errorf("password should be at least 8 characters")
 	}
 
 	count := 0
@@ -90,7 +97,7 @@ func CreateUser(username string, password string, code string) (User, error) {
 
 		if (invite.Code == "") || (invite.UserID != 0) {
 			fmt.Println("Not a valid code or already used.")
-			return User{}, fmt.Errorf("Invite code invalid.")
+			return User{}, fmt.Errorf("invite code invalid")
 		}
 	} else {
 		admin = true
@@ -109,22 +116,26 @@ func CreateUser(username string, password string, code string) (User, error) {
 	return user, dbobj.Error
 }
 
+// AllUsers return all users from thedb.
 func AllUsers() (users []User) {
 	env.Db.Find(&users)
 	return users
 }
 
+// FindUser returns a specific user.
 func FindUser(id uint) (user User) {
 	env.Db.Find(&user, id)
 	return user
 }
 
+// UserCount counts the amount of users in the db.
 func UserCount() int {
 	count := 0
 	env.Db.Find(&User{}).Count(&count)
 	return count
 }
 
+// DeleteUser deltes the given user.
 func DeleteUser(id int) (User, error) {
 	user := User{}
 	env.Db.Find(&user, id)
@@ -133,5 +144,5 @@ func DeleteUser(id int) (User, error) {
 		obj := env.Db.Unscoped().Delete(&user)
 		return user, obj.Error
 	}
-	return user, fmt.Errorf("User could not be found, not deleted.")
+	return user, fmt.Errorf("user could not be found, not deleted")
 }

@@ -19,6 +19,7 @@ var supportedExtensions = map[string]bool{
 	".avi": true,
 }
 
+// Defines various mediatypes, only Movie and Series support atm.
 const (
 	MediaTypeMovie = iota
 	MediaTypeSeries
@@ -26,17 +27,19 @@ const (
 	MediaTypeOtherMovie
 )
 
+// LibraryManager manages all active libraries.
 type LibraryManager struct {
 	pool    *tunny.Pool
 	watcher *fsnotify.Watcher
 }
 
-type EpisodePayload struct {
+type episodePayload struct {
 	series  Series
 	season  Season
 	episode Episode
 }
 
+// NewLibraryManager creates a new LibraryManager with a pool worker that can process episode information.
 func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	manager := LibraryManager{}
 	if watcher != nil {
@@ -45,7 +48,7 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
 	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
 		log.Debugln("Spawning agent worker.")
-		ep, ok := payload.(EpisodePayload)
+		ep, ok := payload.(episodePayload)
 		if ok {
 			log.Debugf("Worker in '%s', S%vE%v", ep.series.Name, ep.season.SeasonNumber, ep.episode.EpisodeNum)
 			err := manager.UpdateEpisodeMD(ep.series, ep.season, ep.episode)
@@ -60,17 +63,20 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	return &manager
 }
 
-func (self *LibraryManager) UpdateMD(library *Library) {
+// UpdateMD looks for missing metadata information and attempts to retrieve it.
+func (man *LibraryManager) UpdateMD(library *Library) {
 	switch kind := library.Kind; kind {
 	case MediaTypeMovie:
 		log.Println("Updating metadata for movies.")
-		self.UpdateMovieMD(library)
+		man.UpdateMovieMD(library)
 	case MediaTypeSeries:
 		log.Println("Updating metadata for TV.")
-		self.UpdateTvMD(library)
+		man.UpdateTvMD(library)
 	}
 }
-func (self *LibraryManager) UpdateEpisodeMD(tv Series, season Season, episode Episode) error {
+
+// UpdateEpisodeMD looks for missing episode metadata and attempts to retrieve it.
+func (man *LibraryManager) UpdateEpisodeMD(tv Series, season Season, episode Episode) error {
 	log.Debugf("Grabbing metadata for episode %v for series '%v'", episode.EpisodeNum, tv.Name)
 	fullEpisode, err := env.Tmdb.GetTvEpisodeInfo(tv.TmdbID, season.SeasonNumber, episode.EpisodeNum, nil)
 	if err == nil {
@@ -84,13 +90,13 @@ func (self *LibraryManager) UpdateEpisodeMD(tv Series, season Season, episode Ep
 			return obj.Error
 		}
 		return nil
-	} else {
-		log.Warnln("Could not grab episode information:", err)
-		return err
 	}
+	log.Warnln("Could not grab episode information:", err)
+	return err
 }
 
-func (self *LibraryManager) UpdateEpisodesMD() error {
+// UpdateEpisodesMD loops over all episode with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) UpdateEpisodesMD() error {
 	episodes := []Episode{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&episodes)
 	for i := range episodes {
@@ -99,13 +105,14 @@ func (self *LibraryManager) UpdateEpisodesMD() error {
 			var tv Series
 			env.Db.Where("id = ?", episode.SeasonID).Find(&season)
 			env.Db.Where("id = ?", season.SeriesID).Find(&tv)
-			self.pool.Process(EpisodePayload{season: season, series: tv, episode: *episode})
+			man.pool.Process(episodePayload{season: season, series: tv, episode: *episode})
 		}(&episodes[i])
 	}
 	return nil
 }
 
-func (self *LibraryManager) UpdateSeasonMD() error {
+// UpdateSeasonMD loops over all seasons with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) UpdateSeasonMD() error {
 	seasons := []Season{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&seasons)
 	for _, season := range seasons {
@@ -128,7 +135,8 @@ func (self *LibraryManager) UpdateSeasonMD() error {
 	return nil
 }
 
-func (self *LibraryManager) UpdateTvMD(library *Library) error {
+// UpdateTvMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) UpdateTvMD(library *Library) error {
 	series := []Series{}
 	env.Db.Where("tmdb_id = ?", 0).Find(&series)
 	for _, serie := range series {
@@ -163,13 +171,14 @@ func (self *LibraryManager) UpdateTvMD(library *Library) error {
 		}
 	}
 
-	self.UpdateSeasonMD()
-	self.UpdateEpisodesMD()
+	man.UpdateSeasonMD()
+	man.UpdateEpisodesMD()
 
 	return nil
 }
 
-func (self *LibraryManager) UpdateMovieMD(library *Library) error {
+// UpdateMovieMD loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) UpdateMovieMD(library *Library) error {
 	movies := []Movie{}
 	// Consider removing the library here as metadata is no longer tied to one library
 	env.Db.Where("tmdb_id = ?", 0).Find(&movies)
@@ -209,27 +218,29 @@ func (self *LibraryManager) UpdateMovieMD(library *Library) error {
 	return nil
 }
 
-func (self *LibraryManager) Probe(library *Library) {
+// Probe goes over the filesystem and parses filenames in the given library.
+func (man *LibraryManager) Probe(library *Library) {
 	switch kind := library.Kind; kind {
 	case MediaTypeMovie:
 		log.Println("Probing files for movie information.")
-		self.ProbeMovies(library)
+		man.ProbeMovies(library)
 	case MediaTypeSeries:
 		log.Println("Probing files for series information.")
-		self.ProbeSeries(library)
+		man.ProbeSeries(library)
 	}
 }
 
-func (self *LibraryManager) ProbeSeries(library *Library) {
+// ProbeSeries goes over the given library and attempts to get series information from filenames.
+func (man *LibraryManager) ProbeSeries(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if supportedExtensions[filepath.Ext(walkPath)] {
-			self.AddWatcher(walkPath)
-			self.AddWatcher(filepath.Dir(walkPath))
+			man.AddWatcher(walkPath)
+			man.AddWatcher(filepath.Dir(walkPath))
 
 			count := 0
 			env.Db.Where("file_path= ?", walkPath).Find(&EpisodeFile{}).Count(&count)
 			if count == 0 {
-				self.ProbeFile(library, walkPath)
+				man.ProbeFile(library, walkPath)
 			}
 		}
 		return nil
@@ -238,14 +249,17 @@ func (self *LibraryManager) ProbeSeries(library *Library) {
 		log.Warnln("Error probing series:", err)
 	}
 }
-func (self *LibraryManager) AddWatcher(filePath string) {
-	err := self.watcher.Add(filePath)
+
+// AddWatcher adds a fsnotify watcher to the given path.
+func (man *LibraryManager) AddWatcher(filePath string) {
+	err := man.watcher.Add(filePath)
 	if err != nil {
 		log.Warnln("FSNOTIFY FAILURE:", err)
 	}
 }
 
-func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
+// ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
+func (man *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	log.Debugln("Parsing filename:", filePath)
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -313,20 +327,21 @@ func (self *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	return nil
 }
 
-func (self *LibraryManager) ProbeMovies(library *Library) {
+// ProbeMovies goes over the given library and attempts to get movie information from filenames.
+func (man *LibraryManager) ProbeMovies(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 
 		if err != nil {
 			return err
 		}
 		if supportedExtensions[filepath.Ext(walkPath)] {
-			self.AddWatcher(walkPath)
-			self.AddWatcher(filepath.Dir(walkPath))
+			man.AddWatcher(walkPath)
+			man.AddWatcher(filepath.Dir(walkPath))
 
 			count := 0
 			env.Db.Where("file_path= ?", walkPath).Find(&MovieFile{}).Count(&count)
 			if count == 0 {
-				self.ProbeFile(library, walkPath)
+				man.ProbeFile(library, walkPath)
 			} else {
 				log.Debugf("File '%s' already exists in library, not adding again.", walkPath)
 			}
@@ -341,7 +356,8 @@ func (self *LibraryManager) ProbeMovies(library *Library) {
 	}
 }
 
-func (self *LibraryManager) CleanUpMovieMD(movieFile MovieFile) {
+// CleanUpMovieMD checks whether there is stale movie information in the database and removes it.
+func (man *LibraryManager) CleanUpMovieMD(movieFile MovieFile) {
 	// Delete all stream information
 	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &movieFile.ID)
 
@@ -357,7 +373,8 @@ func (self *LibraryManager) CleanUpMovieMD(movieFile MovieFile) {
 	env.Db.Delete(&movieFile.Movie)
 }
 
-func (self *LibraryManager) CleanUpSeriesMD(episodeFile EpisodeFile) {
+// CleanUpSeriesMD checks whether there is stale series information in the database and removes it.
+func (man *LibraryManager) CleanUpSeriesMD(episodeFile EpisodeFile) {
 	// Check there are no other copies of the episode around.
 	if episodeFile.IsSingleFile() {
 		// Delete all stream information
@@ -395,7 +412,8 @@ func (self *LibraryManager) CleanUpSeriesMD(episodeFile EpisodeFile) {
 	}
 }
 
-func (self *LibraryManager) CheckRemovedFiles() {
+// CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.
+func (man *LibraryManager) CheckRemovedFiles() {
 	log.Infoln("Checking filesystem to see if any files got removed since our last scan.")
 	for _, movieFile := range FindAllMovieFiles() {
 		log.Debugf("Checking path '%s'", movieFile.FilePath)
@@ -414,17 +432,18 @@ func (self *LibraryManager) CheckRemovedFiles() {
 	}
 }
 
-func (self *LibraryManager) RefreshAll() {
+// RefreshAll rescans all files and attempts to find missing metadata information.
+func (man *LibraryManager) RefreshAll() {
 	for _, lib := range AllLibraries() {
-		self.AddWatcher(lib.FilePath)
+		man.AddWatcher(lib.FilePath)
 
-		self.CheckRemovedFiles()
+		man.CheckRemovedFiles()
 
 		log.Printf("Scanning library folder '%s' (%s) for media files.", lib.Name, lib.FilePath)
-		self.Probe(&lib)
+		man.Probe(&lib)
 
 		log.Printf("Updating metadata for library '%s'", lib.Name)
-		self.UpdateMD(&lib)
+		man.UpdateMD(&lib)
 
 	}
 }
