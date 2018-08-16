@@ -8,20 +8,22 @@ import (
 	"net/http"
 )
 
-type UserRequest struct {
+type userRequest struct {
 	Username string `json:"username"`
 	Code     string `json:"code"`
 	Password string `json:"password"`
 }
-type UserRequestRes struct {
+type userRequestRes struct {
 	HasError bool   `json:"has_error"`
 	Message  string `json:"message"`
 }
 
-type TokenResponse struct {
+type tokenResponse struct {
 	JWT string `json:"jwt"`
 }
 
+// ReadyForSetup checks whether the metadata has been through it's initial setup
+// If this returns true a user can be created without an invite code.
 func ReadyForSetup(w http.ResponseWriter, r *http.Request) {
 	if db.UserCount() == 0 {
 		w.Write([]byte("true"))
@@ -30,8 +32,9 @@ func ReadyForSetup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UserHandler handles logging in existing users and returning a JWT.
 func UserHandler(w http.ResponseWriter, r *http.Request) {
-	ur := UserRequest{}
+	ur := userRequest{}
 	b, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -61,7 +64,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			writeError(err.Error(), w, http.StatusUnauthorized)
 		} else {
-			tokenRes := TokenResponse{JWT: token}
+			tokenRes := tokenResponse{JWT: token}
 			jtoken, err := json.Marshal(tokenRes)
 			if err != nil {
 				log.Warnln("Could not marshall JWT token:", err)
@@ -73,8 +76,9 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CreateUserHandler handles the creation of users, either via invite code or the first admin user.
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
-	ur := UserRequest{}
+	ur := userRequest{}
 	b, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
@@ -96,16 +100,15 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(err.Error(), w, http.StatusUnauthorized)
 		return
-	} else {
-		jre, _ := json.Marshal(user)
-		w.Write(jre)
-
 	}
+
+	jre, _ := json.Marshal(user)
+	w.Write(jre)
 }
 
 func writeError(errStr string, w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
-	urr := UserRequestRes{true, errStr}
+	urr := userRequestRes{true, errStr}
 	jres, err := json.Marshal(urr)
 	if err != nil {
 		log.Warnln("How is this for meta errors: There was an error while creating an error:", err)

@@ -1,4 +1,4 @@
-// Package implements metadata server features such as media indexing
+// Package metadata implements metadata server features such as media indexing,
 // media metadata lookup on external services and exposing this data via APIs.
 package metadata
 
