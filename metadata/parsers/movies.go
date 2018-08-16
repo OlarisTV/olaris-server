@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// ParsedMovieInfo holds extracted information from the given filename.
 type ParsedMovieInfo struct {
 	Year  uint64
 	Title string
@@ -14,6 +15,7 @@ type ParsedMovieInfo struct {
 
 var movieRe = regexp.MustCompile("(.*)\\((\\d{4})\\)")
 
+// ParseMovieName attempts to parse a filename looking for movie information.
 func ParseMovieName(fileName string) *ParsedMovieInfo {
 	log.Debugf("Parsing filename '%s' for movie information.", fileName)
 	psi := ParsedMovieInfo{}

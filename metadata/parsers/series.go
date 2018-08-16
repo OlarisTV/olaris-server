@@ -12,6 +12,7 @@ var yearRegex = regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?
 var seriesRegex = regexp.MustCompile("^(.*)S(\\d{1,2})E(\\d{1,2})")
 var seriesFallbackRegex = regexp.MustCompile("^(.*)(\\d{1,2})x(\\d{1,2})")
 
+// ParsedSeriesInfo holds extracted information from the given filename.
 type ParsedSeriesInfo struct {
 	Year       uint64
 	Title      string
@@ -19,6 +20,7 @@ type ParsedSeriesInfo struct {
 	SeasonNum  int
 }
 
+// ParseSerieName attempts to parse a filename looking for episode/season information.
 func ParseSerieName(fileName string) *ParsedSeriesInfo {
 	log.Debugf("Parsing filename '%s' for episode information.", fileName)
 	var err error
