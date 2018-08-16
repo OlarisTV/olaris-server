@@ -93,7 +93,7 @@ func tokenSecret() (string, error) {
 	}
 
 	secret := helpers.RandAlphaString(32)
-	err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
+	err = ioutil.WriteFile(tokenPath, []byte(secret), 0700)
 	return secret, err
 }
 

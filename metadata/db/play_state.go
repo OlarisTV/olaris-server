@@ -58,7 +58,7 @@ func UpNextEpisodes(userID uint) []*Episode {
 				" join series ON series.id = seasons.series_id"+
 				" join seasons on seasons.id = episodes.season_id"+
 				" where season_num >= ? AND episode_num > ?  AND series_id = ?"+
-				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesId).Scan(&result)
+				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
 			env.Db.Where("ID = ?", result.EpisodeID).First(&ep)
 			eps = append(eps, &ep)
