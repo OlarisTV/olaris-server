@@ -1,3 +1,5 @@
+// Package implements metadata server features such as media indexing
+// media metadata lookup on external services and exposing this data via APIs.
 package metadata
 
 import (
@@ -10,6 +12,7 @@ import (
 	"net/http"
 )
 
+// GetHandler defines the handlers for metadata endpoints such as graphql and REST methods.
 func GetHandler(menv *db.MetadataContext) http.Handler {
 	imageManager := NewImageManager()
 
@@ -22,7 +25,7 @@ func GetHandler(menv *db.MetadataContext) http.Handler {
 	r.Handle("/v1/user/setup", http.HandlerFunc(auth.ReadyForSetup))
 
 	// TODO(Maran): This should be authenticated too.
-	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HttpHandler))
+	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HTTPHandler))
 
 	handler := cors.AllowAll().Handler(r)
 
