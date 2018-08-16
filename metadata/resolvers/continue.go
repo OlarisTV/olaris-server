@@ -2,12 +2,13 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"sort"
 )
 
 func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	sortables := []sortable{}
 
 	for _, movie := range db.UpNextMovies(userID) {

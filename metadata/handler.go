@@ -17,7 +17,7 @@ func GetHandler(menv *db.MetadataContext) http.Handler {
 	imageManager := NewImageManager()
 
 	r := mux.NewRouter()
-	r.Handle("/query", auth.AuthMiddleWare(resolvers.NewRelayHandler(menv)))
+	r.Handle("/query", auth.MiddleWare(resolvers.NewRelayHandler(menv)))
 
 	r.Handle("/v1/auth", http.HandlerFunc(auth.UserHandler)).Methods("POST")
 

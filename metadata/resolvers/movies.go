@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -13,7 +14,7 @@ type MustUuidArgs struct {
 }
 
 func (r *Resolver) Movies(ctx context.Context, args *UuidArgs) []*MovieResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	var l []*MovieResolver
 	var movies []db.Movie
 	if args.Uuid != nil {

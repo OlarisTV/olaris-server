@@ -28,7 +28,7 @@ func (r *CreateSTResponseResolver) Error() *ErrorResolver {
 }
 
 func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID string }) *CreateSTResponseResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	mr := db.FindContentByUUID(args.UUID)
 	var filePath string
 

@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -20,7 +21,7 @@ func (self *CreatePSResponseResolver) Success() bool {
 }
 
 func (r *Resolver) CreatePlayState(ctx context.Context, args *PlayStateArgs) *CreatePSResponseResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	ok := db.CreatePlayState(userID, args.UUID, args.Finished, args.Playtime)
 	// Supply simple struct with true or false only for now
 	return &CreatePSResponseResolver{success: ok}

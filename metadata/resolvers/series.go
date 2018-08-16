@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -16,7 +17,7 @@ type Series struct {
 }
 
 func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(&args.Uuid, userID)
 	if dbepisode != nil {
 		return &EpisodeResolver{r: *dbepisode}
@@ -27,7 +28,7 @@ func (r *Resolver) Episode(ctx context.Context, args *MustUuidArgs) *EpisodeReso
 }
 
 func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
 	season := Season{dbseason, nil}
 
@@ -40,7 +41,7 @@ func (r *Resolver) Season(ctx context.Context, args *MustUuidArgs) *SeasonResolv
 }
 
 func (r *Resolver) Series(ctx context.Context, args *UuidArgs) []*SeriesResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	var resolvers []*SeriesResolver
 	var series []db.Series
 

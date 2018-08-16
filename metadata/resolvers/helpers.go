@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 )
 
 func CreateNoAuthorisationError() error {
@@ -10,19 +11,10 @@ func CreateNoAuthorisationError() error {
 }
 
 func IfAdmin(ctx context.Context) error {
-	if GetUserAdmin(ctx) {
+	admin, ok := auth.UserAdmin(ctx)
+	if ok && admin {
 		return nil
 	} else {
 		return CreateNoAuthorisationError()
 	}
-}
-
-func GetUserAdmin(ctx context.Context) bool {
-	admin := ctx.Value("is_admin").(*bool)
-	return *admin
-}
-
-func GetUserID(ctx context.Context) uint {
-	id := ctx.Value("user_id").(*uint)
-	return *id
 }

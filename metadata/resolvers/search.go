@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -23,7 +24,7 @@ type SearchArgs struct {
 }
 
 func (r *Resolver) Search(ctx context.Context, args *SearchArgs) *[]*SearchItemResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	var l []*SearchItemResolver
 
 	for _, movie := range db.SearchMovieByTitle(userID, args.Name) {

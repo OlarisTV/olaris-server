@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -99,7 +100,7 @@ type LibraryResponse struct {
 }
 
 func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
-	userID := GetUserID(ctx)
+	userID, _ := auth.UserID(ctx)
 	var l []*LibraryResolver
 	libraries := db.AllLibraries()
 	for _, library := range libraries {

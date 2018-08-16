@@ -14,6 +14,18 @@ import (
 	"time"
 )
 
+type contextKey string
+
+func (c contextKey) String() string {
+	return "auth context key " + string(c)
+}
+
+var (
+	contextKeyUserID  = contextKey("user_id")
+	contextKeyIsAdmin = contextKey("is_admin")
+)
+
+// UserClaims defines our custom JWT.
 type UserClaims struct {
 	Username string `json:"username"`
 	UserID   uint   `json:"user_id"`
@@ -21,7 +33,20 @@ type UserClaims struct {
 	jwt.StandardClaims
 }
 
-func AuthMiddleWare(h http.Handler) http.Handler {
+// UserID extracts user id from context.
+func UserID(ctx context.Context) (uint, bool) {
+	userID, ok := ctx.Value(contextKeyUserID).(uint)
+	return userID, ok
+}
+
+// UserAdmin checks whether the JWT is authorised as admin.
+func UserAdmin(ctx context.Context) (bool, bool) {
+	isAdmin, ok := ctx.Value(contextKeyIsAdmin).(bool)
+	return isAdmin, ok
+}
+
+// MiddleWare checks for user authentication and prevents unauthorised access to the API.
+func MiddleWare(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if db.UserCount() == 0 {
 			log.Warnln("No users present, no auth required!")
@@ -40,13 +65,13 @@ func AuthMiddleWare(h http.Handler) http.Handler {
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
 					log.Debugf("User: '%v' (%v). Expires at: %v.", claims.Username, claims.UserID, claims.StandardClaims.ExpiresAt)
 					ctx := r.Context()
-					ctx = context.WithValue(ctx, "user_id", &claims.UserID)
-					ctx = context.WithValue(ctx, "is_admin", &claims.Admin)
+					ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
+					ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
 					h.ServeHTTP(w, r.WithContext(ctx))
 					return
-				} else {
-					writeError("Unauthorized", w, http.StatusUnauthorized)
 				}
+
+				writeError("Unauthorized", w, http.StatusUnauthorized)
 			}
 		}
 	})
@@ -63,9 +88,8 @@ func tokenSecret() (string, error) {
 		secret, err := ioutil.ReadFile(tokenPath)
 		if err != nil {
 			return "", err
-		} else {
-			return string(secret), nil
 		}
+		return string(secret), nil
 	} else {
 		secret := helpers.RandAlphaString(32)
 		err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
