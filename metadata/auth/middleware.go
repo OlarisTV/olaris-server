@@ -90,11 +90,11 @@ func tokenSecret() (string, error) {
 			return "", err
 		}
 		return string(secret), nil
-	} else {
-		secret := helpers.RandAlphaString(32)
-		err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
-		return secret, err
 	}
+
+	secret := helpers.RandAlphaString(32)
+	err := ioutil.WriteFile(tokenPath, []byte(secret), 0700)
+	return secret, err
 }
 
 // TODO Maran: Consider setting the jti if we want to increase security.

@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// Sanitize prepares a filename for parsing. It tries to remove dots and other weird characters to make parsing easier.
 func Sanitize(title string) string {
 	title = strings.Replace(title, ".", " ", -1)
 	title = strings.Replace(title, "’", "'", -1)
@@ -13,6 +14,7 @@ func Sanitize(title string) string {
 	return title
 }
 
+// HeavySanitize mangles a filename even further removing often found extra characters in filenames.
 func HeavySanitize(title string) (string, string) {
 	var year string
 	yearReg := regexp.MustCompile("(\\d{4})")

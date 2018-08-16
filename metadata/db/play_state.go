@@ -19,8 +19,8 @@ type PlayState struct {
 // latestEpResult holds information about the episode that is up next for the given user.
 type latestEpResult struct {
 	EpisodeID  int
-	SeasonId   int
-	SeriesId   int
+	SeasonID   int
+	SeriesID   int
 	EpisodeNum int
 	SeasonNum  int
 	Playtime   int
