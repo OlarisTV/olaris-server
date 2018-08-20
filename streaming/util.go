@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -79,6 +81,16 @@ func getMediaFileURL(fileLocatorStr string) (string, error) {
 		return "http://127.0.0.1:8080/s/files/rclone/" + l.Path, nil
 	}
 	return "", fmt.Errorf("Could not build media file URL: Unknown file locator \"%s\"", l.Location)
+}
+
+func mediaFileURLExists(mediaFileURLStr string) bool {
+	mediaFileURL, _ := url.Parse(mediaFileURLStr)
+	if mediaFileURL.Scheme == "file" {
+		if _, err := os.Stat(mediaFileURL.Path); os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
 
 func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, error) {
