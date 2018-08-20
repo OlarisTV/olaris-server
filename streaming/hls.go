@@ -14,6 +14,10 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
 
 	playableCodecs := r.URL.Query()["playableCodecs"]
 	capabilities := ffmpeg.ClientCodecCapabilities{
@@ -64,6 +68,10 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
 		return
 	}
 
@@ -163,6 +171,16 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
+
 	streamKey, err := getStreamKey(
 		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])
