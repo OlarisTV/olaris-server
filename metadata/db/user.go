@@ -141,8 +141,10 @@ func DeleteUser(id int) (User, error) {
 	env.Db.Find(&user, id)
 
 	if user.ID != 0 {
+		env.Db.Unscoped().Where("user_id = ?", user.ID).Delete(Invite{})
 		obj := env.Db.Unscoped().Delete(&user)
 		return user, obj.Error
 	}
+
 	return user, fmt.Errorf("user could not be found, not deleted")
 }
