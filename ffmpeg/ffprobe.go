@@ -162,12 +162,15 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 		line := strings.Split(scanner.Text(), ",")
 		// Sometimes packets have no timestamp - whatever they are, we don't care about them.
 		if line[1] == "N/A" {
-			continue
+			//continue
 		}
 		if line[2][0] == 'K' {
-			dts, err := strconv.ParseInt(line[1], 10, 64)
-			if err != nil {
-				return nil, err
+			dts := int64(0)
+			if line[1] != "N/A" {
+				dts, err = strconv.ParseInt(line[1], 10, 64)
+				if err != nil {
+					return nil, err
+				}
 			}
 			keyframes = append(keyframes, DtsTimestamp(dts))
 		}
