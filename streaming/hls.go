@@ -52,8 +52,8 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 				VideoStream:    videoRepresentation,
 				AudioStreams:   audioStreamRepresentations,
 				AudioGroupName: "audio",
-				// TODO(Leon Handreke): Fill this from the audio codecs.
-				AudioCodecs: "mp4a.40.2",
+				// TODO(Leon Handreke): Is just using the first one always correct?
+				AudioCodecs: audioStreamRepresentations[0].Stream.Codecs,
 			},
 		},
 		subtitleRepresentations)
