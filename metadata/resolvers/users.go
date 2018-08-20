@@ -15,6 +15,11 @@ func (r *UserResolver) Username() string {
 	return r.r.Username
 }
 
+// ID returns the unique UserID
+func (r *UserResolver) ID() int32 {
+	return int32(r.r.ID)
+}
+
 // Admin returns admin status.
 func (r *UserResolver) Admin() bool {
 	return r.r.Admin

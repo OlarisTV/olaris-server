@@ -85,6 +85,7 @@ var SchemaTxt = `
 	}
 
 	type User {
+		id: Int!
 		username: String!
 		admin: Boolean!
 	}
