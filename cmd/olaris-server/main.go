@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/peak6/envflag"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/app"
 	"gitlab.com/olaris/olaris-server/metadata"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -42,6 +43,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	log.Infoln("binding on port", port)
 	srv := &http.Server{Addr: ":" + port, Handler: handler}
 	go srv.ListenAndServe()
 
