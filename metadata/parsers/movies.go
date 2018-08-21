@@ -1,3 +1,4 @@
+// Package parsers has a collection of parsers that can extract useful information out of filenames.
 package parsers
 
 import (

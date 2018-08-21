@@ -1,3 +1,4 @@
+// Package db handles database queries for the metadata server
 package db
 
 import (

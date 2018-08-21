@@ -1,3 +1,4 @@
+// Package helpers has a collection of helpers that help process metadata details.
 package helpers
 
 import (

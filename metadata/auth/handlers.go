@@ -1,3 +1,4 @@
+// Package auth handles various authentication methods for the metadata server.
 package auth
 
 import (

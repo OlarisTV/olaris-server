@@ -1,3 +1,4 @@
+// Package resolvers implements resolvers for the GraphQL interface.
 package resolvers
 
 import (
