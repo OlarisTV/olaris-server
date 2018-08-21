@@ -21,18 +21,23 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing file for movie information.")
 	psi := ParsedMovieInfo{}
 	var err error
+	var year string
 
 	res := movieRe.FindStringSubmatch(fileName)
 
 	if len(res) > 1 {
 		psi.Title = helpers.Sanitize(res[1])
 	} else {
-		psi.Title = helpers.Sanitize(fileName)
+		psi.Title, year = helpers.HeavySanitize(helpers.Sanitize(fileName))
 	}
 
 	// Year was also found
 	if len(res) > 2 {
-		psi.Year, err = strconv.ParseUint(res[2], 10, 32)
+		year = res[2]
+	}
+
+	if year != "" {
+		psi.Year, err = strconv.ParseUint(year, 10, 32)
 		if err != nil {
 			log.Warnln("Could not convert year to uint:", err)
 		}
