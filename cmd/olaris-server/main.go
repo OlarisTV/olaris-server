@@ -22,8 +22,6 @@ func main() {
 	envflag.Parse()
 
 	// subscribe to SIGINT signals
-	stopChan := make(chan os.Signal)
-	signal.Notify(stopChan, os.Interrupt)
 	r := mux.NewRouter()
 
 	r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
@@ -45,7 +43,14 @@ func main() {
 	}
 	log.Infoln("binding on port", port)
 	srv := &http.Server{Addr: ":" + port, Handler: handler}
-	go srv.ListenAndServe()
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			log.WithFields(log.Fields{"error": err}).Fatal("Error starting server.")
+		}
+	}()
+
+	stopChan := make(chan os.Signal)
+	signal.Notify(stopChan, os.Interrupt)
 
 	// Wait for termination signal
 	<-stopChan
@@ -54,5 +59,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
+	os.Exit(0)
 
 }
