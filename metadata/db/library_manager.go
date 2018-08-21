@@ -13,10 +13,14 @@ import (
 )
 
 var supportedExtensions = map[string]bool{
-	".mp4": true,
-	".mkv": true,
-	".mov": true,
-	".avi": true,
+	".mp4":  true,
+	".mkv":  true,
+	".mov":  true,
+	".avi":  true,
+	".webm": true,
+	".wmv":  true,
+	".mpg":  true,
+	".mpeg": true,
 }
 
 // Defines various mediatypes, only Movie and Series support atm.
