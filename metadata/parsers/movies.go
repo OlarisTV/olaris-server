@@ -17,7 +17,7 @@ var movieRe = regexp.MustCompile("(.*)\\((\\d{4})\\)")
 
 // ParseMovieName attempts to parse a filename looking for movie information.
 func ParseMovieName(fileName string) *ParsedMovieInfo {
-	log.Debugf("Parsing filename '%s' for movie information.", fileName)
+	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing file for movie information.")
 	psi := ParsedMovieInfo{}
 	var err error
 
@@ -25,6 +25,8 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 
 	if len(res) > 1 {
 		psi.Title = helpers.Sanitize(res[1])
+	} else {
+		psi.Title = helpers.Sanitize(fileName)
 	}
 
 	// Year was also found
@@ -33,11 +35,13 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 		if err != nil {
 			log.Warnln("Could not convert year to uint:", err)
 		}
-		log.Debugf("Found release year '%v'.", psi.Year)
+		log.WithFields(log.Fields{"year": psi.Year}).Debugln("Found release year.")
 	}
 
 	if psi.Title == "" {
-		log.Warnln("Could not parse title, doing some heavy sanitizing and trying it again.")
+		log.WithFields(log.Fields{
+			"filename": fileName,
+		}).Warnln("Could not parse title, doing some heavy sanitizing and trying it again.")
 		var yearStr string
 		psi.Title, yearStr = helpers.HeavySanitize(fileName)
 		if yearStr != "" {
@@ -47,6 +51,6 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 			}
 		}
 	}
-	log.Debugf("Parsed title is '%s'.", psi.Title)
+	log.WithFields(log.Fields{"title": psi.Title}).Debugln("Done parsing title.")
 	return &psi
 }

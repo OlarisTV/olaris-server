@@ -1,17 +1,21 @@
 package helpers
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 // Sanitize prepares a filename for parsing. It tries to remove dots and other weird characters to make parsing easier.
-func Sanitize(title string) string {
-	title = strings.Replace(title, ".", " ", -1)
-	title = strings.Replace(title, "’", "'", -1)
-	title = strings.Trim(title, " ")
-	title = strings.Trim(title, " -")
-	return title
+func Sanitize(filename string) string {
+	// Remove extension
+	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+
+	filename = strings.Replace(filename, ".", " ", -1)
+	filename = strings.Replace(filename, "’", "'", -1)
+	filename = strings.Trim(filename, " ")
+	filename = strings.Trim(filename, " -")
+	return filename
 }
 
 // HeavySanitize mangles a filename even further removing often found extra characters in filenames.

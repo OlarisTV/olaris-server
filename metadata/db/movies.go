@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -27,6 +28,10 @@ type Movie struct {
 	ImdbID        string
 	MovieFiles    []MovieFile
 	PlayState     PlayState `gorm:"polymorphic:Owner;"`
+}
+
+func (movie *Movie) logFields() log.Fields {
+	return log.Fields{"title": movie.OriginalTitle, "tmdbId": movie.TmdbID}
 }
 
 // IsSingleFile returns true if this is the only file for this movie.

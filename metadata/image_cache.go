@@ -34,7 +34,7 @@ func (man *ImageManager) HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	folderPath := path.Join(man.cachePath, provider, size)
 	filePath := path.Join(folderPath, id)
 	if helpers.FileExists(filePath) {
-		log.Debugln("Requested file already in cache.")
+		log.WithFields(log.Fields{"file": filePath}).Debugln("Requested file already in cache.")
 		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			log.Warnln("Could not read file from disk.")
@@ -42,7 +42,7 @@ func (man *ImageManager) HTTPHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(file)
 		}
 	} else {
-		log.Debugln("Requested file not in cache yet.")
+		log.WithFields(log.Fields{"file": filePath}).Debugln("Requested file not in cache yet.")
 
 		helpers.EnsurePath(folderPath)
 		openFile, err := os.Create(filePath)

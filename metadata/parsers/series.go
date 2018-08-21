@@ -20,23 +20,27 @@ type ParsedSeriesInfo struct {
 	SeasonNum  int
 }
 
+func (psi *ParsedSeriesInfo) logFields() log.Fields {
+	return log.Fields{"year": psi.Year, "title": psi.Title, "episodeNum": psi.EpisodeNum, "seasonNum": psi.SeasonNum}
+}
+
 // ParseSerieName attempts to parse a filename looking for episode/season information.
 func ParseSerieName(fileName string) *ParsedSeriesInfo {
-	log.Debugf("Parsing filename '%s' for episode information.", fileName)
+	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing filename for episode information.")
 	var err error
 	var psi = ParsedSeriesInfo{}
 
 	yearResult := yearRegex.FindStringSubmatch(fileName)
 	if len(yearResult) > 1 {
 		yearString := yearResult[2]
-		log.Debugf("Found release year '%s'", yearString)
+		log.WithFields(log.Fields{"year": yearString}).Println("Found release year.")
 		// Remove Year data from original fileName
 		fileName = strings.Replace(fileName, yearResult[1], "", -1)
 		psi.Year, err = strconv.ParseUint(yearString, 10, 32)
 		if err != nil {
-			log.Warnln("Could not convert year to uint:", err)
+			log.WithFields(log.Fields{"error": err}).Warnln("Could not convert year to uint")
 		}
-		log.Debugf("Removed year from episode information, resulting in '%s'", fileName)
+		log.WithFields(log.Fields{"filename": fileName}).Debugln("Removed year from episode information to create new title.", fileName)
 	}
 
 	// Find out episode numbers
@@ -60,7 +64,7 @@ func ParseSerieName(fileName string) *ParsedSeriesInfo {
 	} else {
 		psi.Title = helpers.Sanitize(fileName)
 	}
-	log.Debugf("Done parsing found season '%d' episode '%d' for series '%s'", psi.SeasonNum, psi.EpisodeNum, psi.Title)
+	log.WithFields(psi.logFields()).Debugln("Done parsing episode.")
 
 	return &psi
 }

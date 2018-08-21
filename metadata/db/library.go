@@ -3,7 +3,12 @@ package db
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
+
+func (lib *Library) logFields() log.Fields {
+	return log.Fields{"name": lib.Name, "path": lib.FilePath}
+}
 
 // Library is a struct containing information about filesystem folders.
 type Library struct {
