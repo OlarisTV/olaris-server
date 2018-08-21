@@ -20,7 +20,7 @@ all: update-react generate test vet
 
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
-	cd builds ; git checkout develop; git pull ; yarn install ; yarn build
+	cd builds ; git checkout develop; git checkout . ; git pull ; yarn install ; yarn build
 	cp -r builds/build ./app/
 build:
 	$(GOBUILD) -o $(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
@@ -31,6 +31,7 @@ vet:
 	$(GOVET) -v ./...
 clean:
 	$(GOCLEAN)
+	rm -rf ./builds
 deps:
 	$(GODEP) ensure
 generate:
