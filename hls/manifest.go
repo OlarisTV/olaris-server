@@ -2,7 +2,9 @@ package hls
 
 import (
 	"bytes"
+	"fmt"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"net/url"
 	"text/template"
 )
 
@@ -11,6 +13,11 @@ type RepresentationCombination struct {
 	AudioStreams   []ffmpeg.StreamRepresentation
 	AudioGroupName string
 	AudioCodecs    string
+}
+
+type SubtitlePlaylistItem struct {
+	ffmpeg.StreamRepresentation
+	URI string
 }
 
 const transcodingMasterPlaylistTemplate = `#EXTM3U
@@ -28,8 +35,8 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 {{ end -}}
 {{ end }}
 
-{{ range $i, $s := .subtitleStreamRepresentations -}}
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Stream.Title}}",LANGUAGE="{{$s.Stream.Language}}",AUTOSELECT=YES,URI="{{$s.Stream.StreamId}}/{{$s.Representation.RepresentationId}}/media.m3u8"
+{{ range $i, $s := .subtitlePlaylistItems -}}
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="webvtt",NAME="{{$s.Stream.Title}}",LANGUAGE="{{$s.Stream.Language}}",AUTOSELECT=YES,URI="{{$s.URI}}"
 {{- if $s.Stream.EnabledByDefault -}}
 ,DEFAULT=YES
 {{ else -}}
@@ -70,7 +77,7 @@ const subtitleMediaPlaylistTemplate = `#EXTM3U
 #EXT-X-PLAYLIST-TYPE:VOD
 {{ range $index, $duration := .segmentDurations }}
 #EXTINF:{{ $duration }},
-{{ $index }}.m4s{{ end }}
+{{ $index }}.vtt{{ end }}
 #EXT-X-ENDLIST
 `
 
@@ -81,9 +88,23 @@ func BuildMasterPlaylistFromFile(
 	buf := bytes.Buffer{}
 	t := template.Must(template.New("manifest").Parse(transcodingMasterPlaylistTemplate))
 
+	// Subtitles may be in another file, so we need to list their absolute URI.
+	subtitlePlaylistItems := []SubtitlePlaylistItem{}
+	for _, s := range subtitleStreamRepresentations {
+		mediaFileURL, _ := url.Parse(s.Stream.MediaFileURL)
+		subtitlePlaylistItems = append(subtitlePlaylistItems,
+			SubtitlePlaylistItem{
+				StreamRepresentation: s,
+				URI: fmt.Sprintf("/s/files%s/%d/%s/media.m3u8",
+					mediaFileURL.Path,
+					s.Stream.StreamId,
+					s.Representation.RepresentationId),
+			})
+	}
+
 	t.Execute(&buf, map[string]interface{}{
-		"subtitleStreamRepresentations": subtitleStreamRepresentations,
-		"representationCombinations":    representationCombinations,
+		"subtitlePlaylistItems":      subtitlePlaylistItems,
+		"representationCombinations": representationCombinations,
 	})
 	return buf.String()
 }

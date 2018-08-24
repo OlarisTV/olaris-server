@@ -2,8 +2,31 @@ package ffmpeg
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 )
+
+func reverseMap(m map[string]string) map[string]string {
+	n := make(map[string]string)
+	for k, v := range m {
+		n[v] = k
+	}
+	return n
+}
+
+// TODO(Leon Handreke): Get a proper list according to the standard
+var langTagToHumanized = map[string]string{
+	"eng": "English",
+	"ger": "German",
+	"jpn": "Japanese",
+	"ita": "Italian",
+	"fre": "French",
+	"spa": "Spanish",
+	"hun": "Hungarian",
+	"unk": "Unknown",
+}
+
+var humanizedToLangTag = reverseMap(langTagToHumanized)
 
 func GetTitleOrHumanizedLanguage(stream ProbeStream) string {
 	title := stream.Tags["title"]
@@ -12,20 +35,13 @@ func GetTitleOrHumanizedLanguage(stream ProbeStream) string {
 	}
 
 	lang := GetLanguageTag(stream)
-	// TODO(Leon Handreke): Get a proper list according to the standard
-	humanizedLang := map[string]string{
-		"eng": "English",
-		"ger": "German",
-		"jpn": "Japanese",
-		"ita": "Italian",
-		"fre": "French",
-		"spa": "Spanish",
-		"hun": "Hungarian",
-		"unk": "Unknown",
-	}[lang]
 
+	humanizedLang := langTagToHumanized[lang]
 	if humanizedLang != "" {
 		return humanizedLang
+	}
+	if lang != "" {
+		return lang
 	}
 
 	return fmt.Sprintf("stream-%d", stream.Index)
@@ -94,4 +110,12 @@ func buildIntervals(startTimestamps []DtsTimestamp, totalDuration DtsTimestamp, 
 
 func timestampToDuration(ts DtsTimestamp, timeBase int64) time.Duration {
 	return time.Duration(float64(time.Second) * float64(ts) / float64(timeBase))
+}
+
+func mediaFileURLToFilepath(mediaFileURLStr string) (string, error) {
+	mediaFileURL, _ := url.Parse(mediaFileURLStr)
+	if mediaFileURL.Scheme == "file" {
+		return mediaFileURL.Path, nil
+	}
+	return "", fmt.Errorf("%s is not a local file", mediaFileURLStr)
 }

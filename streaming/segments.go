@@ -38,7 +38,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, session.InitialSegment())
 }
 
-func serveSegment(w http.ResponseWriter, r *http.Request) {
+func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	segmentId, err := strconv.Atoi(mux.Vars(r)["segmentId"])
 	if err != nil {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
@@ -58,8 +58,17 @@ func serveSegment(w http.ResponseWriter, r *http.Request) {
 	session, _ := getOrStartTranscodingSession(streamRepresentation, segmentId)
 
 	segmentPath, err := session.GetSegment(segmentId, 20*time.Second)
-	glog.Info("Serving path ", segmentPath)
+	glog.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
+	w.Header().Set("Content-Type", mimeType)
 	http.ServeFile(w, r, segmentPath)
+}
+
+func serveMediaSegment(w http.ResponseWriter, r *http.Request) {
+	serveSegment(w, r, "video/mp4")
+}
+
+func serveSubtitleSegment(w http.ResponseWriter, r *http.Request) {
+	serveSegment(w, r, "text/vtt")
 }
 
 func getSessions(streamKey ffmpeg.StreamKey, representationId string) []*ffmpeg.TranscodingSession {
