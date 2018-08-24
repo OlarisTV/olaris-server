@@ -29,7 +29,8 @@ func GetHandler() http.Handler {
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
-	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveSegment)
+	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveMediaSegment)
+	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.vtt", serveSubtitleSegment)
 	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/init.mp4", serveInit)
 
 	// This handler just serves up the file for downloading. This is also used
