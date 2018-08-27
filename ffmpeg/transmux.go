@@ -1,7 +1,8 @@
 package ffmpeg
 
 import (
-	"fmt"
+	"github.com/golang/protobuf/proto"
+	"gitlab.com/olaris/olaris-server/ffmpeg/ffchunk_options"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,26 +20,31 @@ func NewTransmuxingSession(
 		return nil, err
 	}
 
-	splitTimes := []string{}
+	splitTimes := []int64{}
 	for _, s := range segments[1:] {
-		splitTimes = append(splitTimes, fmt.Sprintf("%d", s.StartTimestamp))
+		splitTimes = append(splitTimes, int64(s.StartTimestamp))
 	}
 
-	args := []string{
-		stream.Stream.MediaFileURL,
-		outputDir,
-		fmt.Sprintf("%d", stream.Stream.StreamId),
-		fmt.Sprintf("%d", segments[0].StartTimestamp),
-		fmt.Sprintf("%d", segments[len(segments)-1].EndTimestamp),
-		fmt.Sprintf("%d", segments[0].SegmentId),
+	options := ffchunk_options.FFChunkOptions{
+		InputFile:         stream.Stream.MediaFileURL,
+		OutputDir:         outputDir,
+		StreamIndex:       stream.Stream.StreamId,
+		StartDts:          int64(segments[0].StartTimestamp),
+		EndDts:            int64(segments[len(segments)-1].EndTimestamp),
+		SegmentStartIndex: int64(segments[0].SegmentId),
+		SplitDts:          splitTimes,
 	}
-	args = append(args, splitTimes...)
+	optionsSerialized, _ := proto.Marshal(&options)
 
-	cmd := exec.Command("ffchunk", args...)
-	log.Println("ffmpeg started with", cmd.Args)
+	cmd := exec.Command("ffchunk_transmux")
+	log.Println("ffmpeg started with", cmd.Args, options.String())
 	cmd.Stderr, _ = os.Open(os.DevNull)
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
+
+	stdin, _ := cmd.StdinPipe()
+	stdin.Write(optionsSerialized)
+	stdin.Close()
 
 	return &TranscodingSession{
 		cmd:       cmd,
