@@ -1,13 +1,12 @@
 package ffmpeg
 
 import (
-	"fmt"
+	"github.com/golang/protobuf/proto"
+	"gitlab.com/olaris/olaris-server/ffmpeg/ffchunk_options"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"strconv"
 	"time"
 )
 
@@ -31,8 +30,8 @@ func NewAudioTranscodingSession(
 	}
 
 	// TODO(Leon Handreke): Fix the prerun
-	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
-	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
+	//startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
+	//endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
 
 	// With AAC, we always encode an extra segment before to avoid encoder priming on the first segment we actually want
 	//runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration
@@ -45,31 +44,38 @@ func NewAudioTranscodingSession(
 	//	startNumber = 0
 	//}
 
-	encoderParams := stream.Representation.encoderParams
+	splitTimes := []int64{}
+	for _, s := range segments[1:] {
+		splitTimes = append(splitTimes, int64(s.StartTimestamp))
+	}
 
-	args := []string{
-		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
-		"-copyts",
-		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
-		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
-		"-threads", "2",
-		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
-		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),
-		"-hls_segment_type", "1", // fMP4
-		"-hls_segment_filename", "stream0_%d.m4s",
-		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u")}
+	options := ffchunk_options.FFChunkOptions{
+		InputFile:         stream.Stream.MediaFileURL,
+		OutputDir:         outputDir,
+		StreamIndex:       stream.Stream.StreamId,
+		StartDts:          int64(segments[0].StartTimestamp),
+		EndDts:            int64(segments[len(segments)-1].EndTimestamp),
+		SegmentStartIndex: int64(segments[0].SegmentId),
+		SplitDts:          splitTimes,
+	}
+	optionsSerialized, _ := proto.Marshal(&options)
 
-	cmd := exec.Command("ffmpeg", args...)
-	log.Println("ffmpeg initialized with", cmd.Args)
+	cmd := exec.Command("ffchunk_transcode_audio")
+	log.Println("ffmpeg started with", cmd.Args, options.String())
 	cmd.Stderr, _ = os.Open(os.DevNull)
-	//cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
+
+	stdin, _ := cmd.StdinPipe()
+	stdin.Write(optionsSerialized)
+	stdin.Close()
+
+	return &TranscodingSession{
+		cmd:       cmd,
+		Stream:    stream,
+		outputDir: outputDir,
+		segments:  segments,
+	}, nil
 
 	return &TranscodingSession{
 		cmd:       cmd,
