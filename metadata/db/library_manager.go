@@ -12,6 +12,9 @@ import (
 	"strings"
 )
 
+// MinFileSize defines how big a file has to be to be indexed.
+const MinFileSize = 5e6 // 5MB
+
 var supportedExtensions = map[string]bool{
 	".mp4":  true,
 	".mkv":  true,
@@ -240,7 +243,7 @@ func (man *LibraryManager) Probe(library *Library) {
 // ProbeSeries goes over the given library and attempts to get series information from filenames.
 func (man *LibraryManager) ProbeSeries(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-		if supportedExtensions[filepath.Ext(walkPath)] {
+		if ValidFile(walkPath) {
 			man.AddWatcher(walkPath)
 			man.AddWatcher(filepath.Dir(walkPath))
 
@@ -334,6 +337,28 @@ func (man *LibraryManager) ProbeFile(library *Library, filePath string) error {
 	return nil
 }
 
+// ValidFile checks whether the supplied filepath is a file that can be indexed by the metadata server.
+func ValidFile(filePath string) bool {
+	if !supportedExtensions[filepath.Ext(filePath)] {
+		log.WithFields(log.Fields{"extension": filepath.Ext(filePath), "filepath": filePath}).Debugln("File is not a valid media file, file won't be indexed.")
+		return false
+	}
+
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while getting file information, file won't be indexed.")
+		return false
+	}
+
+	// Ignore really small files
+	if fileInfo.Size() < MinFileSize {
+		log.WithFields(log.Fields{"size": fileInfo.Size(), "filepath": filePath}).Debugln("File is too small, file won't be indexed.")
+		return false
+	}
+
+	return true
+}
+
 // ProbeMovies goes over the given library and attempts to get movie information from filenames.
 func (man *LibraryManager) ProbeMovies(library *Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
@@ -341,7 +366,7 @@ func (man *LibraryManager) ProbeMovies(library *Library) {
 		if err != nil {
 			return err
 		}
-		if supportedExtensions[filepath.Ext(walkPath)] {
+		if ValidFile(walkPath) {
 			man.AddWatcher(walkPath)
 			man.AddWatcher(filepath.Dir(walkPath))
 
