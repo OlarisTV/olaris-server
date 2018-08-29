@@ -1,5 +1,6 @@
 # Olaris Server
 
+## `This is all prelease code, if you somehow found this please move along, this won't work yet :) `
 
 ## Running with Docker
 
