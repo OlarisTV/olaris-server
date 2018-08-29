@@ -76,13 +76,6 @@ func NewAudioTranscodingSession(
 		outputDir: outputDir,
 		segments:  segments,
 	}, nil
-
-	return &TranscodingSession{
-		cmd:       cmd,
-		Stream:    stream,
-		outputDir: outputDir,
-		segments:  segments,
-	}, nil
 }
 
 func GetTranscodedAudioRepresentation(stream Stream, representationId string, encoderParams EncoderParams) StreamRepresentation {
