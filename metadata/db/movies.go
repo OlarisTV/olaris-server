@@ -30,14 +30,15 @@ type Movie struct {
 	PlayState     PlayState `gorm:"polymorphic:Owner;"`
 }
 
-func (movie *Movie) logFields() log.Fields {
+// LogFields defines some standard items to log in debug messages.
+func (movie *Movie) LogFields() log.Fields {
 	return log.Fields{"title": movie.OriginalTitle, "tmdbId": movie.TmdbID}
 }
 
 // IsSingleFile returns true if this is the only file for this movie.
 func (file *MovieFile) IsSingleFile() bool {
 	count := 0
-	env.Db.Model(&MovieFile{}).Where("movie_id = ?", file.MovieID).Count(&count)
+	db.Model(&MovieFile{}).Where("movie_id = ?", file.MovieID).Count(&count)
 	if count <= 1 {
 		return true
 	}
@@ -47,20 +48,20 @@ func (file *MovieFile) IsSingleFile() bool {
 // DeleteSelfAndMD removes this file and any metadata involved for the movie.
 func (file *MovieFile) DeleteSelfAndMD() {
 	// Delete all stream information since it's only for this file
-	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
+	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
 
-	env.Db.Where("id = ?", file.MovieID).Find(&file.Movie)
+	db.Where("id = ?", file.MovieID).Find(&file.Movie)
 
 	if file.IsSingleFile() {
 		// Delete all PlayState information
-		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
+		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
 
 		// Delete movie
-		env.Db.Delete(&file.Movie)
+		db.Delete(&file.Movie)
 	}
 
 	// Delete all file information
-	env.Db.Delete(&file)
+	db.Delete(&file)
 
 }
 
@@ -81,7 +82,7 @@ func (movie *Movie) TimeStamp() int64 {
 
 // FindAllMovieFiles Returns all movies, even once that could not be identified.
 func FindAllMovieFiles() (movies []MovieFile) {
-	env.Db.Find(&movies)
+	db.Find(&movies)
 
 	return movies
 }
@@ -91,15 +92,23 @@ func FindAllMovieFiles() (movies []MovieFile) {
 func CollectMovieInfo(movies []Movie, userID uint) {
 	// Can't use 'movie' in range here as it won't modify the original object
 	for i := range movies {
-		env.Db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
+		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
 		// TODO(Maran): We should be able to use Gorm's build in polymorphic has_ony query to somehow do this
-		env.Db.Model(movies[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, movies[i].ID, "movies").First(&movies[i].PlayState)
+		db.Model(movies[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, movies[i].ID, "movies").First(&movies[i].PlayState)
 	}
+}
+
+// FindAllUnidentifiedMovies retrives all movies without an tmdb_id in the database.
+func FindAllUnidentifiedMovies() (movies []Movie) {
+	db.Where("tmdb_id = ?", 0).Find(&movies)
+	log.Debugln("Collecting unidentified movies", len(movies))
+
+	return movies
 }
 
 // FindAllMovies finds all identified movies.
 func FindAllMovies(userID uint) (movies []Movie) {
-	env.Db.Where("tmdb_id != 0").Find(&movies)
+	db.Where("tmdb_id != 0").Find(&movies)
 	CollectMovieInfo(movies, userID)
 
 	return movies
@@ -107,7 +116,7 @@ func FindAllMovies(userID uint) (movies []Movie) {
 
 // FindMovieWithUUID finds the movie specified by the given uuid.
 func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
-	env.Db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
+	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
 	CollectMovieInfo(movies, userID)
 
 	return movies
@@ -115,7 +124,7 @@ func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
 
 // SearchMovieByTitle search movies by title.
 func SearchMovieByTitle(userID uint, name string) (movies []Movie) {
-	env.Db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
+	db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
 	CollectMovieInfo(movies, userID)
 	return movies
 }
@@ -123,7 +132,7 @@ func SearchMovieByTitle(userID uint, name string) (movies []Movie) {
 // DeleteMoviesFromLibrary removes all movies from the given library.
 func DeleteMoviesFromLibrary(libraryID uint) {
 	files := []MovieFile{}
-	env.Db.Where("library_id = ?", libraryID).Find(&files)
+	db.Where("library_id = ?", libraryID).Find(&files)
 	for _, file := range files {
 		file.DeleteSelfAndMD()
 	}
@@ -131,8 +140,50 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 
 // FindMoviesInLibrary finds all movies in the given library.
 func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
-	env.Db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
+	db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
 	CollectMovieInfo(movies, userID)
 
 	return movies
+}
+
+// CreateMovieFile persists a moviefile in the database.
+func CreateMovieFile(movie *MovieFile) {
+	db.Create(movie)
+}
+
+// CreateMovie persists a movie in the database.
+func CreateMovie(movie *Movie) {
+	db.Create(movie)
+}
+
+// UpdateMovie updates a movie in the database.
+func UpdateMovie(movie *Movie) {
+	db.Save(movie)
+}
+
+// FirstOrCreateMovie returns the first instance or writes a movie to the db.
+func FirstOrCreateMovie(movie *Movie, movieDef Movie) {
+	db.FirstOrCreate(movie, movieDef)
+}
+
+// UpdateMovieFile updates a movieFile in the database.
+func UpdateMovieFile(movie *Movie) {
+	db.Save(movie)
+}
+
+// FirstMovie gets the first movie out of the database (used in tests).
+func FirstMovie() Movie {
+	var movie Movie
+	db.First(&movie)
+	return movie
+}
+
+// MovieFileExists checks whether there already is a EpisodeFile present with the given path.
+func MovieFileExists(filePath string) bool {
+	count := 0
+	db.Where("file_path= ?", filePath).Find(&MovieFile{}).Count(&count)
+	if count == 0 {
+		return false
+	}
+	return true
 }

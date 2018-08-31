@@ -5,7 +5,7 @@ package metadata
 import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
-	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/metadata/resolvers"
 
 	"gitlab.com/olaris/olaris-server/metadata/auth"
@@ -13,7 +13,7 @@ import (
 )
 
 // GetHandler defines the handlers for metadata endpoints such as graphql and REST methods.
-func GetHandler(menv *db.MetadataContext) http.Handler {
+func GetHandler(menv *app.MetadataContext) http.Handler {
 	imageManager := NewImageManager()
 
 	r := mux.NewRouter()

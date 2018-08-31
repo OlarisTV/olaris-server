@@ -74,7 +74,7 @@ type EpisodeFile struct {
 // IsSingleFile returns true if this is the only file for the given episode.
 func (file *EpisodeFile) IsSingleFile() bool {
 	count := 0
-	env.Db.Model(&EpisodeFile{}).Where("episode_id = ?", file.EpisodeID).Count(&count)
+	db.Model(&EpisodeFile{}).Where("episode_id = ?", file.EpisodeID).Count(&count)
 	if count <= 1 {
 		return true
 	}
@@ -84,78 +84,102 @@ func (file *EpisodeFile) IsSingleFile() bool {
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
 func (file *EpisodeFile) DeleteSelfAndMD() {
 	// Delete all stream information
-	env.Db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
+	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
 
 	var episode Episode
-	env.Db.First(&episode, file.EpisodeID)
+	db.First(&episode, file.EpisodeID)
 
 	if file.IsSingleFile() {
 		// Delete all PlayState information
-		env.Db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episode_files'", file.EpisodeID)
+		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episode_files'", file.EpisodeID)
 
 		// Delete Episode
-		env.Db.Delete(&episode)
+		db.Delete(&episode)
 
 		count := 0
 		var season Season
-		env.Db.First(&season, episode.SeasonID)
+		db.First(&season, episode.SeasonID)
 
-		env.Db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
+		db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
 
 		fmt.Println(count)
 		// If there are no more episodes to this season, delete the season.
 		if count == 0 {
-			env.Db.Delete(Season{}, "id = ?", episode.SeasonID)
+			db.Delete(Season{}, "id = ?", episode.SeasonID)
 		}
 
 		// If there are no more seasons to this series, delete it.
 		count = 0
-		env.Db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
+		db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
 		if count == 0 {
-			env.Db.Delete(Series{}, "id = ?", season.SeriesID)
+			db.Delete(Series{}, "id = ?", season.SeriesID)
 		}
 	}
 
 	// Delete all file information
-	env.Db.Delete(&file)
+	db.Delete(&file)
 
 }
 
 // CollectEpisodeData collects all relevant information for the given episode such as streams and playstates.
 func CollectEpisodeData(episodes []Episode, userID uint) {
 	for i := range episodes {
-		env.Db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		env.Db.Model(episodes[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodes[i].ID, "tv_episodes").First(&episodes[i].PlayState)
+		db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
+		db.Model(episodes[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodes[i].ID, "tv_episodes").First(&episodes[i].PlayState)
 	}
 }
 
 // FindAllSeries retrieves all identified series from the db.
 func FindAllSeries() (series []Series) {
-	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)
 	return series
+}
+
+// FindAllUnidentifiedSeries finds all episodes without any metadata information
+func FindAllUnidentifiedSeries() (series []Series) {
+	db.Where("tmdb_id = 0").Find(&series)
+	return series
+}
+
+// FindAllUnidentifiedEpisodes finds all episodes without any metadata information
+func FindAllUnidentifiedEpisodes() (episodes []Episode) {
+	db.Where("tmdb_id = 0").Find(&episodes)
+	return episodes
 }
 
 // SearchSeriesByTitle searches for series based on their name.
 func SearchSeriesByTitle(userID uint, name string) (series []Series) {
-	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	return series
+}
+
+// FindSerie finds a serie by it's ID.
+func FindSerie(seriesID uint) (series Series) {
+	db.Where("id = ?", seriesID).Find(&series)
 	return series
 }
 
 // FindSeriesByUUID retrives a serie based on it's UUID.
 func FindSeriesByUUID(uuid *string) (series []Series) {
-	env.Db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
 	return series
+}
+
+// FindAllUnidentifiedSeasons finds all seasons without any metadata.
+func FindAllUnidentifiedSeasons() (seasons []Season) {
+	db.Where("tmdb_id = ?", 0).Find(&seasons)
+	return seasons
 }
 
 // FindSeasonsForSeries retrieves all season for the given series based on it's UUID.
 func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
-	env.Db.Preload("Episodes.EpisodeFiles.Streams").Where("series_id = ?", seriesID).Find(&seasons)
+	db.Preload("Episodes.EpisodeFiles.Streams").Where("series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
 
 // FindEpisodesForSeason finds all episodes for the given season UUID.
 func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
-	env.Db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
+	db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
@@ -163,7 +187,7 @@ func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 
 // FindEpisodesInLibrary returns all episodes in the given library.
 func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
-	env.Db.Where("library_id =?", libraryID).Find(&episodes)
+	db.Where("library_id =?", libraryID).Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
@@ -171,25 +195,31 @@ func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 
 // FindSeasonByUUID finds the season based on it's UUID.
 func FindSeasonByUUID(uuid *string) (season Season) {
-	env.Db.Where("uuid = ?", uuid).Find(&season)
+	db.Where("uuid = ?", uuid).Find(&season)
+	return season
+}
+
+// FindSeason finds a season by it's ID
+func FindSeason(seasonID uint) (season Season) {
+	db.Where("id = ?", seasonID).Find(&season)
 	return season
 }
 
 // FindEpisodeByUUID finds a episode based on it's UUID.
 func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
 	var episodes []Episode
-	env.Db.Where("uuid = ?", uuid).First(&episodes)
+	db.Where("uuid = ?", uuid).First(&episodes)
 	if len(episodes) == 1 {
 		episode = &episodes[0]
-		env.Db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
-		env.Db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "tv_episodes").First(&episode.PlayState)
+		db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+		db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "tv_episodes").First(&episode.PlayState)
 	}
 	return episode
 }
 
 // FindAllEpisodeFiles retrieves all episodefiles from the db.
 func FindAllEpisodeFiles() (files []EpisodeFile) {
-	env.Db.Find(&files)
+	db.Find(&files)
 
 	return files
 }
@@ -197,8 +227,58 @@ func FindAllEpisodeFiles() (files []EpisodeFile) {
 // DeleteEpisodesFromLibrary deletes all episodes from the given library.
 func DeleteEpisodesFromLibrary(libraryID uint) {
 	files := []EpisodeFile{}
-	env.Db.Where("library_id = ?", libraryID).Find(&files)
+	db.Where("library_id = ?", libraryID).Find(&files)
 	for _, file := range files {
 		file.DeleteSelfAndMD()
 	}
+}
+
+// EpisodeFileExists checks whether there already is a EpisodeFile present with the given path.
+func EpisodeFileExists(filePath string) bool {
+	count := 0
+	db.Where("file_path= ?", filePath).Find(&EpisodeFile{}).Count(&count)
+	if count == 0 {
+		return false
+	}
+	return true
+}
+
+// CreateSeries persists a series in the database.
+func CreateSeries(series *Series) {
+	db.Create(series)
+}
+
+// UpdateSeries updates a series in the database.
+func UpdateSeries(series *Series) {
+	db.Save(series)
+}
+
+// UpdateSeason updates a season in the database.
+func UpdateSeason(season *Season) {
+	db.Save(season)
+}
+
+// UpdateEpisode updates an episode in the database.
+func UpdateEpisode(episode *Episode) {
+	db.Save(episode)
+}
+
+// UpdateEpisodeFile updates an episodeFile in the database.
+func UpdateEpisodeFile(file *EpisodeFile) {
+	db.Save(file)
+}
+
+// FirstOrCreateSeries returns the first instance or writes a series to the db.
+func FirstOrCreateSeries(series *Series, seriesDef Series) {
+	db.FirstOrCreate(series, seriesDef)
+}
+
+// FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
+func FirstOrCreateEpisode(episode *Episode, episodeDef Episode) {
+	db.FirstOrCreate(episode, episodeDef)
+}
+
+// FirstOrCreateSeason returns the first instance or writes a episodes to the db.
+func FirstOrCreateSeason(season *Season, seasonDef Season) {
+	db.FirstOrCreate(season, seasonDef)
 }

@@ -30,7 +30,7 @@ type latestEpResult struct {
 
 // UpNextMovies returns a list of movies that are recently added and not watched yet.
 func UpNextMovies(userID uint) (movies []*Movie) {
-	env.Db.Joins("JOIN play_states on play_states.owner_id = movies.id").Where("play_states.finished = 0 and play_states.owner_type = 'movies'").Find(&movies)
+	db.Joins("JOIN play_states on play_states.owner_id = movies.id").Where("play_states.finished = 0 and play_states.owner_type = 'movies'").Find(&movies)
 	return movies
 }
 
@@ -38,7 +38,7 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 func UpNextEpisodes(userID uint) []*Episode {
 	result := []latestEpResult{}
 	eps := []*Episode{}
-	env.Db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, (episodes.season_num*100)+episodes.episode_num as height from play_states"+
+	db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, (episodes.season_num*100)+episodes.episode_num as height from play_states"+
 		" inner join episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
 		" inner join seasons on seasons.id = episodes.season_id"+
 		" inner join series on series.id = seasons.series_id"+
@@ -49,18 +49,18 @@ func UpNextEpisodes(userID uint) []*Episode {
 	for _, r := range result {
 		if r.Finished == false {
 			ep := Episode{}
-			env.Db.Where("ID = ?", r.EpisodeID).First(&ep)
+			db.Where("ID = ?", r.EpisodeID).First(&ep)
 			eps = append(eps, &ep)
 		} else {
 			result := latestEpResult{}
-			env.Db.Raw("select episodes.id as episode_id, series.id as series_id"+
+			db.Raw("select episodes.id as episode_id, series.id as series_id"+
 				" from episodes"+
 				" join series ON series.id = seasons.series_id"+
 				" join seasons on seasons.id = episodes.season_id"+
 				" where season_num >= ? AND episode_num > ?  AND series_id = ?"+
 				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
-			env.Db.Where("ID = ?", result.EpisodeID).First(&ep)
+			db.Where("ID = ?", result.EpisodeID).First(&ep)
 			eps = append(eps, &ep)
 		}
 	}
@@ -70,34 +70,34 @@ func UpNextEpisodes(userID uint) []*Episode {
 // LatestPlayStates returns playstates for content recently played for the given user.
 func LatestPlayStates(limit uint, userID uint) []PlayState {
 	var pss []PlayState
-	env.Db.Order("updated_at DESC").Where("user_id = ?", userID).Limit(limit).Find(&pss)
+	db.Order("updated_at DESC").Where("user_id = ?", userID).Limit(limit).Find(&pss)
 	return pss
 }
 
 // CreatePlayState creates new playstate for the given user and media content.
 func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) bool {
 	var ps PlayState
-	env.Db.FirstOrInit(&ps, PlayState{UUIDable: UUIDable{uuid}, UserID: userID})
+	db.FirstOrInit(&ps, PlayState{UUIDable: UUIDable{uuid}, UserID: userID})
 	ps.Finished = finished
 	ps.Playtime = playtime
-	env.Db.Save(&ps)
+	db.Save(&ps)
 
 	count := 0
 	var movie Movie
 	var episode Episode
 
-	env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+	db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
 	if count > 0 {
 		movie.PlayState = ps
-		env.Db.Save(&movie)
+		db.Save(&movie)
 		return true
 	}
 
 	count = 0
-	env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+	db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
 	if count > 0 {
 		episode.PlayState = ps
-		env.Db.Save(&episode)
+		db.Save(&episode)
 		return true
 	}
 

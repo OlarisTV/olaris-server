@@ -1,31 +1,33 @@
-package db
+package db_test
 
 import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/metadata/app"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"io/ioutil"
 	"os"
 	"testing"
 )
 
-var movie Movie
+var movie db.Movie
 
 func createMovieData() {
-	mi := MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
-	stream := Stream{Stream: ffmpeg.Stream{CodecName: "test"}}
-	mf := MovieFile{MediaItem: mi, Streams: []Stream{stream}}
+	mi := db.MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
+	stream := db.Stream{Stream: ffmpeg.Stream{CodecName: "test"}}
+	mf := db.MovieFile{MediaItem: mi, Streams: []db.Stream{stream}}
 
-	ps := PlayState{Finished: false, Playtime: 33, UserID: 1}
+	ps := db.PlayState{Finished: false, Playtime: 33, UserID: 1}
 
-	movie = Movie{Title: "Test", OriginalTitle: "Mad Max: Road Fury", MovieFiles: []MovieFile{mf}, PlayState: ps}
-	env.Db.Create(&movie)
+	movie = db.Movie{Title: "Test", OriginalTitle: "Mad Max: Road Fury", MovieFiles: []db.MovieFile{mf}, PlayState: ps}
+	db.CreateMovie(&movie)
 }
 
 func setupTest(t *testing.T) func() {
 	tmp, err := ioutil.TempDir(os.TempDir(), "bss-test")
 	if err == nil {
 		fmt.Println("Creating DB in:", tmp)
-		NewMDContext(tmp, true)
+		app.NewMDContext(tmp, true)
 	} else {
 		t.Error("Could not create tmpfile for database tests:", err)
 	}
@@ -33,7 +35,7 @@ func setupTest(t *testing.T) func() {
 	// Test teardown - return a closure for use by 'defer'
 	return func() {
 		// t is from the outer setupTest scope
-		env.Db.Close()
+		// db.Close()
 	}
 }
 
@@ -52,8 +54,8 @@ func TestUUIDable(t *testing.T) {
 func TestSearchMovieByTitle(t *testing.T) {
 	defer setupTest(t)()
 	createMovieData()
-	var movies []Movie
-	movies = SearchMovieByTitle(1, "max")
+	var movies []db.Movie
+	movies = db.SearchMovieByTitle(1, "max")
 	if len(movies) == 0 {
 		t.Error("Did not get any movies while searching")
 		return
@@ -69,15 +71,14 @@ func TestCollectMovie(t *testing.T) {
 
 	createMovieData()
 
-	var mov Movie
-	env.Db.First(&mov)
+	mov := db.FirstMovie()
 
 	if len(mov.MovieFiles) != 0 {
 		t.Error("Expected no movie files but got any still")
 	}
 
-	movies := []Movie{mov}
-	CollectMovieInfo(movies, 1)
+	movies := []db.Movie{mov}
+	db.CollectMovieInfo(movies, 1)
 	t.Log(movies)
 	if len(movies[0].MovieFiles) == 0 {
 		t.Error("Expected movie to have files information after calling CollectMovieInfo but there was nothing present")
@@ -85,7 +86,7 @@ func TestCollectMovie(t *testing.T) {
 	if len(movies[0].MovieFiles[0].Streams) == 0 {
 		t.Error("Expected movie to have stream information after calling CollectMovieInfo but there was nothing present")
 	}
-	playstate := PlayState{}
+	playstate := db.PlayState{}
 	if movies[0].PlayState == playstate {
 		t.Error("Expected movie to have Playstate information after calling CollectMovieInfo but there was nothing present")
 	}

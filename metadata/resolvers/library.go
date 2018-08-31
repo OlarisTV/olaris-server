@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/managers"
 )
 
 // Library wrapper around the db.Library package so it can contain related resolvers.
@@ -88,7 +89,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		library, err = db.AddLibrary(args.Name, args.FilePath, db.MediaType(args.Kind))
 		fmt.Println("Scanning library")
 		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
-		go db.NewLibraryManager(r.env.Watcher).RefreshAll()
+		go managers.NewLibraryManager(r.env.Watcher).RefreshAll()
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
 		libRes = LibraryResponse{Error: CreateErrResolver(err)}

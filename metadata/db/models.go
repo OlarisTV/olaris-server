@@ -7,6 +7,14 @@ import (
 	"strconv"
 )
 
+// Defines various mediatypes, only Movie and Series support atm.
+const (
+	MediaTypeMovie = iota
+	MediaTypeSeries
+	MediaTypeMusic
+	MediaTypeOtherMovie
+)
+
 // MediaType describes the type of media in a library.
 type MediaType int
 
@@ -67,13 +75,13 @@ func FindContentByUUID(uuid string) *MediaResult {
 	var movie MovieFile
 	var episode EpisodeFile
 
-	env.Db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+	db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
 	if count > 0 {
 		return &MediaResult{Movie: &movie}
 	}
 
 	count = 0
-	env.Db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+	db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
 	if count > 0 {
 		return &MediaResult{Episode: &episode}
 	}
@@ -83,12 +91,12 @@ func FindContentByUUID(uuid string) *MediaResult {
 
 // RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
 func RecentlyAddedMovies() (movies []*Movie) {
-	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
+	db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
 
 // RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
 func RecentlyAddedEpisodes() (eps []*Episode) {
-	env.Db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
+	db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
 	return eps
 }

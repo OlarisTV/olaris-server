@@ -7,9 +7,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/peak6/envflag"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/app"
 	"gitlab.com/olaris/olaris-server/metadata"
-	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/app"
+	"gitlab.com/olaris/olaris-server/react"
 	"gitlab.com/olaris/olaris-server/streaming"
 	"net/http"
 	"os"
@@ -27,10 +27,10 @@ func main() {
 	r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 	defer streaming.Cleanup()
 
-	mctx := db.NewDefaultMDContext()
+	mctx := app.NewDefaultMDContext()
 	defer mctx.Db.Close()
 
-	r.PathPrefix("/app").Handler(http.StripPrefix("/app", app.GetHandler(mctx)))
+	r.PathPrefix("/app").Handler(http.StripPrefix("/app", react.GetHandler()))
 
 	r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
 
@@ -54,8 +54,9 @@ func main() {
 
 	// Wait for termination signal
 	<-stopChan
+	log.Println("Shutting down...")
 
-	mctx.ExitChan <- 1
+	//	mctx.ExitChan <- 1
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)

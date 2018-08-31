@@ -38,20 +38,20 @@ type Invite struct {
 // CreateInvite creates an invite code that can be redeemed by new users.
 func CreateInvite() Invite {
 	invite := Invite{Code: helpers.RandAlphaString(24)}
-	env.Db.Save(&invite)
+	db.Save(&invite)
 
 	return invite
 }
 
 // AllInvites returns all invites from the db.
 func AllInvites() (invites []Invite) {
-	env.Db.Find(&invites)
+	db.Find(&invites)
 	return invites
 }
 
 // ValidPassword checks if the given password is valid for the user.
 func (user *User) ValidPassword(password string) bool {
-	env.Db.Where("username = ?", user.Username).Find(user)
+	db.Where("username = ?", user.Username).Find(user)
 	if user.hashPassword(password, user.Salt) == user.PasswordHash {
 		return true
 	}
@@ -86,14 +86,14 @@ func CreateUser(username string, password string, code string) (User, error) {
 	}
 
 	count := 0
-	env.Db.Table("users").Count(&count)
+	db.Table("users").Count(&count)
 
 	invite := Invite{}
 	admin := false
 
 	// Not the first user, checking invite.
 	if count > 0 {
-		env.Db.Where("code = ?", code).First(&invite)
+		db.Where("code = ?", code).First(&invite)
 
 		if (invite.Code == "") || (invite.UserID != 0) {
 			fmt.Println("Not a valid code or already used.")
@@ -105,12 +105,12 @@ func CreateUser(username string, password string, code string) (User, error) {
 
 	user := User{Username: username, Admin: admin}
 	user.SetPassword(password, helpers.RandAlphaString(24))
-	dbobj := env.Db.Create(&user)
+	dbobj := db.Create(&user)
 
 	if count > 0 {
-		if !env.Db.NewRecord(&user) {
+		if !db.NewRecord(&user) {
 			invite.UserID = user.ID
-			env.Db.Save(&invite)
+			db.Save(&invite)
 		}
 	}
 	return user, dbobj.Error
@@ -118,31 +118,31 @@ func CreateUser(username string, password string, code string) (User, error) {
 
 // AllUsers return all users from thedb.
 func AllUsers() (users []User) {
-	env.Db.Find(&users)
+	db.Find(&users)
 	return users
 }
 
 // FindUser returns a specific user.
 func FindUser(id uint) (user User) {
-	env.Db.Find(&user, id)
+	db.Find(&user, id)
 	return user
 }
 
 // UserCount counts the amount of users in the db.
 func UserCount() int {
 	count := 0
-	env.Db.Find(&User{}).Count(&count)
+	db.Find(&User{}).Count(&count)
 	return count
 }
 
 // DeleteUser deltes the given user.
 func DeleteUser(id int) (User, error) {
 	user := User{}
-	env.Db.Find(&user, id)
+	db.Find(&user, id)
 
 	if user.ID != 0 {
-		env.Db.Unscoped().Where("user_id = ?", user.ID).Delete(Invite{})
-		obj := env.Db.Unscoped().Delete(&user)
+		db.Unscoped().Where("user_id = ?", user.ID).Delete(Invite{})
+		obj := db.Unscoped().Delete(&user)
 		return user, obj.Error
 	}
 

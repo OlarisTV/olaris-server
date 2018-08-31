@@ -33,3 +33,9 @@ func CollectStreams(filePath string) []Stream {
 	}
 	return streams
 }
+
+// CreateStream persists a stream object in the database.
+func CreateStream(stream *Stream) {
+
+	db.Create(&stream)
+}

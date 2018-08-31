@@ -2,7 +2,7 @@ package resolvers
 
 import (
 	"github.com/graph-gophers/graphql-go"
-	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/app"
 )
 
 // SchemaTxt defines the graphql schema.
@@ -220,7 +220,7 @@ var SchemaTxt = `
 `
 
 // InitSchema inits the graphql schema.
-func InitSchema(env *db.MetadataContext) *graphql.Schema {
+func InitSchema(env *app.MetadataContext) *graphql.Schema {
 	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{env: env})
 	return Schema
 }

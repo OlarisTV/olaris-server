@@ -2,13 +2,13 @@ package resolvers
 
 import (
 	"github.com/graph-gophers/graphql-go/relay"
-	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/app"
 	"net/http"
 )
 
 // Resolver container object for all resolvers.
 type Resolver struct {
-	env *db.MetadataContext
+	env *app.MetadataContext
 }
 
 // ErrorResolver holds error information.
@@ -48,7 +48,7 @@ func GraphiQLHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewRelayHandler handles graphql requests.
-func NewRelayHandler(env *db.MetadataContext) *relay.Handler {
+func NewRelayHandler(env *app.MetadataContext) *relay.Handler {
 	schema := InitSchema(env)
 	return &relay.Handler{Schema: schema}
 }

@@ -6,7 +6,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (lib *Library) logFields() log.Fields {
+// LogFields defines some standard fields to include in logs.
+func (lib *Library) LogFields() log.Fields {
 	return log.Fields{"name": lib.Name, "path": lib.FilePath}
 }
 
@@ -21,17 +22,17 @@ type Library struct {
 // AllLibraries returns all libraries from the database.
 func AllLibraries() []Library {
 	var libraries []Library
-	env.Db.Find(&libraries)
+	db.Find(&libraries)
 	return libraries
 }
 
 // DeleteLibrary deletes a library from the database.
 func DeleteLibrary(id int) (Library, error) {
 	library := Library{}
-	env.Db.Find(&library, id)
+	db.Find(&library, id)
 
 	if library.ID != 0 {
-		obj := env.Db.Unscoped().Delete(&library)
+		obj := db.Unscoped().Delete(&library)
 		if obj.Error == nil {
 			if library.Kind == MediaTypeMovie {
 				DeleteMoviesFromLibrary(library.ID)
@@ -49,6 +50,6 @@ func DeleteLibrary(id int) (Library, error) {
 func AddLibrary(name string, filePath string, kind MediaType) (Library, error) {
 	fmt.Printf("Add library '%s' with path '%s', type: '%d'\n", name, filePath, kind)
 	lib := Library{Name: name, FilePath: filePath, Kind: kind}
-	dbObj := env.Db.Create(&lib)
+	dbObj := db.Create(&lib)
 	return lib, dbObj.Error
 }
