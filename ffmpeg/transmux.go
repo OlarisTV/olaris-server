@@ -26,13 +26,16 @@ func NewTransmuxingSession(
 	}
 
 	options := ffchunk_options.FFChunkOptions{
-		InputFile:         stream.Stream.MediaFileURL,
-		OutputDir:         outputDir,
-		StreamIndex:       stream.Stream.StreamId,
-		StartDts:          int64(segments[0].StartTimestamp),
-		EndDts:            int64(segments[len(segments)-1].EndTimestamp),
-		SegmentStartIndex: int64(segments[0].SegmentId),
-		SplitDts:          splitTimes,
+		InputFile:              stream.Stream.MediaFileURL,
+		OutputDir:              outputDir,
+		StreamIndex:            stream.Stream.StreamId,
+		StartDts:               int64(segments[0].StartTimestamp),
+		EndDts:                 int64(segments[len(segments)-1].EndTimestamp),
+		ContinueUntilKeyframe:  true,
+		SegmentStartIndex:      int64(segments[0].SegmentId),
+		AverageSegmentDuration: int64(float64(stream.Stream.TimeBase) * TransmuxedSegDuration.Seconds()),
+		NbSegments:             int64(len(segments)),
+		//SplitDts:          splitTimes,
 	}
 	optionsSerialized, _ := proto.Marshal(&options)
 
@@ -87,50 +90,43 @@ func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
 	sessions := []SegmentList{}
 	timeBase := keyframeIntervals[0].TimeBase
 	segDurationTs := DtsTimestamp(TransmuxedSegDuration.Seconds() * float64(timeBase))
+	startDts := keyframeIntervals[0].StartTimestamp
+	endDts := keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp
 
-	earliestNextCut := keyframeIntervals[0].StartTimestamp + segDurationTs
-	session := []Segment{
-		{
-			Interval{
-				timeBase,
-				keyframeIntervals[0].StartTimestamp,
-				keyframeIntervals[0].StartTimestamp},
-			segmentId,
-		}}
-	segmentId++
+	currentDts := startDts
 
-	for _, keyframeInterval := range keyframeIntervals {
-		if session[len(session)-1].EndTimestamp >= earliestNextCut {
-			session = append(session,
-				Segment{
-					Interval{
-						timeBase,
-						keyframeInterval.StartTimestamp,
-						keyframeInterval.EndTimestamp},
-					segmentId})
-			segmentId++
-			earliestNextCut += segDurationTs
-		} else {
-			session[len(session)-1].EndTimestamp = keyframeInterval.EndTimestamp
-		}
-
+	session := SegmentList{}
+	for {
 		if len(session) >= segmentsPerSession {
 			sessions = append(sessions, session)
-			session = []Segment{
-				{
-					Interval{
-						timeBase,
-						keyframeInterval.EndTimestamp,
-						keyframeInterval.EndTimestamp},
-					segmentId,
-				},
-			}
-			segmentId++
-			earliestNextCut = keyframeInterval.EndTimestamp + segDurationTs
+			session = SegmentList{}
 		}
+		if currentDts+segDurationTs >= endDts {
+			session = append(session, Segment{
+				Interval{
+					TimeBase:       timeBase,
+					StartTimestamp: currentDts,
+					EndTimestamp:   endDts,
+				},
+				segmentId,
+			})
+			break
+		} else {
+			session = append(session, Segment{
+				Interval{
+					TimeBase:       timeBase,
+					StartTimestamp: currentDts,
+					EndTimestamp:   currentDts + segDurationTs,
+				},
+				segmentId,
+			})
+		}
+		segmentId++
+		currentDts += segDurationTs
 	}
 	sessions = append(sessions, session)
 
-	//fmt.Println(sessions)
+	//log.Println(sessions)
+
 	return sessions
 }
