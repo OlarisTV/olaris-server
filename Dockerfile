@@ -28,7 +28,8 @@ RUN     apt-get -y --no-install-recommends install ffmpeg
 
 # Install ffchunk dependencies
 # We install -dev packages because their names remain stable between Ubuntu releases
-RUN apt-get -y --no-install-recommends install cmake libavformat-dev libavutil-dev libavcodec-dev libswresample-dev
+RUN apt-get -y --no-install-recommends install libavformat-dev libavutil-dev libavcodec-dev libswresample-dev \
+	libprotobuf-c1
 
 #RUN apt-get -y install software-properties-common gpg
 #RUN add-apt-repository ppa:gophers/archive
