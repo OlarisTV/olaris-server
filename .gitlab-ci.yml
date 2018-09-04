@@ -18,8 +18,8 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
   - go get github.com/jteeuwen/go-bindata/...
   - go get github.com/elazarl/go-bindata-assetfs/...
-  - "curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > app/static.zip"
-  - unzip app/static.zip -d react/
+  - "curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip"
+  - unzip react/static.zip -d react/
   - go generate -v ./...
 
 stages:
