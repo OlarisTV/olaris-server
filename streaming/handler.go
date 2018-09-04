@@ -1,7 +1,5 @@
 package streaming
 
-//go:generate go-bindata-assetfs -pkg $GOPACKAGE static/...
-
 import (
 	"flag"
 	"github.com/gorilla/mux"
@@ -21,7 +19,6 @@ var sessionsMutex = sync.Mutex{}
 var router = mux.NewRouter()
 
 func GetHandler() http.Handler {
-	router.PathPrefix("/player").Handler(http.StripPrefix("/player", http.FileServer(assetFS())))
 	router.HandleFunc("/api/v1/files", serveFileIndex)
 	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 
