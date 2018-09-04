@@ -21,8 +21,8 @@ all: update-react generate test vet
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
 	cd builds ; git checkout develop; git checkout . ; git pull ; yarn install ; yarn build
-	cp -r builds/build ./app/
-build:
+	cp -r builds/build ./react/
+build: all
 	$(GOBUILD) -o $(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 #build-with-react: update-react generate build
 test:

@@ -9,4 +9,6 @@ node_modules
 cmd/olaris-server/bsmds-linux
 app/build
 app/bindata.go
+react/build
+react/bindata.go
 yarn.lock
