@@ -73,4 +73,9 @@ func TestContinuePlayResume(t *testing.T) {
 		t.Errorf("Expected the second Episode to be resumed to be Episode 3 got %s instead\n", episodes[1].Name)
 	}
 
+	count := db.UnwatchedEpisodesInSeasonCount(1, 1)
+	if count != 2 {
+		t.Errorf("Expected the amount of unwatched episodes in the season to be 2 got %v instead\n", count)
+	}
+
 }

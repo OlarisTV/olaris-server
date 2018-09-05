@@ -129,6 +129,24 @@ func CollectEpisodeData(episodes []Episode, userID uint) {
 	}
 }
 
+type countResult struct {
+	Count uint
+}
+
+// UnwatchedEpisodesInSeriesCount retrieves the amount of unwatched episodes in a given series.
+func UnwatchedEpisodesInSeriesCount(seriesID uint, userID uint) uint {
+	var res countResult
+	db.Raw("SELECT COUNT(*) as count FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?) AND id NOT IN(SELECT owner_id FROM play_states WHERE owner_type = 'episodes' AND finished = 1 AND user_id = ? AND owner_id IN(SELECT id FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?)))", seriesID, userID, seriesID).Scan(&res)
+	return res.Count
+}
+
+// UnwatchedEpisodesInSeasonCount retrieves the amount of unwatched episodes in a given season.
+func UnwatchedEpisodesInSeasonCount(seasonID uint, userID uint) uint {
+	var res countResult
+	db.Raw("select count(*) as count from episodes where season_id = ? AND id NOT IN (SELECT owner_id FROM play_states WHERE owner_type = 'episodes' AND finished = 1 AND user_id = ? AND owner_id IN( SELECT id FROM episodes WHERE season_id = ?))", seasonID, userID, seasonID).Scan(&res)
+	return res.Count
+}
+
 // FindAllSeries retrieves all identified series from the db.
 func FindAllSeries() (series []Series) {
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)

@@ -124,6 +124,7 @@ var SchemaTxt = `
 		tmdb_id: Int!
 		type: String!
 		uuid: String!
+		unwatched_episodes_count: Int!
 	}
 
 	type Season {
@@ -135,6 +136,7 @@ var SchemaTxt = `
 		tmdb_id: Int!
 		episodes: [Episode]!
 		uuid: String!
+		unwatched_episodes_count: Int!
 	}
 
 	type Episode {

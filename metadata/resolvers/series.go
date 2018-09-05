@@ -13,13 +13,15 @@ type mustUUIDArgs struct {
 // Season wrapper object around db.Season so it can hold episode resolvers.
 type Season struct {
 	db.Season
-	Episodes []*EpisodeResolver
+	Episodes              []*EpisodeResolver
+	UnwatchedEpisodeCount uint
 }
 
 // Series wrapper object around db.Series so it can hold seasons resolvers.
 type Series struct {
 	db.Series
-	Seasons []*SeasonResolver
+	Seasons               []*SeasonResolver
+	UnwatchedEpisodeCount uint
 }
 
 // Episode returns episode.
@@ -37,7 +39,8 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	userID, _ := auth.UserID(ctx)
 	dbseason := db.FindSeasonByUUID(&args.Uuid)
-	season := Season{dbseason, nil}
+	season := Season{dbseason, nil, 0}
+	season.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeasonCount(dbseason.ID, userID)
 
 	// TODO(Maran): This part can be DRIED up and moved into it's own function
 	for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
@@ -72,7 +75,9 @@ func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
 	var seasons []*SeasonResolver
 
 	for _, dbseason := range dbserie.Seasons {
-		season := Season{*dbseason, nil}
+		// TODO: DRY THIS UP!
+		season := Season{*dbseason, nil, 0}
+		season.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeasonCount(dbseason.ID, userID)
 		var eps []db.Episode
 		for _, episode := range dbseason.Episodes {
 			eps = append(eps, *episode)
@@ -85,7 +90,9 @@ func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
 		}
 		seasons = append(seasons, &SeasonResolver{r: season})
 	}
-	return &SeriesResolver{r: Series{dbserie, seasons}}
+	s := Series{dbserie, seasons, 0}
+	s.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeriesCount(dbserie.ID, userID)
+	return &SeriesResolver{r: s}
 }
 
 // SeriesResolver resolvers a serie.
@@ -138,6 +145,11 @@ func (r *SeriesResolver) TmdbID() int32 {
 	return int32(r.r.TmdbID)
 }
 
+// UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
+func (r *SeriesResolver) UnwatchedEpisodesCount() int32 {
+	return int32(r.r.UnwatchedEpisodeCount)
+}
+
 // Seasons returns all seasons.
 func (r *SeriesResolver) Seasons() []*SeasonResolver {
 	return r.r.Seasons
@@ -171,6 +183,11 @@ func (r *SeasonResolver) AirDate() string {
 // PosterPath resturn uri to poster.
 func (r *SeasonResolver) PosterPath() string {
 	return r.r.PosterPath
+}
+
+// UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
+func (r *SeasonResolver) UnwatchedEpisodesCount() int32 {
+	return int32(r.r.UnwatchedEpisodeCount)
 }
 
 // TmdbID returns tmdb id.
