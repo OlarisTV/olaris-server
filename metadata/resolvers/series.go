@@ -7,7 +7,7 @@ import (
 )
 
 type mustUUIDArgs struct {
-	UUID string
+	UUID *string
 }
 
 // Season wrapper object around db.Season so it can hold episode resolvers.
@@ -27,7 +27,7 @@ type Series struct {
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
 	userID, _ := auth.UserID(ctx)
-	dbepisode := db.FindEpisodeByUUID(&args.UUID, userID)
+	dbepisode := db.FindEpisodeByUUID(args.UUID, userID)
 	if dbepisode != nil {
 		return &EpisodeResolver{r: *dbepisode}
 	}
@@ -38,7 +38,7 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 // Season returns season.
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	userID, _ := auth.UserID(ctx)
-	dbseason := db.FindSeasonByUUID(&args.UUID)
+	dbseason := db.FindSeasonByUUID(args.UUID)
 	season := Season{dbseason, nil, 0}
 	season.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeasonCount(dbseason.ID, userID)
 
@@ -56,8 +56,8 @@ func (r *Resolver) Series(ctx context.Context, args *mustUUIDArgs) []*SeriesReso
 	var resolvers []*SeriesResolver
 	var series []db.Series
 
-	if args.UUID != "" {
-		series = db.FindSeriesByUUID(&args.UUID)
+	if args.UUID != nil {
+		series = db.FindSeriesByUUID(args.UUID)
 	} else {
 		series = db.FindAllSeries()
 	}
