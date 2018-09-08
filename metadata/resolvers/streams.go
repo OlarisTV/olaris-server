@@ -39,6 +39,12 @@ func (r *StreamResolver) StreamID() *int32 {
 	return &a
 }
 
+// TotalDuration returns the total duriation of the stream in seconds.
+func (r *StreamResolver) TotalDuration() *float64 {
+	seconds := r.r.TotalDuration.Seconds()
+	return &seconds
+}
+
 // StreamType returns stream type (sub/audio/video)
 func (r *StreamResolver) StreamType() *string {
 	return &r.r.StreamType

@@ -158,6 +158,8 @@ var SchemaTxt = `
 		file_path: String!
 		uuid: String!
 		streams: [Stream]!
+		# Total duration of the first video stream in seconds
+		total_duration: Float
 	}
 
 	type Stream {
@@ -177,6 +179,8 @@ var SchemaTxt = `
 	  title: String
 	  # Title for audio and subtitle streams
 	  resolution: String
+	  # Total duration of the stream in seconds
+	  total_duration: Float
 	}
 
 	# A movie file
@@ -211,6 +215,8 @@ var SchemaTxt = `
 		uuid: String!
 		# Stream information (subtitles / audio and video streams)
 		streams: [Stream]!
+		# Total duration of the first video stream in seconds
+		total_duration: Float
 	}
 
 	# Invite that can be used to allow other users access to your server.

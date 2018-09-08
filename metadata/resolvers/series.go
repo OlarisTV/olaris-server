@@ -293,6 +293,17 @@ func (r *EpisodeFileResolver) UUID() string {
 	return r.r.UUID
 }
 
+// TotalDuration returns the total duration in seconds based on the first encountered videostream.
+func (r *EpisodeFileResolver) TotalDuration() *float64 {
+	for _, stream := range r.r.Streams {
+		if stream.StreamType == "video" {
+			seconds := stream.TotalDuration.Seconds()
+			return &seconds
+		}
+	}
+	return nil
+}
+
 // Streams return stream information.
 func (r *EpisodeFileResolver) Streams() (streams []*StreamResolver) {
 	for _, stream := range r.r.Streams {
