@@ -36,8 +36,7 @@ func (r *Resolver) Search(ctx context.Context, args *searchArgs) *[]*SearchItemR
 		l = append(l, &SearchItemResolver{r: &MovieResolver{r: movie}})
 	}
 	for _, serie := range db.SearchSeriesByTitle(userID, args.Name) {
-		s := CreateSeriesResolver(serie, userID)
-		l = append(l, &SearchItemResolver{r: s})
+		l = append(l, &SearchItemResolver{r: &SeriesResolver{newSeries(&serie, userID)}})
 	}
 
 	return &l

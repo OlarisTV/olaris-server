@@ -135,7 +135,7 @@ func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
 		list.Movies = mr
 
 		for _, episode := range db.FindEpisodesInLibrary(library.ID, userID) {
-			list.Episodes = append(list.Episodes, &EpisodeResolver{r: episode})
+			list.Episodes = append(list.Episodes, &EpisodeResolver{r: newEpisode(&episode, userID)})
 		}
 
 		lib := LibraryResolver{r: list}

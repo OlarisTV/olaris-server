@@ -137,6 +137,7 @@ var SchemaTxt = `
 		episodes: [Episode]!
 		uuid: String!
 		unwatched_episodes_count: Int!
+		series: Series
 	}
 
 	type Episode {
@@ -149,6 +150,7 @@ var SchemaTxt = `
 		uuid: String!
 		files: [EpisodeFile]!
 		play_state: PlayState
+		season: Season
 	}
 
 	type EpisodeFile {

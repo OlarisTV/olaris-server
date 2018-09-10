@@ -10,18 +10,35 @@ type mustUUIDArgs struct {
 	UUID *string
 }
 
-// Season wrapper object around db.Season so it can hold episode resolvers.
+// Season wrapper object around db.Season
 type Season struct {
 	db.Season
-	Episodes              []*EpisodeResolver
 	UnwatchedEpisodeCount uint
+	UserID                uint
 }
 
-// Series wrapper object around db.Series so it can hold seasons resolvers.
+// Series wrapper object around db.Series so it can hold the userid
 type Series struct {
 	db.Series
-	Seasons               []*SeasonResolver
 	UnwatchedEpisodeCount uint
+	// TODO: Figure out if this is racey
+	UserID uint
+}
+
+// Episode is a wrapper object around db.Episode
+type Episode struct {
+	db.Episode
+	UserID uint
+}
+
+func newEpisode(dbEpisode *db.Episode, userID uint) Episode {
+	return Episode{*dbEpisode, userID}
+}
+func newSeason(dbSeason *db.Season, userID uint) Season {
+	return Season{*dbSeason, 0, userID}
+}
+func newSeries(dbSeries *db.Series, userID uint) Series {
+	return Series{*dbSeries, 0, userID}
 }
 
 // Episode returns episode.
@@ -29,9 +46,10 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 	userID, _ := auth.UserID(ctx)
 	dbepisode := db.FindEpisodeByUUID(args.UUID, userID)
 	if dbepisode != nil {
-		return &EpisodeResolver{r: *dbepisode}
+		ep := newEpisode(dbepisode, userID)
+		return &EpisodeResolver{r: ep}
 	}
-	return &EpisodeResolver{r: db.Episode{}}
+	return &EpisodeResolver{r: Episode{}}
 
 }
 
@@ -39,13 +57,7 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	userID, _ := auth.UserID(ctx)
 	dbseason := db.FindSeasonByUUID(args.UUID)
-	season := Season{dbseason, nil, 0}
-	season.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeasonCount(dbseason.ID, userID)
-
-	// TODO(Maran): This part can be DRIED up and moved into it's own function
-	for _, episode := range db.FindEpisodesForSeason(season.ID, userID) {
-		season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
-	}
+	season := newSeason(&dbseason, userID)
 
 	return &SeasonResolver{r: season}
 }
@@ -63,36 +75,14 @@ func (r *Resolver) Series(ctx context.Context, args *mustUUIDArgs) []*SeriesReso
 	}
 
 	for _, serie := range series {
-		serieResolver := CreateSeriesResolver(serie, userID)
-		resolvers = append(resolvers, serieResolver)
+		s := newSeries(&serie, userID)
+
+		res := SeriesResolver{r: s}
+
+		resolvers = append(resolvers, &res)
 	}
 
 	return resolvers
-}
-
-// CreateSeriesResolver wrapper to create complete series information based on a series.
-func CreateSeriesResolver(dbserie db.Series, userID uint) *SeriesResolver {
-	var seasons []*SeasonResolver
-
-	for _, dbseason := range dbserie.Seasons {
-		// TODO: DRY THIS UP!
-		season := Season{*dbseason, nil, 0}
-		season.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeasonCount(dbseason.ID, userID)
-		var eps []db.Episode
-		for _, episode := range dbseason.Episodes {
-			eps = append(eps, *episode)
-		}
-		// Get personalised data in
-		db.CollectEpisodeData(eps, userID)
-
-		for _, episode := range eps {
-			season.Episodes = append(season.Episodes, &EpisodeResolver{r: episode})
-		}
-		seasons = append(seasons, &SeasonResolver{r: season})
-	}
-	s := Series{dbserie, seasons, 0}
-	s.UnwatchedEpisodeCount = db.UnwatchedEpisodesInSeriesCount(dbserie.ID, userID)
-	return &SeriesResolver{r: s}
 }
 
 // SeriesResolver resolvers a serie.
@@ -147,12 +137,20 @@ func (r *SeriesResolver) TmdbID() int32 {
 
 // UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
 func (r *SeriesResolver) UnwatchedEpisodesCount() int32 {
-	return int32(r.r.UnwatchedEpisodeCount)
+	epCount := db.UnwatchedEpisodesInSeasonCount(r.r.ID, r.r.UserID)
+	return int32(epCount)
 }
 
 // Seasons returns all seasons.
 func (r *SeriesResolver) Seasons() []*SeasonResolver {
-	return r.r.Seasons
+	var seasons []*SeasonResolver
+
+	for _, dbseason := range db.FindSeasonsForSeries(r.r.ID) {
+		season := newSeason(&dbseason, r.r.UserID)
+		seasons = append(seasons, &SeasonResolver{r: season})
+	}
+
+	return seasons
 }
 
 // SeasonResolver resolves season
@@ -187,7 +185,7 @@ func (r *SeasonResolver) PosterPath() string {
 
 // UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
 func (r *SeasonResolver) UnwatchedEpisodesCount() int32 {
-	return int32(r.r.UnwatchedEpisodeCount)
+	return int32(db.UnwatchedEpisodesInSeasonCount(r.r.ID, r.r.UserID))
 }
 
 // TmdbID returns tmdb id.
@@ -200,14 +198,27 @@ func (r *SeasonResolver) SeasonNumber() int32 {
 	return int32(r.r.SeasonNumber)
 }
 
+// Series returns the series this season belongs to.
+func (r *SeasonResolver) Series() *SeriesResolver {
+	s := db.FindSeries(r.r.SeriesID)
+	series := newSeries(&s, r.r.UserID)
+	return &SeriesResolver{series}
+}
+
 // Episodes returns seasonal episodes.
 func (r *SeasonResolver) Episodes() []*EpisodeResolver {
-	return r.r.Episodes
+	var eps []*EpisodeResolver
+	for _, episode := range db.FindEpisodesForSeason(r.r.ID, r.r.UserID) {
+		epp := newEpisode(&episode, r.r.UserID)
+		ep := &EpisodeResolver{r: epp}
+		eps = append(eps, ep)
+	}
+	return eps
 }
 
 // EpisodeResolver resolves episode.
 type EpisodeResolver struct {
-	r db.Episode
+	r Episode
 }
 
 // Files return all files for this episode.
@@ -221,6 +232,13 @@ func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {
 // Name returns name.
 func (r *EpisodeResolver) Name() string {
 	return r.r.Name
+}
+
+// Season returns the season the episode belongs to.
+func (r *EpisodeResolver) Season() *SeasonResolver {
+	s := db.FindSeason(r.r.SeasonID)
+	season := newSeason(&s, r.r.UserID)
+	return &SeasonResolver{season}
 }
 
 // UUID returns uuid.
@@ -255,7 +273,8 @@ func (r *EpisodeResolver) EpisodeNumber() int32 {
 
 // PlayState returns episode playstate information.
 func (r *EpisodeResolver) PlayState() *PlayStateResolver {
-	return &PlayStateResolver{r: r.r.PlayState}
+	ps := db.FindPlaystateForEpisode(r.r.ID, r.r.UserID)
+	return &PlayStateResolver{r: ps}
 }
 
 // PlayStateResolver resolves playstate

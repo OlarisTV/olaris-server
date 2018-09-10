@@ -211,6 +211,12 @@ func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 	return episodes
 }
 
+// FindPlaystateForEpisode returns the playstate for the given episode
+func FindPlaystateForEpisode(episodeID uint, userID uint) (ps PlayState) {
+	db.Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodeID, "episodes").First(&ps)
+	return ps
+}
+
 // FindSeasonByUUID finds the season based on it's UUID.
 func FindSeasonByUUID(uuid *string) (season Season) {
 	db.Where("uuid = ?", uuid).Find(&season)
@@ -230,7 +236,7 @@ func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
 	if len(episodes) == 1 {
 		episode = &episodes[0]
 		db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
-		db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "tv_episodes").First(&episode.PlayState)
+		db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "episodes").First(&episode.PlayState)
 	}
 	return episode
 }
@@ -259,6 +265,12 @@ func EpisodeFileExists(filePath string) bool {
 		return false
 	}
 	return true
+}
+
+// FindSeries finds a series by it's ID
+func FindSeries(seriesID uint) (series Series) {
+	db.Where("id = ?", seriesID).Find(&series)
+	return series
 }
 
 // CreateSeries persists a series in the database.

@@ -27,7 +27,7 @@ func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
 
 	for _, item := range sortables {
 		if res, ok := item.(*db.Episode); ok {
-			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: *res}})
+			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: newEpisode(res, userID)}})
 		}
 		if res, ok := item.(*db.Movie); ok {
 			l = append(l, &MediaItemResolver{r: &MovieResolver{r: *res}})
