@@ -32,7 +32,7 @@ var SchemaTxt = `
 	type Mutation {
 		# Tell the application to index all the supported files in the given directory.
 		# 'kind' can be 0 for movies and 1 for series.
-		createLibrary(name: String!, file_path: String!, kind: Int!): LibraryResponse!
+		createLibrary(name: String!, filePath: String!, kind: Int!): LibraryResponse!
 
 		# Delete a library and remove all collected metadata.
 		deleteLibrary(id: Int!): LibraryResponse!
@@ -107,7 +107,7 @@ var SchemaTxt = `
 		name: String!
 
 		# Path that this library manages
-		file_path: String!
+		filePath: String!
 
 		movies: [Movie]!
 		episodes: [Episode]!
@@ -116,65 +116,65 @@ var SchemaTxt = `
 	type Series {
 		name: String!
 		overview: String!
-		first_air_date: String!
+		firstAirDate: String!
 		status: String!
 		seasons: [Season]!
-		backdrop_path: String!
-		poster_path: String!
-		tmdb_id: Int!
+		backdropPath: String!
+		posterPath: String!
+		tmdbID: Int!
 		type: String!
 		uuid: String!
-		unwatched_episodes_count: Int!
+		unwatchedEpisodesCount: Int!
 	}
 
 	type Season {
 		name: String!
 		overview: String!
-		season_number: Int!
-		air_date: String!
-		poster_path: String!
-		tmdb_id: Int!
+		seasonNumber: Int!
+		airDate: String!
+		posterPath: String!
+		tmdbID: Int!
 		episodes: [Episode]!
 		uuid: String!
-		unwatched_episodes_count: Int!
+		unwatchedEpisodesCount: Int!
 		series: Series
 	}
 
 	type Episode {
 		name: String!
 		overview: String!
-		still_path: String!
-		air_date: String!
-		episode_number: Int!
-		tmdb_id: Int!
+		stillPath: String!
+		airDate: String!
+		episodeNumber: Int!
+		tmdbID: Int!
 		uuid: String!
 		files: [EpisodeFile]!
-		play_state: PlayState
+		playState: PlayState
 		season: Season
 	}
 
 	type EpisodeFile {
 		# Filename
-		file_name: String!
+		fileName: String!
 		# Absolute path to the filesystem
-		file_path: String!
+		filePath: String!
 		uuid: String!
 		streams: [Stream]!
 		# Total duration of the first video stream in seconds
-		total_duration: Float
+		totalDuration: Float
 	}
 
 	type Stream {
 	  # Name of the codec used for encoding
-	  codec_name: String
+	  codecName: String
 	  # Mimetype for the codec
-	  codec_mime: String
+	  codecMime: String
 	  # Encoding profile used for codec
 	  profile: String
 	  # Stream bitrate (not file)
-	  bit_rate: Int
+	  bitRate: Int
 	  # Type of stream can be either 'video', 'audio' or 'subtitle'
-	  stream_type: String
+	  streamType: String
 	  # Language used for audio or subtitle types
 	  language: String
 	  # Title for audio and subtitle streams
@@ -182,7 +182,7 @@ var SchemaTxt = `
 	  # Title for audio and subtitle streams
 	  resolution: String
 	  # Total duration of the stream in seconds
-	  total_duration: Float
+	  totalDuration: Float
 	}
 
 	# A movie file
@@ -196,29 +196,29 @@ var SchemaTxt = `
 		# Short description of the movie
 		overview: String!
 		# IMDB ID
-		imdb_id: String!
+		imdbID: String!
 		# TMDB ID
-		tmdb_id: Int!
+		tmdbID: Int!
 		# ID to retrieve backdrop
-		backdrop_path: String!
+		backdropPath: String!
 		# ID to retrieve poster
-		poster_path: String!
+		posterPath: String!
 		uuid: String!
 		files: [MovieFile]!
-		play_state: PlayState
+		playState: PlayState
 	}
 
 	type MovieFile {
 		# Filename
-		file_name: String!
+		fileName: String!
 		# Absolute path to the filesystem
-		file_path: String!
-		library_id: Int!
+		filePath: String!
+		libraryId: Int!
 		uuid: String!
 		# Stream information (subtitles / audio and video streams)
 		streams: [Stream]!
 		# Total duration of the first video stream in seconds
-		total_duration: Float
+		totalDuration: Float
 	}
 
 	# Invite that can be used to allow other users access to your server.
