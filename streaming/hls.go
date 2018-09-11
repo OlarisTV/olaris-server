@@ -14,6 +14,10 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
 
 	playableCodecs := r.URL.Query()["playableCodecs"]
 	capabilities := ffmpeg.ClientCodecCapabilities{
@@ -52,8 +56,8 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 				VideoStream:    videoRepresentation,
 				AudioStreams:   audioStreamRepresentations,
 				AudioGroupName: "audio",
-				// TODO(Leon Handreke): Fill this from the audio codecs.
-				AudioCodecs: "mp4a.40.2",
+				// TODO(Leon Handreke): Is just using the first one always correct?
+				AudioCodecs: audioStreamRepresentations[0].Stream.Codecs,
 			},
 		},
 		subtitleRepresentations)
@@ -64,6 +68,10 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
 		return
 	}
 
@@ -163,6 +171,16 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !mediaFileURLExists(mediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
+
 	streamKey, err := getStreamKey(
 		mux.Vars(r)["fileLocator"],
 		mux.Vars(r)["streamId"])

@@ -2,7 +2,10 @@ package ffmpeg
 
 import (
 	"fmt"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -140,9 +143,9 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 	return streams, nil
 }
 
-func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
+func GetSubtitleStreams(mediaFileURL string) ([]Stream, error) {
 	streams := []Stream{}
-	container, err := Probe(mediaFilePath)
+	container, err := Probe(mediaFileURL)
 	if err != nil {
 		return nil, err
 	}
@@ -152,26 +155,64 @@ func GetSubtitleStreams(mediaFilePath string) ([]Stream, error) {
 			continue
 		}
 
-		timeBase, err := parseTimeBaseString(stream.TimeBase)
-		if err != nil {
-			return []Stream{}, err
+		totalDuration := container.Format.Duration()
+		// TODO(Leon Handreke): This usually happens for next-to-the-file .srt files, ffprobe doesn't return
+		// a duration for them. Do something more intelligent (such as actually parsing the file).
+		if totalDuration == 0 {
+			totalDuration = time.Duration(time.Second * 100000)
 		}
 
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
-					MediaFileURL: mediaFilePath,
+					MediaFileURL: mediaFileURL,
 					StreamId:     int64(stream.Index),
 				},
-				TotalDuration:    container.Format.Duration(),
-				TotalDurationDts: DtsTimestamp(stream.DurationTs),
-				TimeBase:         timeBase,
+				TotalDuration:    totalDuration,
+				TotalDurationDts: DtsTimestamp(totalDuration.Seconds() * 1000),
+				TimeBase:         1000,
 				StreamType:       "subtitle",
 				Language:         GetLanguageTag(stream),
 				Title:            GetTitleOrHumanizedLanguage(stream),
 				EnabledByDefault: stream.Disposition["default"] != 0,
 			})
 	}
+
+	mediaFilePath, err := mediaFileURLToFilepath(mediaFileURL)
+	if err == nil {
+		mediaFilePathWithoutExt := strings.TrimSuffix(mediaFilePath, filepath.Ext(mediaFileURL))
+		r := regexp.MustCompile(regexp.QuoteMeta(mediaFilePathWithoutExt) + "\\.?(?P<lang>.*).srt")
+
+		subtitleFiles, _ := filepath.Glob(mediaFilePathWithoutExt + "*.srt")
+		for _, subtitleFile := range subtitleFiles {
+			match := r.FindStringSubmatch(subtitleFile)
+			// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
+			tag := match[1]
+			lang := "unk"
+
+			if tag == "" {
+				tag = "External"
+			} else {
+				if humanizedToLangTag[tag] != "" {
+					lang = humanizedToLangTag[tag]
+				}
+			}
+
+			streams = append(streams,
+				Stream{
+					StreamKey: StreamKey{
+						MediaFileURL: subtitleFile,
+						StreamId:     0,
+					},
+					TotalDuration:    container.Format.Duration(),
+					StreamType:       "subtitle",
+					Language:         lang,
+					Title:            tag,
+					EnabledByDefault: false,
+				})
+		}
+	}
+
 	return streams, nil
 }
 

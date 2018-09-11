@@ -2,12 +2,13 @@ package ffmpeg
 
 import (
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"gitlab.com/olaris/olaris-server/ffmpeg/ffchunk_options"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"strconv"
 	"time"
 )
 
@@ -30,37 +31,40 @@ func NewVideoTranscodingSession(
 		return nil, err
 	}
 
-	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
-	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
-	encoderParams := stream.Representation.encoderParams
+	//startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
+	//endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
+	// TODO(Leon Handreke): Pass encoder params to ffchunk
+	//encoderParams := stream.Representation.encoderParams
 
-	args := []string{
-		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
-		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
-		"-copyts",
-		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
-		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
-		"-preset:0", "veryfast",
-		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", transcodedVideoSegmentDuration.Seconds()),
-		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
-		"-threads", "2",
-		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
-		"-hls_time", fmt.Sprintf("%.3f", transcodedVideoSegmentDuration.Seconds()),
-		"-hls_segment_type", "1", // fMP4
-		"-hls_segment_filename", "stream0_%d.m4s",
-		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
+	splitTimes := []int64{}
+	for _, s := range segments[1:] {
+		splitTimes = append(splitTimes, int64(s.StartTimestamp))
 	}
 
-	cmd := exec.Command("ffmpeg", args...)
-	log.Println("ffmpeg initialized with", cmd.Args)
-	cmd.Stderr, _ = os.Open(os.DevNull)
-	//cmd.Stderr = os.Stderr
+	options := ffchunk_options.FFChunkOptions{
+		InputFile:         stream.Stream.MediaFileURL,
+		OutputDir:         outputDir,
+		StreamIndex:       stream.Stream.StreamId,
+		StartDts:          int64(segments[0].StartTimestamp),
+		EndDts:            int64(segments[len(segments)-1].EndTimestamp),
+		SegmentStartIndex: int64(segments[0].SegmentId),
+		SplitDts:          splitTimes,
+	}
+	optionsSerialized, _ := proto.Marshal(&options)
+
+	cmd := exec.Command("ffchunk_transcode_video")
+	log.Println("ffchunk_transcode_video started with", cmd.Args, options.String())
+
+	logSink := getTranscodingLogSink("ffchunk_transcode_video")
+	io.WriteString(logSink, fmt.Sprintf("%s %s\n\n", cmd.Args, options.String()))
+	cmd.Stderr = logSink
+
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
+
+	stdin, _ := cmd.StdinPipe()
+	stdin.Write(optionsSerialized)
+	stdin.Close()
 
 	return &TranscodingSession{
 		cmd:       cmd,
