@@ -1,8 +1,10 @@
 package ffmpeg
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"gitlab.com/olaris/olaris-server/ffmpeg/ffchunk_options"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -51,8 +53,12 @@ func NewVideoTranscodingSession(
 	optionsSerialized, _ := proto.Marshal(&options)
 
 	cmd := exec.Command("ffchunk_transcode_video")
-	log.Println("ffmpeg started with", cmd.Args, options.String())
-	cmd.Stderr, _ = os.Open(os.DevNull)
+	log.Println("ffchunk_transcode_video started with", cmd.Args, options.String())
+
+	logSink := getTranscodingLogSink("ffchunk_transcode_video")
+	io.WriteString(logSink, fmt.Sprintf("%s %s\n\n", cmd.Args, options.String()))
+	cmd.Stderr = logSink
+
 	cmd.Stdout = os.Stdout
 	cmd.Dir = outputDir
 

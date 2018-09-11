@@ -1,10 +1,21 @@
 package ffmpeg
 
 import (
+	"flag"
 	"fmt"
+	"github.com/golang/glog"
+	"gitlab.com/olaris/olaris-server/helpers"
+	"io"
 	"net/url"
+	"os"
+	"path"
 	"time"
 )
+
+var writeTranscoderLog = flag.Bool(
+	"write_transcoder_log",
+	false,
+	"Whether to write transcoder output to logfile")
 
 func reverseMap(m map[string]string) map[string]string {
 	n := make(map[string]string)
@@ -118,4 +129,22 @@ func mediaFileURLToFilepath(mediaFileURLStr string) (string, error) {
 		return mediaFileURL.Path, nil
 	}
 	return "", fmt.Errorf("%s is not a local file", mediaFileURLStr)
+}
+
+func getTranscodingLogSink(prefix string) io.WriteCloser {
+	if !(*writeTranscoderLog) {
+		f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0600)
+		return f
+	}
+
+	filename := fmt.Sprintf("%s_%s.log",
+		prefix, time.Now().UTC().Format(time.RFC3339))
+	filepath := path.Join(helpers.LogPath(), filename)
+	f, err := os.OpenFile(filepath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		glog.Error("Failed to open log file ", filepath, ": ", err.Error())
+		f, _ = os.OpenFile(os.DevNull, os.O_RDWR, 0600)
+	}
+	fmt.Println(filepath)
+	return f
 }
