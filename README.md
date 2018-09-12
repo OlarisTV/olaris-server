@@ -6,26 +6,24 @@
 
 Olaris is an open-source community driven media manager and transcoding server. The main interface is the [olaris-react](https://gitlab.com/olaris/olaris-react) project although in due time we hope to support multiple clients.
 
-Olaris is build using the following values:
+Our core values are:
 
 ### Community driven development
-We want Olaris to be a community project which means we will heavily
-prioritize features based on user feedback.
+We want Olaris to be a community project which means we will heavily prioritise features based on our user’s feedback.
 
 ### Focus on one feature at a time
-We will work on features until they are pefect (or as close to it as possible). We rather have a product where three features work really well then a product with 30 half-assed features.
-This does not mean we won't work in parallel it just means that we will not start new features until we are happy the features we deliver actually work.
+We will work on features until they are perfect (or as close to it as possible). We would rather have a product where three features work really well than a product with 30 unfinished features.
+
+This does not mean we won't work in parallel, it simply means we will not start anything new until we are happy the new feature works to a high standard.
 
 ### Our users are not our product
-We don't want to collect metadata, we don't want to sell metadata your data is yours.
+We don't want to collect metadata, we don't want to sell metadata your data is yours and yours alone.
 
-### Focus on one thing: Video.
-Our focus is on visual media, video. This will be our focus anything that does not meet this requirement won't be worked on. This means for instance that we will never add music support as it just requires a drastically different way of doing things. If we do want to do something with it we will build a new product specifically for this.
+### Singular Focus: Video.
+Our sole focus is on video and video alone, anything that does not meet this requirement will not be considered. This means for example we will never add music support due to different approach that would be required throughout. If we ever consider doing something that doesn’t include video it will be a separate entity to Olaris.
 
 ### Open-source
-Everything we build should be open-source. We feel strongly that more
-can be achieved with free open-source software. That's why were are
-aiming to be and say open-source instead of open-core.
+Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why were are aiming to be and to remain open-source instead of open-core.
 
 ## Running manually
 
