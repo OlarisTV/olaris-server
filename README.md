@@ -2,20 +2,36 @@
 
 ## `This is all prelease code, if you somehow found this please move along, this won't work yet :) `
 
-## Running with Docker
+## What is Olaris?
 
-    `make build-docker`
-    `docker run -i -t --publish 8080:8080 -v $(pwd):/go/src/gitlab.com/olaris/olaris-server -v ~/Videos:/var/media -v ~/.config/olaris:/root/.config/olaris -t olaris-server`
+Olaris is an open-source community driven media manager and transcoding server. The main interface is the [olaris-react](https://gitlab.com/olaris/olaris-react) project although in due time we hope to support multiple clients.
 
+Olaris is build using the following values:
 
-This mounts your local development directory inside the Docker container, allowing you to make changes to the application without rebuilding the container. The container features auto-reload functionality - just save a file, wait a few seconds and reload in your browser!
+### Community driven development
+We want Olaris to be a community project which means we will heavily
+prioritize features based on user feedback.
 
-Use your own media directory to mount at `/var/media` obviously.
+### Focus on one feature at a time
+We will work on features until they are pefect (or as close to it as possible). We rather have a product where three features work really well then a product with 30 half-assed features.
+This does not mean we won't work in parallel it just means that we will not start new features until we are happy the features we deliver actually work.
+
+### Our users are not our product
+We don't want to collect metadata, we don't want to sell metadata your data is yours.
+
+### Focus on one thing: Video.
+Our focus is on visual media, video. This will be our focus anything that does not meet this requirement won't be worked on. This means for instance that we will never add music support as it just requires a drastically different way of doing things. If we do want to do something with it we will build a new product specifically for this.
+
+### Open-source
+Everything we build should be open-source. We feel strongly that more
+can be achieved with free open-source software. That's why were are
+aiming to be and say open-source instead of open-core.
 
 ## Running manually
 
 ### Build dependencies
   * Install Go
+  * Build and install [ffchunk](https://gitlab.com/olaris/ffchunk)
 	* go get github.com/jteeuwen/go-bindata/...
 	* go get github.com/elazarl/go-bindata-assetfs/...
 
@@ -28,22 +44,3 @@ Use your own media directory to mount at `/var/media` obviously.
   `make build` to build for your local platform.
 
   `build-with-react` to build and pull in the latest web-interface.
-
-## Custom ffmpeg
-
-Olaris-server currently requires a patched version of ffmpeg to
-work correctly.
-
-	git clone https://gitlab.com/olaris/ffmpeg.git
-	cd ffmpeg
-
-On Debian Linux, I have successfully used the following command line to build a working binary
-
-	./configure --prefix=/usr --extra-version=1+b2 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --enable-gpl --disable-stripping --enable-avresample --enable-avisynth --enable-gnutls --enable-ladspa --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --enable-libcdio --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libgme --enable-libgsm --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librubberband --enable-librsvg --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libssh --enable-libtheora --enable-libtwolame --enable-libvorbis --enable-libvpx --enable-libwavpack --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzmq --enable-libzvbi --enable-omx --enable-openal --enable-opengl --enable-sdl2 --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-libx264 --enable-static
-	make -j4
-
-For macOS, see https://trac.ffmpeg.org/wiki/CompilationGuide/macOS
-
-To make Olaris Server use your binary, put the ffmpeg source directory (which will then contain the binary) in your `PATH`. For development, just do
-
-	export PATH=/path/to/your/ffmpeg:$PATH
