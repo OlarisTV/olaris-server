@@ -29,7 +29,7 @@ ready-ci:
 .PHONY: update-react
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
-	cd builds ; git checkout develop; git checkout . ; git pull ; yarn install ; yarn build
+	cd builds && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
 	cp -r builds/build ./react/
 
 .PHONY: build
