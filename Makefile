@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := build_local
+
 GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
@@ -5,9 +7,8 @@ GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 GOGET=$(GOCMD) get
 GOGENERATE=$(GOCMD) generate
-BIN_LOC=bin/
-BINARY_NAME=$(BIN_LOC)olaris-server
-BINARY_UNIX=$(BINARY_NAME)-unix
+BIN_LOC=build
+BINARY_NAME=olaris-server
 GODEP=dep
 CMD_SERVER_PATH=cmd/olaris-server/main.go
 REACT_REPO=https://gitlab.com/olaris/olaris-react.git
@@ -15,36 +16,63 @@ SRC_PATH=gitlab.com/olaris/olaris-server
 LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
 GIT_REV := $(shell git rev-list -1 HEAD)
 REACT_BUILD_DIR=./app/build
+IDENTIFIER=$(BINARY_NAME)-$(GOOS)-$(GOARCH)
 
-all: update-react generate test vet
+all: generate
 
+.PHONY: ready-ci
+ready-ci:
+	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
+	unzip react/static.zip -d react/
+	make generate
+
+.PHONY: update-react
 update-react:
 	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
 	cd builds ; git checkout develop; git checkout . ; git pull ; yarn install ; yarn build
 	cp -r builds/build ./react/
-build: all
-	$(GOBUILD) -o $(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
-#build-with-react: update-react generate build
+
+.PHONY: build
+build:
+	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -o $(BIN_LOC)/$(IDENTIFIER) $(LDFLAGS) -v $(CMD_SERVER_PATH)
+
+.PHONY: build_local
+build_local:
+	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
+
+.PHONY: crossbuild
+crossbuild:
+	mkdir -p $(BIN_LOC)
+	make build FLAGS="$(BIN_LOC)/$(IDENTIFIER)"
+
+.PHONY: test
 test:
 	$(GOTEST) -v ./...
+
+.PHONY: vet
 vet:
 	$(GOVET) -v ./...
+
+.PHONY: clean
 clean:
 	$(GOCLEAN)
 	rm -rf ./builds
+
+.PHONY: deps
 deps:
 	$(GODEP) ensure
+
+.PHONY: generate
 generate:
 	$(GOGENERATE) -v ./...
-run: build
-	./$(BINARY_NAME)
-build-docker:
-	docker build -t olaris-server .
-build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v $(CMD_SERVER_PATH)
-build-arm6:
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 $(GOBUILD) -o $(BINARY_NAME)-arm6 -v $(CMD_SERVER_PATH)
-build-arm7:
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GOBUILD) -o $(BINARY_NAME)-arm7 -v $(CMD_SERVER_PATH)
 
-build-all: generate build-arm6 build-arm7 build-linux
+.PHONY: run
+run: all
+	$(GOCMD) $(CMD_SERVER_PATH)
+
+.PHONY: build-all
+build-all:
+	make crossbuild GOOS=linux GOARCH=arm
+	make crossbuild GOOS=linux GOARCH=386
+	make crossbuild GOOS=linux GOARCH=arm64
+	make crossbuild GOOS=linux GOARCH=amd64

@@ -12,3 +12,4 @@ app/bindata.go
 react/build
 react/bindata.go
 yarn.lock
+build

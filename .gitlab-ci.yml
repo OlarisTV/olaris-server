@@ -18,9 +18,7 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
   - go get github.com/jteeuwen/go-bindata/...
   - go get github.com/elazarl/go-bindata-assetfs/...
-  - "curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip"
-  - unzip react/static.zip -d react/
-  - go generate -v ./...
+  - make ready-ci
 
 stages:
     - test
@@ -36,9 +34,8 @@ format:
 compile:
     stage: build
     script:
-      - go build -o binaries/olaris-server-linux cmd/olaris-server/main.go
-      #- GOOS=windows GOARCH=amd64 go build -o binaries/olaris-server.exe cmd/olaris-server/main.go
+      - make build-all
     artifacts:
       paths:
-        - binaries/
+        - build/
       expire_in: 2 week
