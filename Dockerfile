@@ -1,4 +1,4 @@
-FROM debian:testing-slim as base
+FROM ubuntu:xenial as base
 
 FROM base as ffchunk-build
 
