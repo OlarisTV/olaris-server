@@ -137,7 +137,7 @@ func (r *SeriesResolver) TmdbID() int32 {
 
 // UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
 func (r *SeriesResolver) UnwatchedEpisodesCount() int32 {
-	epCount := db.UnwatchedEpisodesInSeasonCount(r.r.ID, r.r.UserID)
+	epCount := db.UnwatchedEpisodesInSeriesCount(r.r.ID, r.r.UserID)
 	return int32(epCount)
 }
 
