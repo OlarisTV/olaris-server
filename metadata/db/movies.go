@@ -94,7 +94,7 @@ func CollectMovieInfo(movies []Movie, userID uint) {
 	for i := range movies {
 		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
 		// TODO(Maran): We should be able to use Gorm's build in polymorphic has_ony query to somehow do this
-		db.Model(movies[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, movies[i].ID, "movies").First(&movies[i].PlayState)
+		db.Model(movies[i]).Where("user_id = ? AND owner_id = ? and owner_type = ?", userID, movies[i].ID, "movies").First(&movies[i].PlayState)
 	}
 }
 

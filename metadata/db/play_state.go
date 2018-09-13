@@ -75,27 +75,30 @@ func LatestPlayStates(limit uint, userID uint) []PlayState {
 }
 
 // CreatePlayState creates new playstate for the given user and media content.
-func CreatePlayState(userID uint, uuid string, finished bool, playtime float64) bool {
-	var ps PlayState
-	db.FirstOrInit(&ps, PlayState{UUIDable: UUIDable{uuid}, UserID: userID})
-	ps.Finished = finished
-	ps.Playtime = playtime
-	db.Save(&ps)
-
+func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime float64) bool {
 	count := 0
 	var movie Movie
 	var episode Episode
+	var ps PlayState
 
-	db.Where("uuid = ?", uuid).Find(&movie).Count(&count)
+	db.Where("uuid = ?", mediaUUID).Find(&movie).Count(&count)
 	if count > 0 {
+		db.FirstOrInit(&ps, PlayState{OwnerID: movie.ID, UserID: userID, OwnerType: "movies"})
+		ps.Finished = finished
+		ps.Playtime = playtime
+		db.Save(&ps)
+
 		movie.PlayState = ps
 		db.Save(&movie)
 		return true
 	}
 
 	count = 0
-	db.Where("uuid = ?", uuid).Find(&episode).Count(&count)
+	db.Where("uuid = ?", mediaUUID).Find(&episode).Count(&count)
 	if count > 0 {
+		db.FirstOrInit(&ps, PlayState{OwnerID: episode.ID, UserID: userID, OwnerType: "episodes"})
+		ps.Finished = finished
+		ps.Playtime = playtime
 		episode.PlayState = ps
 		db.Save(&episode)
 		return true
