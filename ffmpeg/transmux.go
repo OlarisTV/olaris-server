@@ -76,9 +76,16 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		return StreamRepresentation{}, err
 	}
 
+	totalInterval := Interval{
+		keyframeIntervals[0].TimeBase,
+		keyframeIntervals[0].StartTimestamp,
+		keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp,
+	}
 	if stream.StreamType == "audio" {
-		representation.SegmentStartTimestamps = BuildConstantSegmentDurations(
-			keyframeIntervals, TransmuxedSegDuration)
+		representation.SegmentStartTimestamps = []SegmentList{
+			BuildConstantSegmentDurations(
+				totalInterval, TransmuxedSegDuration, 0),
+		}
 	} else if stream.StreamType == "video" {
 		representation.SegmentStartTimestamps = guessTransmuxedSegmentList(keyframeIntervals)
 	}

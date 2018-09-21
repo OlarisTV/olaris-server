@@ -57,6 +57,7 @@ EXPOSE 8080
 
 ENV LOGTOSTDERR=1
 ENV V=4
+ENV WRITE_TRANSCODER_LOG=1
 ENTRYPOINT realize start --generate
 
 # Remove downloaded archive files

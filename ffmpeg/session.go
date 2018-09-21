@@ -77,12 +77,12 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 		return nil, err
 	}
 
-	r := regexp.MustCompile("stream0_(?P<number>\\d+).m4s")
+	r := regexp.MustCompile("stream0_(?P<number>\\d+).m4s$")
 
 	for _, f := range files {
 		match := r.FindString(f.Name())
 		if match != "" {
-			segmentFsNumber, _ := strconv.Atoi(match[len("segment_") : len(match)-len(".m4s")])
+			segmentFsNumber, _ := strconv.Atoi(match[len("stream0_") : len(match)-len(".m4s")])
 			res[segmentFsNumber] = filepath.Join(s.outputDir, f.Name())
 		}
 

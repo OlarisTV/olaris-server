@@ -81,8 +81,8 @@ func GetTranscodedVideoRepresentation(
 
 	keyFrameItervals, _ := GetKeyframeIntervals(stream)
 
-	segmentStartTimestamps := BuildConstantSegmentDurations(
-		keyFrameItervals, transcodedAudioSegmentDuration)
+	segmentStartTimestamps := buildVideoSegmentDurations(
+		keyFrameItervals, transcodedVideoSegmentDuration)
 
 	return StreamRepresentation{
 		Stream: stream,
@@ -95,4 +95,36 @@ func GetTranscodedVideoRepresentation(
 		},
 		SegmentStartTimestamps: segmentStartTimestamps,
 	}
+}
+
+func buildVideoSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) []SegmentList {
+	timeBase := keyframeIntervals[0].TimeBase
+	sessionIntervals := []Interval{
+		Interval{
+			timeBase,
+			keyframeIntervals[0].StartTimestamp,
+			keyframeIntervals[0].StartTimestamp,
+		},
+	}
+
+	for _, keyframeInterval := range keyframeIntervals {
+		sessionIntervals[len(sessionIntervals)-1].EndTimestamp = keyframeInterval.EndTimestamp
+		sessionDuration := sessionIntervals[len(sessionIntervals)-1].Duration()
+		if sessionDuration >= (segmentsPerSession * segmentDuration) {
+			// TODO(Leon Handreke): We may end up with a zero-length session here in rare cases.
+			sessionIntervals = append(sessionIntervals, Interval{
+				timeBase,
+				keyframeInterval.EndTimestamp,
+				keyframeInterval.EndTimestamp,
+			})
+		}
+	}
+
+	segmentIndex := 0
+	sessions := []SegmentList{}
+	for _, sessionInterval := range sessionIntervals {
+		sessions = append(sessions, BuildConstantSegmentDurations(sessionInterval, segmentDuration, segmentIndex))
+		segmentIndex += segmentsPerSession
+	}
+	return sessions
 }

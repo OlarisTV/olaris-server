@@ -67,15 +67,10 @@ func GetLanguageTag(stream ProbeStream) string {
 	return "unk"
 }
 
-func BuildConstantSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) []SegmentList {
+func BuildConstantSegmentDurations(interval Interval, segmentDuration time.Duration, startSegmentIndex int) SegmentList {
 	// We just assume that the time_base is the same for all.
-	timeBase := keyframeIntervals[0].TimeBase
-	totalInterval := Interval{
-		timeBase,
-		keyframeIntervals[0].StartTimestamp,
-		keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp,
-	}
-	totalDuration := totalInterval.Duration()
+	timeBase := interval.TimeBase
+	totalDuration := interval.Duration()
 	segmentDurationDts := int64(segmentDuration.Seconds() * float64(timeBase))
 	numFullSegments := int(totalDuration / segmentDuration)
 
@@ -86,20 +81,23 @@ func BuildConstantSegmentDurations(keyframeIntervals []Interval, segmentDuration
 				Interval{
 					timeBase,
 					// Casting time.Duration to int is OK here because segmentDuration is small
-					DtsTimestamp(int64(i) * segmentDurationDts),
-					DtsTimestamp(int64(i+1) * segmentDurationDts),
+					interval.StartTimestamp + DtsTimestamp(int64(i)*segmentDurationDts),
+					interval.StartTimestamp + DtsTimestamp(int64(i+1)*segmentDurationDts),
 				},
-				int(i),
+				startSegmentIndex + int(i),
 			})
 	}
-	lastEndTimestamp := session[len(session)-1].EndTimestamp
-	session = append(session,
-		Segment{Interval{
-			timeBase,
-			lastEndTimestamp,
-			keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp},
-			numFullSegments})
-	return []SegmentList{session}
+	if numFullSegments == 0 {
+		session = append(session,
+			Segment{Interval{
+				timeBase,
+				interval.StartTimestamp,
+				interval.EndTimestamp},
+				startSegmentIndex + numFullSegments})
+	} else {
+		session[len(session)-1].EndTimestamp = interval.EndTimestamp
+	}
+	return session
 }
 
 func buildIntervals(startTimestamps []DtsTimestamp, totalDuration DtsTimestamp, timeBase int64) []Interval {

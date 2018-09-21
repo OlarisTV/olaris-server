@@ -86,9 +86,14 @@ func NewAudioTranscodingSession(
 
 func GetTranscodedAudioRepresentation(stream Stream, representationId string, encoderParams EncoderParams) StreamRepresentation {
 	keyFrameItervals, _ := GetKeyframeIntervals(stream)
+	totalInterval := Interval{
+		keyFrameItervals[0].TimeBase,
+		keyFrameItervals[0].StartTimestamp,
+		keyFrameItervals[len(keyFrameItervals)-1].EndTimestamp,
+	}
 
-	segmentStartTimestamps := BuildConstantSegmentDurations(
-		keyFrameItervals, transcodedAudioSegmentDuration)
+	segmentStartTimestamps := buildAudioSegmentDurations(
+		totalInterval, transcodedAudioSegmentDuration)
 
 	return StreamRepresentation{
 		Stream: stream,
@@ -101,4 +106,47 @@ func GetTranscodedAudioRepresentation(stream Stream, representationId string, en
 		},
 		SegmentStartTimestamps: segmentStartTimestamps,
 	}
+}
+
+func buildAudioSegmentDurations(interval Interval, segmentDuration time.Duration) []SegmentList {
+	sessions := []SegmentList{}
+
+	session := SegmentList{}
+	currentTimestamp := interval.StartTimestamp
+	segmentId := 0
+
+	segmentDurationDts := DtsTimestamp(segmentDuration.Seconds() * float64(interval.TimeBase))
+
+	for currentTimestamp < interval.EndTimestamp {
+		if len(session) >= segmentsPerSession {
+			sessions = append(sessions, session)
+			session = SegmentList{}
+		}
+
+		session = append(session, Segment{
+			Interval{
+				interval.TimeBase,
+				currentTimestamp,
+				currentTimestamp + segmentDurationDts,
+			},
+			segmentId,
+		})
+
+		segmentId++
+		currentTimestamp += segmentDurationDts
+	}
+
+	// Append the last segment to the end of the interval
+	session = append(session, Segment{
+		Interval{
+			interval.TimeBase,
+			currentTimestamp,
+			interval.EndTimestamp,
+		},
+		segmentId,
+	})
+	sessions = append(sessions, session)
+
+	return sessions
+
 }
