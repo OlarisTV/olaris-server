@@ -17,6 +17,11 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if !mediaFileURLExists(streamKey.MediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
+
 	stream, err := ffmpeg.GetStream(streamKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -51,6 +56,11 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if !mediaFileURLExists(streamKey.MediaFileURL) {
+		http.NotFound(w, r)
+		return
+	}
+
 	stream, err := ffmpeg.GetStream(streamKey)
 	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
 		stream,
