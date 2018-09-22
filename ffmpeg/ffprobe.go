@@ -5,6 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
+	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
 	"os"
@@ -99,7 +100,8 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
-		cmd := exec.Command("ffprobe",
+		cmd := exec.Command(
+			executable.GetFFprobeExecutablePath(),
 			"-show_data",
 			"-show_format",
 			"-show_streams", fileURL, "-print_format", "json", "-v", "quiet")

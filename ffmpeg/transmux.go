@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
 	"log"
 	"os"
@@ -40,7 +41,7 @@ func NewTransmuxingSession(
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.m3u")}
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Dir = outputDir
 

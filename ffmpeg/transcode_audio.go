@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
 	"log"
 	"os"
@@ -74,7 +75,7 @@ func NewAudioTranscodingSession(
 		splitTimes = append(splitTimes, int64(s.StartTimestamp))
 	}
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
 	log.Println("ffmpeg started with", cmd.Args)
 
 	logSink := getTranscodingLogSink("ffmpeg_transcode_audio")

@@ -44,12 +44,16 @@ func MetadataConfigPath() string {
 	return path.Join(BaseConfigPath(), "metadb")
 }
 
-func LogPath() string {
+func CacheDir() string {
 	cacheDir, err := UserCacheDir()
 	if err != nil {
 		panic(fmt.Sprintf("Error getting user cache dir: %s", err.Error()))
 	}
-	logPath := path.Join(cacheDir, "olaris", "log")
+	return path.Join(cacheDir, "olaris")
+}
+
+func LogPath() string {
+	logPath := path.Join(CacheDir(), "log")
 	EnsurePath(logPath)
 	return logPath
 }
