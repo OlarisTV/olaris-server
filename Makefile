@@ -21,16 +21,18 @@ IDENTIFIER=$(BINARY_NAME)-$(GOOS)-$(GOARCH)
 all: generate
 
 .PHONY: ready-ci
-ready-ci:
-	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
-	unzip react/static.zip -d react/
-	make generate
+ready-ci: download-olaris-react generate
 
-.PHONY: update-react
-update-react:
-	if [ ! -d "./builds" ]; then git clone $(REACT_REPO) builds; fi
-	cd builds && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
-	cp -r builds/build ./react/
+.PHONY: download-olaris-react
+download-olaris-react:
+	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
+	unzip -o react/static.zip -d react/
+
+.PHONY: build-olaris-react
+build-olaris-react:
+	if [ ! -d "./builds/olaris-react" ]; then cd builds && git clone $(REACT_REPO) olaris-react; fi
+	cd builds/olaris-react && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
+	cp -r builds/olaris-react/build ./react/
 
 .PHONY: build
 build:
