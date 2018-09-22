@@ -9,8 +9,6 @@ import (
 	"sync"
 )
 
-var mediaFilesDir = flag.String("media_files_dir", "/var/media", "Path to the media files to be served")
-
 var sessions = []*ffmpeg.TranscodingSession{}
 
 // Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
@@ -19,7 +17,6 @@ var sessionsMutex = sync.Mutex{}
 var router = mux.NewRouter()
 
 func GetHandler() http.Handler {
-	router.HandleFunc("/api/v1/files", serveFileIndex)
 	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
 
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
