@@ -40,6 +40,9 @@ build:
 build_local:
 	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
+build-docker:
+	docker build -t olaris-server .
+
 .PHONY: crossbuild
 crossbuild:
 	mkdir -p $(BIN_LOC)
