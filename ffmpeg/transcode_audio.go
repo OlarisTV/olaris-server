@@ -33,9 +33,14 @@ func NewAudioTranscodingSession(
 	// TODO(Leon Handreke): Fix the prerun
 	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
 	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
+	startSegmentIndex := segments[0].SegmentId
 
 	// With AAC, we always encode an extra segment before to avoid encoder priming on the first segment we actually want
-	//runDuration := segmentsPerSession*transcodedAudioSegmentDuration + transcodedAudioSegmentDuration
+	if startSegmentIndex > 0 {
+		startDuration -= transcodedAudioSegmentDuration
+		startSegmentIndex--
+	}
+
 	//runStartDuration := startDuration - transcodedAudioSegmentDuration
 	//
 	//if runStartDuration < 0 {
@@ -57,7 +62,7 @@ func NewAudioTranscodingSession(
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
+		"-start_number", fmt.Sprintf("%d", startSegmentIndex),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
