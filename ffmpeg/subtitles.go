@@ -18,20 +18,20 @@ func NewSubtitleSession(
 		return nil, err
 	}
 
-	extractSubtitlesCmd := exec.Command("ffmpeg",
+	cmd := exec.Command("ffmpeg",
 		// -ss being before -i is important for fast seeking
 		"-i", stream.Stream.MediaFileURL,
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-threads", "2",
 		"-f", "webvtt",
 		"stream0_0.m4s")
-	extractSubtitlesCmd.Stderr, _ = os.Open(os.DevNull)
-	extractSubtitlesCmd.Dir = outputDir
+	cmd.Stderr, _ = os.Open(os.DevNull)
+	cmd.Dir = outputDir
 
-	log.Println("ffmpeg initialized with", extractSubtitlesCmd.Args)
+	log.Println("ffmpeg initialized with", cmd.Args, " in dir ", cmd.Dir)
 
 	return &TranscodingSession{
-		cmd:       extractSubtitlesCmd,
+		cmd:       cmd,
 		Stream:    stream,
 		outputDir: outputDir,
 		segments:  segments,
