@@ -46,7 +46,7 @@ const transcodingMasterPlaylistTemplate = `#EXTM3U
 
 {{ range $ci, $c := .representationCombinations -}}
 #EXT-X-STREAM-INF:BANDWIDTH={{$c.VideoStream.Representation.BitRate}},CODECS="{{$c.VideoStream.Representation.Codecs}},{{$c.AudioCodecs}}",AUDIO="{{$c.AudioGroupName}}"
-{{- if $.subtitleStreamRepresentations -}}
+{{- if $.subtitlePlaylistItems -}}
 ,SUBTITLES="webvtt"
 {{- end }}
 {{$c.VideoStream.Stream.StreamId}}/{{$c.VideoStream.Representation.RepresentationId}}/media.m3u8
