@@ -6,7 +6,6 @@ binaries
 bin
 node_modules
 cmd/olaris-server/bsmds-linux
-app/build
 **/bindata.go
 react/build
 yarn.lock
