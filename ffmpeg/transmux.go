@@ -45,7 +45,7 @@ func NewTransmuxingSession(
 	log.Println("ffmpeg started with", cmd.Args)
 	cmd.Dir = outputDir
 
-	logSink := getTranscodingLogSink("ffmpeg")
+	logSink := getTranscodingLogSink("ffmpeg_transmux")
 	//io.WriteString(logSink, fmt.Sprintf("%s %s\n\n", cmd.Args, options.String()))
 	cmd.Stderr = logSink
 	cmd.Stdout = os.Stdout
