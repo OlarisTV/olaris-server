@@ -1,7 +1,6 @@
 package streaming
 
 import (
-	"flag"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
