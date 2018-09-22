@@ -8,9 +8,9 @@ GOVET=$(GOCMD) vet
 GOGET=$(GOCMD) get
 GOGENERATE=$(GOCMD) generate
 BIN_LOC=build
-BINARY_NAME=olaris-server
+BINARY_NAME=olaris
 GODEP=dep
-CMD_SERVER_PATH=cmd/olaris-server/main.go
+CMD_SERVER_PATH=cmd/olaris/main.go
 REACT_REPO=https://gitlab.com/olaris/olaris-react.git
 SRC_PATH=gitlab.com/olaris/olaris-server
 LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
