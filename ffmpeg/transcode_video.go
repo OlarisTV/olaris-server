@@ -30,8 +30,6 @@ func NewVideoTranscodingSession(
 		return nil, err
 	}
 
-	fmt.Println(segments)
-
 	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
 	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
 	encoderParams := stream.Representation.encoderParams

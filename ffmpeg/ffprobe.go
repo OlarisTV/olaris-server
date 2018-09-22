@@ -139,7 +139,7 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 		"-select_streams", strconv.Itoa(int(s.StreamId)),
 		// Use dts_time here because ffmpeg seeking works by DTS,
 		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
-		"-show_entries", "packet=dts,flags",
+		"-show_entries", "packet=pts,dts,flags",
 		"-v", "quiet",
 		"-of", "csv",
 		s.MediaFileURL)
@@ -161,12 +161,22 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 		// Each line has the format "packet,4.223000,K_"
 		line := strings.Split(scanner.Text(), ",")
 		// Sometimes there are empty lines at the end
-		if len(line) != 3 {
+		if len(line) != 4 {
 			continue
 		}
-		if line[2][0] == 'K' {
+		if line[3][0] == 'K' {
 			dts := int64(0)
-			if line[1] != "N/A" {
+			if line[2] != "N/A" {
+				dts, err = strconv.ParseInt(line[2], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				// NOTE(Leon Handreke): Use PTS as fallback here. The issue is that at the beginning,
+				// DTS is sometimes N/A. Just setting it to zero breaks our cut prediction algorithm.
+				// ffmpeg internally splits by PTS (i.e. PTS of first packet it sees + n*seglength).
+				// TODO(Leon Handreke): The ideal thing would be to extract both PTS and DTS here
+				// and do the cut prediction by PTS but the seeking by DTS.
 				dts, err = strconv.ParseInt(line[1], 10, 64)
 				if err != nil {
 					return nil, err
