@@ -36,8 +36,8 @@ update-react:
 build:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -o $(BIN_LOC)/$(IDENTIFIER) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
-.PHONY: build_local
-build_local:
+.PHONY: build-local
+build-local:
 	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
 build-docker:

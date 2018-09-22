@@ -3,17 +3,17 @@ settings:
     force: false
     interval: 0s
 schema:
-- name: olaris-server
+- name: olaris
   path: .
   commands:
     generate:
       status: true
     build:
       status: true
-      dir: cmd/olaris-server
+      dir: cmd/olaris
     run:
       status: true
-      path: cmd/olaris-server
+      path: cmd/olaris
   watcher:
     extensions:
     - go
