@@ -27,6 +27,7 @@ ready-ci: download-olaris-react generate
 download-olaris-react:
 	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
 	unzip -o react/static.zip -d react/
+	rm react/static.zip
 
 .PHONY: build-olaris-react
 build-olaris-react:
