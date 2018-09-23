@@ -16,8 +16,6 @@ var sessionsMutex = sync.Mutex{}
 var router = mux.NewRouter()
 
 func GetHandler() http.Handler {
-	router.HandleFunc("/api/v1/state", handleSetMediaPlaybackState).Methods("POST")
-
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
