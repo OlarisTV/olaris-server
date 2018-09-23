@@ -1,35 +1,8 @@
 FROM ubuntu:xenial as base
 
-FROM base as ffchunk-build
-
-WORKDIR     /tmp/workdir
-
-RUN     apt-get -y update && \
-        apt-get install -y --no-install-recommends ca-certificates git build-essential
-
-RUN apt-get -y --no-install-recommends install \
-	    cmake pkg-config \
-	    libavformat-dev libavutil-dev libavcodec-dev libswresample-dev \
-	    libprotobuf-c-dev
-RUN true
-RUN git clone -b master https://gitlab.com/olaris/ffchunk.git
-RUN mkdir -p ffchunk/build && cd ffchunk/build && cmake .. && make && make install && cd ../..
-
 FROM        base AS olaris-dev
 
-COPY --from=ffchunk-build /usr/local/bin/ffchunk_transmux /usr/local/bin/ffchunk_transmux
-COPY --from=ffchunk-build /usr/local/bin/ffchunk_transcode_video /usr/local/bin/ffchunk_transcode_video
-COPY --from=ffchunk-build /usr/local/bin/ffchunk_transcode_audio /usr/local/bin/ffchunk_transcode_audio
-
 RUN     apt-get -y update
-
-# Install ffmpeg
-RUN     apt-get -y --no-install-recommends install ffmpeg
-
-# Install ffchunk dependencies
-# We install -dev packages because their names remain stable between Ubuntu releases
-RUN apt-get -y --no-install-recommends install libavformat-dev libavutil-dev libavcodec-dev libswresample-dev \
-	libprotobuf-c1
 
 #RUN apt-get -y install software-properties-common gpg
 #RUN add-apt-repository ppa:gophers/archive

@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := build_local
+.DEFAULT_GOAL := build-local
 
 GOCMD=go
 GOBUILD=$(GOCMD) build
@@ -36,11 +36,11 @@ build-olaris-react:
 	cp -r builds/olaris-react/build ./react/
 
 .PHONY: build
-build:
+build: generate
 	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -o $(BIN_LOC)/$(IDENTIFIER) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
 .PHONY: build-local
-build-local:
+build-local: generate
 	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
 build-docker:
