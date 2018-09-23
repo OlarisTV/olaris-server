@@ -33,6 +33,11 @@ var langTagToHumanized = map[string]string{
 	"ita": "Italian",
 	"fre": "French",
 	"spa": "Spanish",
+	"dut": "Dutch",
+	"por": "Portugese",
+	"pol": "Polish",
+	"rus": "Russian",
+	"vie": "Vietnamese",
 	"hun": "Hungarian",
 	"unk": "Unknown",
 }
