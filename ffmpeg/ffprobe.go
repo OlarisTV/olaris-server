@@ -140,7 +140,8 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 
 // probeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
 func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
-	cmd := exec.Command("ffprobe",
+	cmd := exec.Command(
+		executable.GetFFprobeExecutablePath(),
 		"-select_streams", strconv.Itoa(int(s.StreamId)),
 		// Use dts_time here because ffmpeg seeking works by DTS,
 		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
