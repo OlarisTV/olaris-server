@@ -97,7 +97,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := db.CreateUser(ur.Username, ur.Password, ur.Code)
+	user, err := db.CreateUserWithCode(ur.Username, ur.Password, ur.Code)
 	if err != nil {
 		writeError(err.Error(), w, http.StatusUnauthorized)
 		return
