@@ -5,6 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
@@ -106,6 +107,8 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 			"-show_format",
 			"-show_streams", fileURL, "-print_format", "json", "-v", "quiet")
 		cmd.Stderr = os.Stderr
+
+		log.Infof("Starting %s with args %s", cmd.Path, cmd.Args)
 
 		r, err := cmd.StdoutPipe()
 		if err != nil {

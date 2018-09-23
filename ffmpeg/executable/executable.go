@@ -37,7 +37,6 @@ func getExecutablePath(name string) string {
 			return name
 		}
 	}
-	fmt.Println(binaryPath)
 	return binaryPath
 }
 
