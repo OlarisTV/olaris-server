@@ -19,8 +19,8 @@ type fileLocator struct {
 
 var allowDirectFileAccessFlag = flag.Bool(
 	"allow_direct_file_access",
-	true,
-	"Whether accessing files directly by their path (without presending a valid JWT) is allowed")
+	false,
+	"Whether accessing files directly by their path (without presenting a valid JWT) is allowed")
 
 // getFileLocator parses the file that the client is trying to access from a string.
 // The passed string may either be in the form of "jwt/<streaming JWT>
