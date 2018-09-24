@@ -209,7 +209,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 		parsedInfo := parsers.ParseSerieName(name)
 		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := db.MediaItem{
-				FileName:  name,
+				FileName:  basename,
 				FilePath:  filePath,
 				Size:      fileInfo.Size(),
 				Title:     parsedInfo.Title,
@@ -242,7 +242,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 		db.FirstOrCreateMovie(&movie, movie)
 
 		mi := db.MediaItem{
-			FileName:  name,
+			FileName:  basename,
 			FilePath:  filePath,
 			Size:      fileInfo.Size(),
 			Title:     mvi.Title,
