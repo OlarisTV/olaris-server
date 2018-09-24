@@ -312,6 +312,11 @@ func (r *EpisodeFileResolver) UUID() string {
 	return r.r.UUID
 }
 
+// FileSize returns episode filesize
+func (r *EpisodeFileResolver) FileSize() int32 {
+	return int32(r.r.Size)
+}
+
 // TotalDuration returns the total duration in seconds based on the first encountered videostream.
 func (r *EpisodeFileResolver) TotalDuration() *float64 {
 	for _, stream := range r.r.Streams {

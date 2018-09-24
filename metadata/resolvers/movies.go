@@ -112,6 +112,11 @@ func (r *MovieFileResolver) FileName() string {
 	return r.r.FileName
 }
 
+// FileSize returns movie filesize
+func (r *MovieFileResolver) FileSize() int32 {
+	return int32(r.r.Size)
+}
+
 // UUID returns movie uuid.
 func (r *MovieFileResolver) UUID() string {
 	return r.r.UUID

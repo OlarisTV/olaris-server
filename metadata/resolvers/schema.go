@@ -162,6 +162,8 @@ var SchemaTxt = `
 		streams: [Stream]!
 		# Total duration of the first video stream in seconds
 		totalDuration: Float
+		# FileSize in bytes
+		fileSize: Int!
 	}
 
 	type Stream {
@@ -219,6 +221,8 @@ var SchemaTxt = `
 		streams: [Stream]!
 		# Total duration of the first video stream in seconds
 		totalDuration: Float
+		# FileSize in bytes
+		fileSize: Int!
 	}
 
 	# Invite that can be used to allow other users access to your server.
