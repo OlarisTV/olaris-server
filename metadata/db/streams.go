@@ -33,7 +33,7 @@ func CollectStreams(filePath string) []Stream {
 		streams = append(streams, Stream{Stream: s})
 	}
 
-	_, err := ffmpeg.GetKeyframeIntervals(videoStream)
+	_, err := ffmpeg.GetOrCacheKeyFrames(videoStream)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Warnln("Error creating keyframe data")
 

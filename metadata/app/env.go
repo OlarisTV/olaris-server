@@ -26,10 +26,23 @@ type MetadataContext struct {
 
 var env *MetadataContext
 
+// GormLogger ensures logging for db queries uses logrus
+type GormLogger struct{}
+
+// Print is the print method for db logging
+func (*GormLogger) Print(v ...interface{}) {
+	if v[0] == "sql" {
+		log.WithFields(log.Fields{"module": "gorm", "type": "sql"}).Debugln(v[3])
+	}
+	if v[0] == "log" {
+		log.WithFields(log.Fields{"module": "gorm", "type": "log"}).Print(v[2])
+	}
+}
+
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, false)
+	return NewMDContext(dbPath, true)
 }
 
 // NewMDContext lets you create a more custom environment.
@@ -40,6 +53,7 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	log.Printf("Olaris-server - v%s", helpers.Version())
 
 	db := db.NewDb(dbPath, dbLogMode)
+	db.SetLogger(&GormLogger{})
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

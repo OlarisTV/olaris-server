@@ -187,3 +187,35 @@ func MovieFileExists(filePath string) bool {
 	}
 	return true
 }
+
+type mergeResult struct {
+	TmdbID  uint
+	ID      uint
+	Counter uint
+}
+
+// MergeDuplicateMovies should merge duplicate movies into a singular movie with movie files associated.
+func MergeDuplicateMovies() int {
+	log.Debugln("Checking for duplicate movies that can be merged.")
+
+	var merging []mergeResult
+	rows, err := db.Raw("SELECT tmdb_id,id, count(*) as counter FROM movies WHERE tmdb_id != 0 GROUP BY tmdb_id HAVING counter > 1").Rows()
+	if err != nil {
+		fmt.Println(err)
+	}
+	for rows.Next() {
+		var res mergeResult
+		db.ScanRows(rows, &res)
+		merging = append(merging, res)
+	}
+	rows.Close()
+
+	for _, res := range merging {
+		log.WithFields(log.Fields{"tmdb_id": res.TmdbID}).Debugln("Merging movies based on tmdb_id.")
+
+		// We might want to ensure this always works, I'm not sure how deterministic the order of SQLite is.
+		db.Exec("UPDATE movie_files SET movie_id=(SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1) WHERE movie_id = ?", res.TmdbID, res.ID)
+		db.Exec("DELETE FROM movies WHERE id = ?", res.ID)
+	}
+	return 0
+}
