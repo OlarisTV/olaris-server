@@ -38,6 +38,7 @@ func CollectStreamKeyFrames() {
 		collectingKeyframes = false
 		mutex.Unlock()
 	}
+	log.Infoln("Finished keyframe cache generation.")
 }
 
 // CollectStreams collects all stream information for the given file.
