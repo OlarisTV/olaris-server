@@ -180,13 +180,14 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 	cmd.Wait()
 	return keyframes, nil
 }
-func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
+
+func GetOrCacheKeyFrames(stream Stream) ([]DtsTimestamp, error) {
 	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
 	// sometimes just a name. We need some other good descriptor for files,
 	// preferably including a checksum
 	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFileURL)
 	if err != nil {
-		return []Interval{}, err
+		return []DtsTimestamp{}, err
 	}
 
 	keyframeTimestamps := []DtsTimestamp{}
@@ -200,7 +201,7 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 		start := time.Now()
 		keyframeTimestamps, err = probeKeyframes(stream.StreamKey)
 		if err != nil {
-			return []Interval{}, err
+			return []DtsTimestamp{}, err
 		}
 
 		keyframeCache := db.KeyframeCache{Filename: stream.MediaFileURL}
@@ -211,7 +212,14 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 		elapsed := time.Since(start)
 		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL, "timeSpend": fmt.Sprintf("%s", elapsed)}).Debugln("Keyframe cache generated.")
 	}
+	return keyframeTimestamps, nil
+}
 
+func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
+	keyframeTimestamps, err := GetOrCacheKeyFrames(stream)
+	if err != nil {
+		return []Interval{}, nil
+	}
 	return buildIntervals(keyframeTimestamps, stream.TotalDurationDts, stream.TimeBase), nil
 }
 
