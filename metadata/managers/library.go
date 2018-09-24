@@ -348,9 +348,8 @@ func (man *LibraryManager) RefreshAll() {
 
 		log.WithFields(lib.LogFields()).Infoln("Scanning library for metadata updates.")
 		man.UpdateMD(&lib)
-
-		db.MergeDuplicateMovies()
-
 	}
+
+	db.MergeDuplicateMovies()
 	log.Println("Finished refreshing libraries.")
 }
