@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
@@ -31,6 +32,13 @@ func CollectStreams(filePath string) []Stream {
 	for _, s := range subs {
 		streams = append(streams, Stream{Stream: s})
 	}
+
+	_, err := ffmpeg.GetKeyframeIntervals(videoStream)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warnln("Error creating keyframe data")
+
+	}
+
 	return streams
 }
 

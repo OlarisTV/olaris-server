@@ -5,6 +5,7 @@ import (
 	_ "bytes"
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
 	"os"
@@ -179,7 +180,6 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 	cmd.Wait()
 	return keyframes, nil
 }
-
 func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
 	// sometimes just a name. We need some other good descriptor for files,
@@ -191,11 +191,13 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 
 	keyframeTimestamps := []DtsTimestamp{}
 	if keyframeCache != nil {
-		//glog.Infof("Reading keyframes for %s from cache", stream.MediaFileURL)
+		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL}).Debugln("We already have a keyframeCache.")
 		for _, v := range keyframeCache.KeyframeTimestamps {
 			keyframeTimestamps = append(keyframeTimestamps, DtsTimestamp(v))
 		}
 	} else {
+		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL}).Debugln("No keyframeCache yet, generating.")
+		start := time.Now()
 		keyframeTimestamps, err = probeKeyframes(stream.StreamKey)
 		if err != nil {
 			return []Interval{}, err
@@ -206,6 +208,8 @@ func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
 			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
 		}
 		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
+		elapsed := time.Since(start)
+		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL, "timeSpend": fmt.Sprintf("%s", elapsed)}).Debugln("Keyframe cache generated.")
 	}
 
 	return buildIntervals(keyframeTimestamps, stream.TotalDurationDts, stream.TimeBase), nil
