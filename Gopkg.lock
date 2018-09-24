@@ -119,6 +119,12 @@
   revision = "e698b6abc17ead17ea89d3d22a4b2625299701e3"
 
 [[projects]]
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/jinzhu/gorm"
   packages = [
@@ -231,6 +237,12 @@
   name = "github.com/skratchdot/open-golang"
   packages = ["open"]
   revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
+
+[[projects]]
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
+  version = "v0.0.3"
 
 [[projects]]
   branch = "master"
@@ -358,6 +370,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "79fc377df69a262c0ac0c0b4f8556ce57cfab91bd93161f5977bc4da352308f7"
+  inputs-digest = "cc372714db397f8cc46ed3106ac7d094ba426715d160098c351421d75edfbaf3"
   solver-name = "gps-cdcl"
   solver-version = 1

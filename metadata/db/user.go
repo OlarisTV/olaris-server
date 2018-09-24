@@ -74,17 +74,8 @@ func (user *User) hashPassword(password string, salt string) string {
 	return hashedStr
 }
 
-// CreateUser creates a new user. The invite code will be ignored if no other users exist yet.
-func CreateUser(username string, password string, code string) (User, error) {
-	// TODO Maran: Create a way to return all errors at once
-	if len(username) < 3 {
-		return User{}, fmt.Errorf("username should be at least 3 characters")
-	}
-
-	if len(password) < 8 {
-		return User{}, fmt.Errorf("password should be at least 8 characters")
-	}
-
+// CreateUserWithCode creates a new user. The invite code will be ignored if no other users exist yet.
+func CreateUserWithCode(username string, password string, code string) (User, error) {
 	count := 0
 	db.Table("users").Count(&count)
 
@@ -103,9 +94,7 @@ func CreateUser(username string, password string, code string) (User, error) {
 		admin = true
 	}
 
-	user := User{Username: username, Admin: admin}
-	user.SetPassword(password, helpers.RandAlphaString(24))
-	dbobj := db.Create(&user)
+	user, err := CreateUser(username, password, admin)
 
 	if count > 0 {
 		if !db.NewRecord(&user) {
@@ -113,6 +102,24 @@ func CreateUser(username string, password string, code string) (User, error) {
 			db.Save(&invite)
 		}
 	}
+	return user, err
+}
+
+func CreateUser(username string, password string, admin bool) (User, error) {
+	// TODO Maran: Create a way to return all errors at once
+	if len(username) < 3 {
+		return User{}, fmt.Errorf("username should be at least 3 characters")
+	}
+
+	if len(password) < 8 {
+		return User{}, fmt.Errorf("password should be at least 8 characters")
+	}
+
+	user := User{Username: username, Admin: admin}
+	user.SetPassword(password, helpers.RandAlphaString(24))
+	fmt.Println(user)
+	dbobj := db.Create(&user)
+
 	return user, dbobj.Error
 }
 

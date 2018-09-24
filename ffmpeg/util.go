@@ -100,7 +100,17 @@ func BuildConstantSegmentDurations(interval Interval, segmentDuration time.Durat
 				interval.EndTimestamp},
 				startSegmentIndex + numFullSegments})
 	} else {
-		session[len(session)-1].EndTimestamp = interval.EndTimestamp
+		// NOTE(Leon Handreke): Longer last segment
+		//session[len(session)-1].EndTimestamp = interval.EndTimestamp
+		// NOTE(Leon Handreke): Shorter last segment
+		session = append(session, Segment{
+			Interval{
+				timeBase,
+				session[len(session)-1].EndTimestamp,
+				interval.EndTimestamp,
+			},
+			startSegmentIndex + numFullSegments,
+		})
 	}
 	return session
 }

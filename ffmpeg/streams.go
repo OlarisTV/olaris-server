@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -91,8 +92,8 @@ func GetVideoStream(mediaFilePath string) (Stream, error) {
 		return Stream{}, err
 	}
 	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
-	if len(streams) != 1 {
-		return Stream{}, fmt.Errorf("File %s does not contain exactly one video stream", mediaFilePath)
+	if len(streams) > 1 {
+		log.Infof("File %s does not contain exactly one video stream", mediaFilePath)
 	}
 	return streams[0], nil
 

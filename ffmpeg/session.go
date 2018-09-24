@@ -13,10 +13,11 @@ import (
 )
 
 type TranscodingSession struct {
-	cmd       *exec.Cmd
-	Stream    StreamRepresentation
-	outputDir string
-	segments  SegmentList
+	cmd        *exec.Cmd
+	Stream     StreamRepresentation
+	outputDir  string
+	segments   SegmentList
+	terminated bool
 }
 
 func (s *TranscodingSession) Start() error {
@@ -26,6 +27,7 @@ func (s *TranscodingSession) Start() error {
 	// Prevent zombies
 	go func() {
 		s.cmd.Wait()
+		s.terminated = true
 	}()
 	return nil
 }
@@ -79,13 +81,23 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 
 	r := regexp.MustCompile("stream0_(?P<number>\\d+).m4s$")
 
+	maxSegmentId := 0
+
 	for _, f := range files {
 		match := r.FindString(f.Name())
 		if match != "" {
 			segmentFsNumber, _ := strconv.Atoi(match[len("stream0_") : len(match)-len(".m4s")])
 			res[segmentFsNumber] = filepath.Join(s.outputDir, f.Name())
-		}
 
+			if segmentFsNumber > maxSegmentId {
+				maxSegmentId = segmentFsNumber
+			}
+		}
+	}
+
+	// We delete the "newest" segment because it may still be written to to avoid races.
+	if len(res) > 0 && !s.terminated {
+		delete(res, maxSegmentId)
 	}
 
 	return res, nil
