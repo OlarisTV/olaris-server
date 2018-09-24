@@ -4,6 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"sync"
 )
 
 // Stream holds information about the various streams included in a mediafile. This can be audio/video or even subtitle data.
@@ -13,6 +14,30 @@ type Stream struct {
 	UUIDable
 	OwnerID   uint
 	OwnerType string
+}
+
+var mutex = &sync.Mutex{}
+var collectingKeyframes bool
+
+// CollectStreamKeyFrames indexes all keyframes for accurate seeking
+func CollectStreamKeyFrames() {
+	log.Infoln("Starting keyframe cache generation.")
+	if collectingKeyframes == false {
+		mutex.Lock()
+		collectingKeyframes = true
+		mutex.Unlock()
+		var streams []Stream
+		db.Where("stream_type = 'video' OR stream_type = 'audio'").Find(&streams)
+		for _, stream := range streams {
+			_, err := ffmpeg.GetOrCacheKeyFrames(ffmpeg.Stream{StreamKey: ffmpeg.StreamKey{StreamId: stream.StreamId, MediaFileURL: stream.MediaFileURL}})
+			if err != nil {
+				log.WithFields(log.Fields{"error": err, "file": stream.MediaFileURL}).Warnln("Error creating keyframe data")
+			}
+		}
+		mutex.Lock()
+		collectingKeyframes = false
+		mutex.Unlock()
+	}
 }
 
 // CollectStreams collects all stream information for the given file.
@@ -31,11 +56,6 @@ func CollectStreams(filePath string) []Stream {
 
 	for _, s := range subs {
 		streams = append(streams, Stream{Stream: s})
-	}
-
-	_, err := ffmpeg.GetOrCacheKeyFrames(videoStream)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Error creating keyframe data")
 	}
 
 	return streams
