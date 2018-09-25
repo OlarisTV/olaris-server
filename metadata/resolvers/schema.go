@@ -49,6 +49,8 @@ var SchemaTxt = `
 		# Delete a user from the database, please note that the user will be able to username until the JWT expires.
 		deleteUser(id: Int!): UserResponse!
 
+		updateStreams(uuid: String): BoolResponse!
+
 
 	}
 
@@ -69,6 +71,10 @@ var SchemaTxt = `
 	}
 
 	type CreatePSResponse {
+		success: Boolean!
+	}
+
+	type BoolResponse {
 		success: Boolean!
 	}
 
