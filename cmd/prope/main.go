@@ -18,8 +18,7 @@ func main() {
 		return
 	}
 
-	fmt.Println(probe.Format.Filename)
-	fmt.Printf("%+v\n", probe)
-	a := probe.Streams[0].GetMime()
-	fmt.Println("Mimetype:", a)
+	for _, s := range probe.Streams {
+		fmt.Printf("%s\n", s.String())
+	}
 }

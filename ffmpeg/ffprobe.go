@@ -47,6 +47,10 @@ type ProbeStream struct {
 	DurationTs    int               `json:"duration_ts"`
 }
 
+func (ps *ProbeStream) String() string {
+	return fmt.Sprintf("Stream %v (%s)\nCodec: %s (%s)\nResolution: %vx%v\nBitrate: %v\n", ps.Index, ps.CodecType, ps.CodecName, ps.CodecLongName, ps.Width, ps.Height, ps.BitRate)
+}
+
 func FilterProbeStreamByCodecType(streams []ProbeStream, codecType string) []ProbeStream {
 	res := []ProbeStream{}
 	for _, s := range streams {
