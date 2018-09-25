@@ -2,10 +2,13 @@
 package app
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	"math/rand"
+	"reflect"
+	"regexp"
 	"time"
 	// Import sqlite dialect
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -29,14 +32,56 @@ var env *MetadataContext
 // GormLogger ensures logging for db queries uses logrus
 type GormLogger struct{}
 
+var sqlRegexp = regexp.MustCompile(`(\$\d+)|\?`)
+
 // Print is the print method for db logging
-func (*GormLogger) Print(v ...interface{}) {
-	if v[0] == "sql" {
-		log.WithFields(log.Fields{"module": "gorm", "type": "sql"}).Debugln(v[3])
+//func (*GormLogger) Print(v ...interface{}) {
+//	if v[0] == "sql" {
+//		log.WithFields(log.Fields{"module": "gorm", "type": "sql", "duration": v[2]}).Debugln(v[3])
+//	}
+//	if v[0] == "log" {
+//		log.WithFields(log.Fields{"module": "gorm", "type": "log"}).Print(v[2])
+//	}
+//}
+func (l *GormLogger) Print(values ...interface{}) {
+	entry := log.WithField("name", "database")
+	if len(values) > 1 {
+		level := values[0]
+		source := values[1]
+		entry = log.WithField("source", source)
+		if level == "sql" {
+			duration := values[2]
+			// sql
+			var formattedValues []interface{}
+			for _, value := range values[4].([]interface{}) {
+				indirectValue := reflect.Indirect(reflect.ValueOf(value))
+				if indirectValue.IsValid() {
+					value = indirectValue.Interface()
+					if t, ok := value.(time.Time); ok {
+						formattedValues = append(formattedValues, fmt.Sprintf("'%v'", t.Format(time.RFC3339)))
+					} else if b, ok := value.([]byte); ok {
+						formattedValues = append(formattedValues, fmt.Sprintf("'%v'", string(b)))
+					} else if r, ok := value.(driver.Valuer); ok {
+						if value, err := r.Value(); err == nil && value != nil {
+							formattedValues = append(formattedValues, fmt.Sprintf("'%v'", value))
+						} else {
+							formattedValues = append(formattedValues, "NULL")
+						}
+					} else {
+						formattedValues = append(formattedValues, fmt.Sprintf("'%v'", value))
+					}
+				} else {
+					formattedValues = append(formattedValues, fmt.Sprintf("'%v'", value))
+				}
+			}
+			entry.WithField("took", duration).Debug(fmt.Sprintf(sqlRegexp.ReplaceAllString(values[3].(string), "%v"), formattedValues...))
+		} else {
+			entry.Error(values[2:]...)
+		}
+	} else {
+		entry.Error(values...)
 	}
-	if v[0] == "log" {
-		log.WithFields(log.Fields{"module": "gorm", "type": "log"}).Print(v[2])
-	}
+
 }
 
 // NewDefaultMDContext creates a new env with sane defaults.
