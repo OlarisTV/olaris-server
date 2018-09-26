@@ -3,6 +3,7 @@ package ffmpeg
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -99,9 +100,9 @@ func GetVideoStream(mediaFilePath string) (Stream, error) {
 
 }
 
-func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
+func GetVideoStreams(mediaFileURL string) ([]Stream, error) {
 	streams := []Stream{}
-	container, err := Probe(mediaFilePath)
+	container, err := Probe(mediaFileURL)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,6 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 		if stream.CodecType != "video" {
 			continue
 		}
-		bitrate, _ := strconv.Atoi(stream.BitRate)
 
 		timeBase, err := parseTimeBaseString(stream.TimeBase)
 		if err != nil {
@@ -122,10 +122,25 @@ func GetVideoStreams(mediaFilePath string) ([]Stream, error) {
 			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
 		}
 
+		bitrate, _ := strconv.Atoi(stream.BitRate)
+		if bitrate == 0 {
+			filepath, err := mediaFileURLToFilepath(mediaFileURL)
+			if err != nil {
+				return []Stream{}, fmt.Errorf("Could not determine local path for file %s", mediaFileURL)
+			}
+			fileinfo, err := os.Stat(filepath)
+			if err != nil {
+				return []Stream{}, fmt.Errorf("Could not determine filesize for file %s", mediaFileURL)
+			}
+			filesize := fileinfo.Size()
+			// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
+			bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
+		}
+
 		streams = append(streams,
 			Stream{
 				StreamKey: StreamKey{
-					MediaFileURL: mediaFilePath,
+					MediaFileURL: mediaFileURL,
 					StreamId:     int64(stream.Index),
 				},
 				Codecs:           stream.GetMime(),
