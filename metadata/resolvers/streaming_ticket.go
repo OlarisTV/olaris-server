@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
@@ -62,8 +63,10 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
 
-	HLSStreamingPath := fmt.Sprintf("/s/files/jwt/%s/hls-manifest.m3u8", token)
-	DASHStreamingPath := fmt.Sprintf("/s/files/jwt/%s/dash-manifest.mpd", token)
+	sessionID := helpers.RandAlphaString(16)
+
+	HLSStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/hls-manifest.m3u8", token, sessionID)
+	DASHStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/dash-manifest.mpd", token, sessionID)
 
 	return &CreateSTResponseResolver{CreateSTResponse{
 		Error:             nil,

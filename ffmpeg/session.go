@@ -1,7 +1,6 @@
 package ffmpeg
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -16,7 +15,6 @@ type TranscodingSession struct {
 	cmd        *exec.Cmd
 	Stream     StreamRepresentation
 	outputDir  string
-	segments   []Segment
 	terminated bool
 }
 
@@ -46,29 +44,6 @@ func (s *TranscodingSession) Destroy() error {
 	}
 
 	return nil
-}
-
-// GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
-// It will block for at most deadline.
-func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (string, error) {
-
-	if !s.IsProjectedAvailable(segmentId, deadline) {
-		return "", fmt.Errorf("Segment not projected to be available within deadline %s", deadline)
-	}
-
-	for {
-		availableSegments, _ := s.AvailableSegments()
-		if path, ok := availableSegments[segmentId]; ok {
-			return path, nil
-		}
-		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
-		time.Sleep(500 * time.Millisecond)
-	}
-}
-
-func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
-	return s.segments[0].SegmentId <= segmentId &&
-		segmentId <= s.segments[len(s.segments)-1].SegmentId
 }
 
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
@@ -114,7 +89,8 @@ func (s *TranscodingSession) InitialSegment() string {
 				return segmentPath
 			}
 		}
-		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
+		// TODO(Leon Handreke): Unify with GetSegment (special index number)
+		// and do the waiting in the server
 		time.Sleep(500 * time.Millisecond)
 	}
 }
