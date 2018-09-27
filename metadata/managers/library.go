@@ -433,7 +433,5 @@ func (man *LibraryManager) RefreshAll() {
 
 	db.MergeDuplicateMovies()
 
-	go db.CollectStreamKeyFrames()
-
 	log.Println("Finished refreshing libraries.")
 }

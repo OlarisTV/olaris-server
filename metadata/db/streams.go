@@ -17,32 +17,6 @@ type Stream struct {
 }
 
 var mutex = &sync.Mutex{}
-var collectingKeyframes bool
-
-// CollectStreamKeyFrames indexes all keyframes for accurate seeking
-func CollectStreamKeyFrames() {
-	log.Infoln("Starting keyframe cache generation.")
-	if collectingKeyframes == false {
-		// TODO: Make this a task queue.
-		mutex.Lock()
-		collectingKeyframes = true
-		mutex.Unlock()
-		var streams []Stream
-		db.Where("stream_type = 'video' OR stream_type = 'audio'").Find(&streams)
-		for _, stream := range streams {
-			_, err := ffmpeg.GetOrCacheKeyFrames(ffmpeg.Stream{StreamKey: ffmpeg.StreamKey{StreamId: stream.StreamId, MediaFileURL: stream.MediaFileURL}})
-			if err != nil {
-				log.WithFields(log.Fields{"error": err, "file": stream.MediaFileURL}).Warnln("Error creating keyframe data")
-			}
-		}
-		mutex.Lock()
-		collectingKeyframes = false
-		mutex.Unlock()
-	} else {
-		log.Warnln("Already generating keyframe cache, skipping")
-	}
-	log.Infoln("Finished keyframe cache generation.")
-}
 
 // UpdateAllStreams updates all streams for all mediaItems
 func UpdateAllStreams() {
