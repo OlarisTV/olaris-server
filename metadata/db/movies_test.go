@@ -27,7 +27,7 @@ func setupTest(t *testing.T) func() {
 	tmp, err := ioutil.TempDir(os.TempDir(), "bss-test")
 	if err == nil {
 		fmt.Println("Creating DB in:", tmp)
-		app.NewMDContext(tmp, true)
+		app.NewMDContext(tmp, false)
 	} else {
 		t.Error("Could not create tmpfile for database tests:", err)
 	}
