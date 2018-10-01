@@ -7,9 +7,11 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 )
 
+// GetHome returns the given users home folder
 func GetHome() string {
 	usr, err := user.Current()
 	if err != nil {
@@ -18,6 +20,7 @@ func GetHome() string {
 	return usr.HomeDir
 }
 
+// EnsurePath ensures the given filesystem path exists, if not it will create it.
 func EnsurePath(pathName string) error {
 	glog.Infof("Ensuring folder %s exists.\n", pathName)
 	if _, err := os.Stat(pathName); os.IsNotExist(err) {
@@ -31,19 +34,33 @@ func EnsurePath(pathName string) error {
 	return nil
 }
 
+// FileExists checks whether a file or folder exists in the filesystem, will follow symlinks and ensures the target exists too.
 func FileExists(pathName string) bool {
-	_, err := os.Stat(pathName)
-	return err == nil
+	fi, err := os.Lstat(pathName)
+	if err != nil {
+		return false
+	}
+	// Is a symlink
+	if fi.Mode()&os.ModeSymlink != 0 {
+		p, err := filepath.EvalSymlinks(pathName)
+		if err != nil {
+			return FileExists(p)
+		}
+	}
+	return true
 }
 
+// BaseConfigPath returns the root for our config folders.
 func BaseConfigPath() string {
 	return path.Join(GetHome(), ".config", "olaris")
 }
 
+// MetadataConfigPath returns the config path for the md server
 func MetadataConfigPath() string {
 	return path.Join(BaseConfigPath(), "metadb")
 }
 
+// CacheDir returns a cache folder to use.
 func CacheDir() string {
 	cacheDir, err := UserCacheDir()
 	if err != nil {
@@ -52,13 +69,13 @@ func CacheDir() string {
 	return path.Join(cacheDir, "olaris")
 }
 
+// LogPath returns the path to our logfolder.
 func LogPath() string {
 	logPath := path.Join(CacheDir(), "log")
 	EnsurePath(logPath)
 	return logPath
 }
 
-// TODO(Leon Handreke): This is in os in golang 1.11
 // UserCacheDir returns the default root directory to use for user-specific
 // cached data. Users should create their own application-specific subdirectory
 // within this one and use that.
@@ -75,6 +92,7 @@ func LogPath() string {
 func UserCacheDir() (string, error) {
 	var dir string
 
+	// TODO(Leon Handreke): This is in os in golang 1.11
 	switch runtime.GOOS {
 	case "windows":
 		dir = os.Getenv("LocalAppData")

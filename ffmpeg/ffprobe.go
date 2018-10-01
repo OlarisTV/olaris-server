@@ -7,6 +7,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
 	"os"
@@ -105,6 +106,10 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
+		if !helpers.FileExists(fileURL) {
+			return nil, fmt.Errorf("file does not exist")
+		}
+
 		cmd := exec.Command(
 			executable.GetFFprobeExecutablePath(),
 			"-show_data",
