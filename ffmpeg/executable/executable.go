@@ -27,13 +27,13 @@ func getExecutablePath(name string) string {
 	if _, err := os.Stat(binaryPath); err != nil {
 		data, err := Asset(name)
 		if err != nil {
-			log.Errorf("No %s compiled in, using system system version instead", name)
+			log.Warnf("No %s compiled in, using system system version instead", name)
 			return name
 		}
 		helpers.EnsurePath(binaryDir)
 		if err := ioutil.WriteFile(binaryPath, data, 0700); err != nil {
 			fmt.Println(err.Error())
-			log.Errorf("Failed to write %s built-in binary, using system version instead", name)
+			log.Warnf("Failed to write %s built-in binary, using system version instead", name)
 			return name
 		}
 	}
