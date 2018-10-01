@@ -5,6 +5,8 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
+var updateStreamLock = false
+
 // StreamResolver resolves stream information.
 type StreamResolver struct {
 	r db.Stream
@@ -67,4 +69,22 @@ func (r *StreamResolver) Resolution() *string {
 		return &a
 	}
 	return new(string)
+}
+
+// UpdateStreams is a resolver method for the UpdateStreams method
+func (r *Resolver) UpdateStreams(args *mustUUIDArgs) bool {
+	if args.UUID != nil {
+		ok := db.UpdateStreams(args.UUID)
+		return ok
+	}
+
+	if updateStreamLock == false {
+		updateStreamLock = true
+		go func() {
+			db.UpdateAllStreams()
+			updateStreamLock = false
+		}()
+	}
+
+	return true
 }

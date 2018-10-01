@@ -41,28 +41,42 @@ func CollectStreamKeyFrames() {
 	log.Infoln("Finished keyframe cache generation.")
 }
 
+// UpdateAllStreams updates all streams for all mediaItems
+func UpdateAllStreams() {
+	for _, movie := range FindAllMovieFiles() {
+		UpdateStreams(&movie.UUID)
+	}
+	for _, ep := range FindAllEpisodeFiles() {
+		UpdateStreams(&ep.UUID)
+	}
+}
+
 // UpdateStreams deletes stream information and rescans the file
 func UpdateStreams(mediaUUID *string) bool {
-	log.Infoln("Updating Stream information")
+	log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Updating Stream information.")
 	count := 0
 	var movieFile MovieFile
 	var episodeFile EpisodeFile
 
 	db.Where("uuid = ?", mediaUUID).Find(&movieFile).Count(&count)
 	if count > 0 {
+		log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Found movie, probing file.")
 		db.Exec("DELETE FROM streams WHERE owner_id = ? AND owner_type = 'movie_files'", movieFile.ID)
 		movieFile.Streams = CollectStreams(movieFile.FilePath)
 		db.Save(&movieFile)
+		return true
 	}
 
 	count = 0
 	db.Where("uuid = ?", mediaUUID).Find(&episodeFile).Count(&count)
 	if count > 0 {
+		log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Found series probing file.")
 		db.Exec("DELETE FROM streams WHERE owner_id = ? AND owner_type = 'episode_files'", episodeFile.ID)
 		episodeFile.Streams = CollectStreams(episodeFile.FilePath)
 		db.Save(&episodeFile)
+		return true
 	}
-	return true
+	return false
 }
 
 // CollectStreams collects all stream information for the given file.

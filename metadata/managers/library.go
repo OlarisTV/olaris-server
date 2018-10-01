@@ -53,7 +53,7 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 		log.Debugln("Spawning episode worker.")
 		ep, ok := payload.(episodePayload)
 		if ok {
-			err := updateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
+			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
 			} else {
@@ -72,22 +72,11 @@ func (man *LibraryManager) UpdateMD(library *db.Library) {
 	switch kind := library.Kind; kind {
 	case db.MediaTypeMovie:
 		log.WithFields(library.LogFields()).Println("Updating metadata for movies.")
-		man.UpdateMovieMD(library)
+		man.IdentifyUnidentMovies(library)
 	case db.MediaTypeSeries:
 		log.WithFields(library.LogFields()).Println("Updating metadata for TV.")
-		man.UpdateSeriesMD(library)
+		man.IdentifyUnidentSeries(library)
 	}
-}
-
-// UpdateEpisodeMD looks for missing episode metadata and attempts to retrieve it.
-func (man *LibraryManager) UpdateEpisodeMD(tv db.Series, season db.Season, episode db.Episode) error {
-	log.WithFields(log.Fields{"series": tv.Name, "episode": episode.EpisodeNum, "season": season.SeasonNumber}).Debugln("Attempting to find metadata.")
-	return nil
-}
-
-// updateEpisodeMD supplies a global method to be used from the pool.
-func updateEpisodeMD(a agents.EpisodeAgent, episode *db.Episode, season *db.Season, series *db.Series) error {
-	return a.UpdateEpisodeMD(episode, season, series)
 }
 
 // UpdateEpisodesMD loops over all episode with no tmdb information yet and attempts to retrieve the metadata.
@@ -103,31 +92,29 @@ func (man *LibraryManager) UpdateEpisodesMD() error {
 	return nil
 }
 
-func updateSeasonMD(a agents.SeasonAgent, season *db.Season, series *db.Series) error {
-	return a.UpdateSeasonMD(season, series)
-}
-
 // UpdateSeasonMD loops over all seasons with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) UpdateSeasonMD() error {
 	agent := agents.NewTmdbAgent()
 	for _, season := range db.FindAllUnidentifiedSeasons() {
 		series := db.FindSerie(season.SeriesID)
-		updateSeasonMD(agent, &season, &series)
+		agents.UpdateSeasonMD(agent, &season, &series)
 		db.UpdateSeason(&season)
 	}
 	return nil
 }
 
-func updateSeriesMD(a agents.SeriesAgent, series *db.Series) error {
-	return a.UpdateSeriesMD(series)
+// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
+func UpdateSeriesMD(series *db.Series) error {
+	agent := agents.NewTmdbAgent()
+	agents.UpdateSeriesMD(agent, series)
+	db.UpdateSeries(series)
+	return nil
 }
 
-// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) UpdateSeriesMD(library *db.Library) error {
-	agent := agents.NewTmdbAgent()
+// IdentifyUnidentSeries loops over all series with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) IdentifyUnidentSeries(library *db.Library) error {
 	for _, series := range db.FindAllUnidentifiedSeries() {
-		updateSeriesMD(agent, &series)
-		db.UpdateSeries(&series)
+		UpdateSeriesMD(&series)
 	}
 
 	man.UpdateSeasonMD()
@@ -136,17 +123,62 @@ func (man *LibraryManager) UpdateSeriesMD(library *db.Library) error {
 	return nil
 }
 
-func updateMovieMD(mi agents.MovieAgent, movie *db.Movie) error {
-	return mi.UpdateMovieMD(movie)
+// UpdateMovieMD updates the database record with the latest data from the agent
+func UpdateMovieMD(movie *db.Movie) error {
+	// Perhaps we should supply the agent to save to resources
+	agent := agents.NewTmdbAgent()
+	agents.UpdateMovieMD(agent, movie)
+	db.UpdateMovie(movie)
+	return nil
 }
 
-// UpdateMovieMD loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) UpdateMovieMD(library *db.Library) error {
+// RefreshAllMovieMD refreshes all data from the agent and updates the database record.
+func RefreshAllMovieMD() error {
+	for _, movie := range db.FindMoviesForMDRefresh() {
+		log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
+		UpdateMovieMD(&movie)
+	}
+	return nil
+}
+
+// RefreshAllSeriesMD refreshes all data from the agent and updates the database record.
+func RefreshAllSeriesMD() error {
+	for _, series := range db.FindSeriesForMDRefresh() {
+		log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
+		UpdateSeriesMD(&series)
+		for _, season := range db.FindSeasonsForSeries(series.ID) {
+			log.WithFields(log.Fields{"name": season.Name}).Println("Refreshing metadata for series.")
+			UpdateSeasonMD(&season, &series)
+			for _, ep := range db.FindEpisodesForSeason(season.ID, 1) {
+				log.WithFields(log.Fields{"name": ep.Name}).Println("Refreshing metadata for episode.")
+				UpdateEpisodeMD(&ep, &season, &series)
+			}
+		}
+	}
+	return nil
+}
+
+// UpdateEpisodeMD updates the database record with the latest data from the agent
+func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
 	agent := agents.NewTmdbAgent()
+	agents.UpdateEpisodeMD(agent, ep, season, series)
+	db.UpdateEpisode(ep)
+	return nil
+}
+
+// UpdateSeasonMD updates the database record with the latest data from the agent
+func UpdateSeasonMD(season *db.Season, series *db.Series) error {
+	agent := agents.NewTmdbAgent()
+	agents.UpdateSeasonMD(agent, season, series)
+	db.UpdateSeason(season)
+	return nil
+}
+
+// IdentifyUnidentMovies loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 	for _, movie := range db.FindAllUnidentifiedMovies() {
 		log.WithFields(log.Fields{"title": movie.Title}).Println("Attempting to fetch metadata for unidentified movie.")
-		updateMovieMD(agent, &movie)
-		db.UpdateMovie(&movie)
+		UpdateMovieMD(&movie)
 	}
 	return nil
 }
@@ -338,15 +370,15 @@ func (man *LibraryManager) CheckRemovedFiles() {
 
 // RefreshAll rescans all files and attempts to find missing metadata information.
 func (man *LibraryManager) RefreshAll() {
+	man.CheckRemovedFiles()
+
 	for _, lib := range db.AllLibraries() {
 		man.AddWatcher(lib.FilePath)
-
-		man.CheckRemovedFiles()
 
 		log.WithFields(lib.LogFields()).Println("Scanning library for changed files.")
 		man.Probe(&lib)
 
-		log.WithFields(lib.LogFields()).Infoln("Scanning library for metadata updates.")
+		log.WithFields(lib.LogFields()).Infoln("Scanning library for unidentified media.")
 		man.UpdateMD(&lib)
 
 	}

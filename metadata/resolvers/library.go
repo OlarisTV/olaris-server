@@ -3,12 +3,16 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"path/filepath"
 )
+
+var refreshMDLocks = make(map[uint]bool)
+var rescanningLibraries bool
 
 // Library wrapper around the db.Library package so it can contain related resolvers.
 type Library struct {
@@ -56,6 +60,80 @@ type createLibraryArgs struct {
 	Name     string
 	FilePath string
 	Kind     int32
+}
+
+func withLock(fn func(), id uint) {
+	log.WithFields(log.Fields{"lockID": id}).Debugln("Checking for lock.")
+	if refreshMDLocks[id] == false {
+		log.WithFields(log.Fields{"lockID": id}).Debugln("No lock.")
+		refreshMDLocks[id] = true
+		fn()
+		refreshMDLocks[id] = false
+		log.WithFields(log.Fields{"lockID": id}).Debugln("Lock released.")
+	} else {
+		log.WithFields(log.Fields{"lockID": id}).Warnln("Already had a lock, ignoring.")
+	}
+}
+
+// RefreshAgentMetadata refreshes all metadata from agent
+func (r *Resolver) RefreshAgentMetadata(args struct {
+	LibraryID *int32
+	UUID      *string
+}) bool {
+	// TODO: Give a proper response if ever warranted
+	if args.LibraryID != nil {
+		libID := int(*args.LibraryID)
+		library := db.FindLibrary(libID)
+		if library.ID != 0 {
+			go withLock(func() {
+				if library.Kind == db.MediaTypeMovie {
+					managers.RefreshAllMovieMD()
+				} else if library.Kind == db.MediaTypeSeries {
+					managers.RefreshAllSeriesMD()
+				}
+			}, library.ID)
+		}
+		return true
+	}
+
+	series := db.FindSeriesByUUID(args.UUID)
+	if len(series) > 0 {
+		go withLock(func() {
+			managers.UpdateSeriesMD(&series[0])
+		}, series[0].ID)
+		return true
+	}
+
+	season := db.FindSeasonByUUID(args.UUID)
+	if season.ID != 0 {
+		go withLock(func() {
+			managers.UpdateSeasonMD(&season, season.GetSeries())
+		}, season.ID)
+		return true
+	}
+
+	episode := db.FindEpisodeByUUID(args.UUID, 0)
+	if episode.ID != 0 {
+		go withLock(func() {
+			managers.UpdateEpisodeMD(episode, episode.GetSeason(), episode.GetSeries())
+		}, episode.ID)
+		return true
+	}
+
+	return false
+}
+
+// RescanLibraries rescans all libraries for new files.
+func (r *Resolver) RescanLibraries() bool {
+	if rescanningLibraries == false {
+		rescanningLibraries = true
+		go func() {
+			managers.NewLibraryManager(r.env.Watcher).RefreshAll()
+			rescanningLibraries = false
+		}()
+		return true
+	}
+	return false
 }
 
 // DeleteLibrary deletes a library.

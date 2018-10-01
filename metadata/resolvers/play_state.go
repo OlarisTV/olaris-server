@@ -2,7 +2,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
@@ -39,11 +38,4 @@ type BoolResponseResolver struct {
 // Success resolves success
 func (bs *BoolResponseResolver) Success() bool {
 	return bs.success
-}
-
-// UpdateStreams is a resolver method for the UpdateStreams method
-func (r *Resolver) UpdateStreams(args *mustUUIDArgs) *BoolResponseResolver {
-	fmt.Println("UPDATE")
-	ok := db.UpdateStreams(args.UUID)
-	return &BoolResponseResolver{success: ok}
 }

@@ -62,6 +62,7 @@ func (a *TmdbAgent) UpdateSeasonMD(season *db.Season, series *db.Series) error {
 
 // UpdateSeriesMD updates the metadata information for the given series.
 func (a *TmdbAgent) UpdateSeriesMD(series *db.Series) error {
+	// TODO: Right now this is being used for refresh as well as first scan. If we already have a tmdbID we want to refresh based on that.
 	log.WithFields(log.Fields{"seriesName": series.Name}).Debugln("Looking for series metadata.")
 	var options = make(map[string]string)
 
@@ -122,7 +123,6 @@ func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
 		movie.OriginalTitle = mov.OriginalTitle
 		movie.BackdropPath = mov.BackdropPath
 		movie.PosterPath = mov.PosterPath
-		//	env.Db.Save(&movie)
 		log.WithFields(movie.LogFields()).Println("identified movie.")
 	} else {
 		log.WithFields(log.Fields{

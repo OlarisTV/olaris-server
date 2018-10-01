@@ -46,11 +46,17 @@ var SchemaTxt = `
 		# Request permission to play a certain file
 		createStreamingTicket(uuid: String!): CreateSTResponse!
 
-		# Delete a user from the database, please note that the user will be able to username until the JWT expires.
+		# Delete a user from the database, please note that the user will be able to keep using the account until the JWT expires.
 		deleteUser(id: Int!): UserResponse!
 
-		updateStreams(uuid: String): BoolResponse!
+		# Rescans the mediaFile with the given ID (or all if ID ommited) and updates the stream information in the database.
+		updateStreams(uuid: String): Boolean!
 
+		# Refreshes all external agent information (poster/overviews etc.) for the given library or season/series/episode.
+		refreshAgentMetadata(libraryID: Int, uuid: String): Boolean!
+
+		# Rescan all library paths for new files that are not indexed yet.
+		rescanLibraries(): Boolean!
 
 	}
 
@@ -103,13 +109,12 @@ var SchemaTxt = `
 
 	# A media library
 	type Library {
-		# Primary ID
 		id: Int!
 
-		# Library Type (0 - movies)
+		# Library type (0 - movies, 1 - series)
 		kind: Int!
 
-		# Human readable name of the Library
+		# Human readable name of the Library (unused)
 		name: String!
 
 		# Path that this library manages

@@ -26,6 +26,13 @@ func AllLibraries() []Library {
 	return libraries
 }
 
+// FindLibrary finds a library.
+func FindLibrary(id int) Library {
+	var library Library
+	db.Find(&library, id)
+	return library
+}
+
 // DeleteLibrary deletes a library from the database.
 func DeleteLibrary(id int) (Library, error) {
 	library := Library{}

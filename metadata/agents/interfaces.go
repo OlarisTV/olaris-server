@@ -23,3 +23,23 @@ type EpisodeAgent interface {
 type SeriesAgent interface {
 	UpdateSeriesMD(*db.Series) error
 }
+
+// UpdateMovieMD is a generic method that invokes an agent and updates the metadata.
+func UpdateMovieMD(mi MovieAgent, movie *db.Movie) error {
+	return mi.UpdateMovieMD(movie)
+}
+
+// UpdateEpisodeMD is a generic method that invokes an agent and updates the metadata
+func UpdateEpisodeMD(a EpisodeAgent, episode *db.Episode, season *db.Season, series *db.Series) error {
+	return a.UpdateEpisodeMD(episode, season, series)
+}
+
+// UpdateSeasonMD is a generic method that invokes an agent and updates the metadata
+func UpdateSeasonMD(a SeasonAgent, season *db.Season, series *db.Series) error {
+	return a.UpdateSeasonMD(season, series)
+}
+
+// UpdateSeriesMD is a generic method that invokes an agent and updates the metadata
+func UpdateSeriesMD(a SeriesAgent, series *db.Series) error {
+	return a.UpdateSeriesMD(series)
+}

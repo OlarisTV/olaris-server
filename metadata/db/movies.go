@@ -106,7 +106,13 @@ func FindAllUnidentifiedMovies() (movies []Movie) {
 	return movies
 }
 
-// FindAllMovies finds all identified movies.
+// FindMoviesForMDRefresh finds all movies, including unidentified ones.
+func FindMoviesForMDRefresh() (movies []Movie) {
+	db.Find(&movies)
+	return movies
+}
+
+// FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(userID uint) (movies []Movie) {
 	db.Where("tmdb_id != 0").Find(&movies)
 	CollectMovieInfo(movies, userID)

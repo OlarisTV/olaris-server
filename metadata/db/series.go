@@ -41,6 +41,13 @@ type Season struct {
 	Episodes     []*Episode
 }
 
+// GetSeries get the associated series to this eason
+func (s *Season) GetSeries() *Series {
+	var series Series
+	db.Model(&s).Related(&series)
+	return &series
+}
+
 // Episode holds metadata information about episodes.
 type Episode struct {
 	gorm.Model
@@ -60,6 +67,21 @@ type Episode struct {
 // TimeStamp returns a unix timestamp for the given episode.
 func (ep *Episode) TimeStamp() int64 {
 	return ep.CreatedAt.Unix()
+}
+
+// GetSeason returns the associated season
+func (ep *Episode) GetSeason() *Season {
+	var season Season
+	db.Model(ep).Related(&season)
+	return &season
+}
+
+// GetSeries returns the associated series through season
+func (ep *Episode) GetSeries() *Series {
+	var series *Series
+	season := ep.GetSeason()
+	series = season.GetSeries()
+	return series
 }
 
 // EpisodeFile holds filesystem information about a given episode file.
@@ -147,6 +169,12 @@ func UnwatchedEpisodesInSeasonCount(seasonID uint, userID uint) uint {
 	return res.Count
 }
 
+// FindSeriesForMDRefresh finds all series, including unidentified ones.
+func FindSeriesForMDRefresh() (series []Series) {
+	db.Find(&series)
+	return series
+}
+
 // FindAllSeries retrieves all identified series from the db.
 func FindAllSeries() (series []Series) {
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)
@@ -179,6 +207,7 @@ func FindSerie(seriesID uint) (series Series) {
 
 // FindSeriesByUUID retrives a serie based on it's UUID.
 func FindSeriesByUUID(uuid *string) (series []Series) {
+	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
 	return series
 }
@@ -198,6 +227,7 @@ func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
 // FindEpisodesForSeason finds all episodes for the given season UUID.
 func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 	db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
+	// TODO: Don't do this here and move it to the resolver
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
@@ -216,6 +246,12 @@ func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 func FindPlaystateForEpisode(episodeID uint, userID uint) (ps PlayState) {
 	db.Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodeID, "episodes").First(&ps)
 	return ps
+}
+
+// FindAllSeasons returns all seasons
+func FindAllSeasons() (seasons []Season) {
+	db.Find(&seasons)
+	return seasons
 }
 
 // FindSeasonByUUID finds the season based on it's UUID.
