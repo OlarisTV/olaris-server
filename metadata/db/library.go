@@ -48,7 +48,7 @@ func DeleteLibrary(id int) (Library, error) {
 
 // AddLibrary adds a filesystem folder and starts tracking media inside the folders.
 func AddLibrary(name string, filePath string, kind MediaType) (Library, error) {
-	fmt.Printf("Add library '%s' with path '%s', type: '%d'\n", name, filePath, kind)
+	log.WithFields(log.Fields{"name": name, "path": filePath, "kind": kind}).Infoln("Adding library")
 	lib := Library{Name: name, FilePath: filePath, Kind: kind}
 	dbObj := db.Create(&lib)
 	return lib, dbObj.Error
