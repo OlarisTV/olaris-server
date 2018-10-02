@@ -178,6 +178,8 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		library, err = db.AddLibrary(args.Name, path, db.MediaType(args.Kind))
 		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
 		if err != nil {
+			libRes = LibraryResponse{Error: CreateErrResolver(err)}
+		} else {
 			go managers.NewLibraryManager(r.env.Watcher).RefreshAll()
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}

@@ -217,7 +217,7 @@ func (man *LibraryManager) ProbeSeries(library *db.Library) {
 func (man *LibraryManager) AddWatcher(filePath string) {
 	err := man.watcher.Add(filePath)
 	if err != nil {
-		log.Warnln("FSNOTIFY FAILURE:", err)
+		log.Warnln("Could not add filesystem notification watcher:", err)
 	}
 }
 

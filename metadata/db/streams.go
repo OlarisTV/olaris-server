@@ -37,6 +37,8 @@ func CollectStreamKeyFrames() {
 		mutex.Lock()
 		collectingKeyframes = false
 		mutex.Unlock()
+	} else {
+		log.Warnln("Already generating keyframe cache, skipping")
 	}
 	log.Infoln("Finished keyframe cache generation.")
 }
