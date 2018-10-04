@@ -43,7 +43,19 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	videoRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(streams.GetVideoStream(), capabilities)
+
+	// Get transmuxed or similar transcoded representation
+	fullQualityRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(streams.GetVideoStream(), capabilities)
+	videoRepresentations := []ffmpeg.StreamRepresentation{fullQualityRepresentation}
+
+	// Build lower-quality transcoded versions
+	for _, preset := range []string{"preset:480-1000k-video", "preset:720-5000k-video", "1080-10000k-video"} {
+		r, _ := ffmpeg.StreamRepresentationFromRepresentationId(
+			streams.GetVideoStream(), preset)
+		if r.Representation.BitRate < fullQualityRepresentation.Representation.BitRate {
+			videoRepresentations = append(videoRepresentations, r)
+		}
+	}
 
 	audioStreamRepresentations := []ffmpeg.StreamRepresentation{}
 	for _, s := range streams.AudioStreams {
@@ -57,17 +69,18 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
 
-	manifest := hls.BuildMasterPlaylistFromFile(
-		[]hls.RepresentationCombination{
-			{
-				VideoStream:    videoRepresentation,
-				AudioStreams:   audioStreamRepresentations,
-				AudioGroupName: "audio",
-				// TODO(Leon Handreke): Is just using the first one always correct?
-				AudioCodecs: audioStreamRepresentations[0].Stream.Codecs,
-			},
-		},
-		subtitleRepresentations)
+	combinations := []hls.RepresentationCombination{}
+	for _, v := range videoRepresentations {
+		combinations = append(combinations, hls.RepresentationCombination{
+			VideoStream:    v,
+			AudioStreams:   audioStreamRepresentations,
+			AudioGroupName: "audio",
+			// TODO(Leon Handreke): Is just using the first one always correct?
+			AudioCodecs: audioStreamRepresentations[0].Stream.Codecs,
+		})
+	}
+
+	manifest := hls.BuildMasterPlaylistFromFile(combinations, subtitleRepresentations)
 	w.Write([]byte(manifest))
 }
 
