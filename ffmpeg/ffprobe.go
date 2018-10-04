@@ -150,6 +150,14 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 
 // probeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
 func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
+	// NOTE(Leon Handreke): This is a really ugly hack to account for the fact
+	// that MP4 seeking seems to happen by PTS, despite AVFMT_SEEK_TO_PTS
+	// not being set.
+	seekByPTS := false
+	if strings.HasSuffix(s.MediaFileURL, ".mp4") {
+		seekByPTS = true
+	}
+
 	cmd := exec.Command(
 		executable.GetFFprobeExecutablePath(),
 		"-select_streams", strconv.Itoa(int(s.StreamId)),
@@ -183,9 +191,16 @@ func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
 		if line[3][0] == 'K' {
 			dts := int64(0)
 			if line[2] != "N/A" {
-				dts, err = strconv.ParseInt(line[2], 10, 64)
-				if err != nil {
-					return nil, err
+				if seekByPTS {
+					dts, err = strconv.ParseInt(line[1], 10, 64)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					dts, err = strconv.ParseInt(line[2], 10, 64)
+					if err != nil {
+						return nil, err
+					}
 				}
 			} else {
 				// NOTE(Leon Handreke): Use PTS as fallback here. The issue is that at the beginning,
