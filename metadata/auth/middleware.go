@@ -52,7 +52,6 @@ func MiddleWare(h http.Handler) http.Handler {
 			log.Warnln("No users present, no auth required!")
 			h.ServeHTTP(w, r)
 		} else {
-			log.Debugln("Users present auth required from this point on.")
 			var authHeader string
 			authHeader = r.Header.Get("Authorization")
 			if authHeader != "" {
@@ -63,16 +62,16 @@ func MiddleWare(h http.Handler) http.Handler {
 				}
 
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					log.Debugf("User: '%v' (%v). Expires at: %v.", claims.Username, claims.UserID, claims.StandardClaims.ExpiresAt)
+					log.WithFields(log.Fields{"username": claims.Username, "userID": claims.UserID, "expiresAt": claims.StandardClaims.ExpiresAt}).Debugln("Authenicated with valid JWT")
 					ctx := r.Context()
 					ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
 					ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
 					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
-
-				writeError("Unauthorized", w, http.StatusUnauthorized)
 			}
+			log.Warnln("No authorisation header presented.")
+			writeError("Unauthorized", w, http.StatusUnauthorized)
 		}
 	})
 }
