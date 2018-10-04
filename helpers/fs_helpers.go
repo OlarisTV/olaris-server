@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/user"
 	"path"
@@ -38,14 +39,18 @@ func EnsurePath(pathName string) error {
 func FileExists(pathName string) bool {
 	fi, err := os.Lstat(pathName)
 	if err != nil {
+		log.Debugln("error statting file:", err)
 		return false
 	}
 	// Is a symlink
 	if fi.Mode()&os.ModeSymlink != 0 {
+		log.Debugln("got symlink:", pathName)
 		p, err := filepath.EvalSymlinks(pathName)
-		if err != nil {
+		if err == nil {
 			return FileExists(p)
 		}
+		log.Debugln("got error checking symlink:", err)
+		return false
 	}
 	return true
 }

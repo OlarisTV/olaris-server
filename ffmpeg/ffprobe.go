@@ -106,7 +106,8 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
-		if !helpers.FileExists(fileURL) {
+		// TODO: We need to make this smarter, at one point we for instance will have other options then file://
+		if !helpers.FileExists(strings.Replace(fileURL, "file://", "", -1)) {
 			return nil, fmt.Errorf("file does not exist")
 		}
 
