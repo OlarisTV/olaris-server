@@ -83,19 +83,17 @@ func UpdateStreams(mediaUUID *string) bool {
 
 // CollectStreams collects all stream information for the given file.
 func CollectStreams(filePath string) []Stream {
-	videoStream, _ := ffmpeg.GetVideoStream(filePath)
-	audioStreams, _ := ffmpeg.GetAudioStreams(filePath)
-	subs, _ := ffmpeg.GetSubtitleStreams(filePath)
+	s, _ := ffmpeg.GetStreams(filePath)
 
 	var streams []Stream
 
-	streams = append(streams, Stream{Stream: videoStream})
+	streams = append(streams, Stream{Stream: s.GetVideoStream()})
 
-	for _, s := range audioStreams {
+	for _, s := range s.AudioStreams {
 		streams = append(streams, Stream{Stream: s})
 	}
 
-	for _, s := range subs {
+	for _, s := range s.SubtitleStreams {
 		streams = append(streams, Stream{Stream: s})
 	}
 

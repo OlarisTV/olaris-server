@@ -43,102 +43,76 @@ type Stream struct {
 	EnabledByDefault bool
 }
 
-func GetAudioStreams(mediaFileURL string) ([]Stream, error) {
-	streams := []Stream{}
+type Streams struct {
+	VideoStreams    []Stream
+	AudioStreams    []Stream
+	SubtitleStreams []Stream
+}
+
+func GetStreams(mediaFileURL string) (*Streams, error) {
+	streams := Streams{}
 	container, err := Probe(mediaFileURL)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, stream := range container.Streams {
-		if stream.CodecType != "audio" {
-			continue
-		}
-		bitrate, _ := strconv.Atoi(stream.BitRate)
+		if stream.CodecType == "audio" {
+			bitrate, _ := strconv.Atoi(stream.BitRate)
 
-		timeBase, err := parseTimeBaseString(stream.TimeBase)
-		if err != nil {
-			return []Stream{}, err
-		}
-
-		totalDurationTs := DtsTimestamp(stream.DurationTs)
-		if stream.DurationTs == 0 {
-			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
-		}
-
-		streams = append(streams,
-			Stream{
-				StreamKey: StreamKey{
-					MediaFileURL: mediaFileURL,
-					StreamId:     int64(stream.Index),
-				},
-				Codecs:           stream.GetMime(),
-				BitRate:          int64(bitrate),
-				TotalDuration:    container.Format.Duration(),
-				TotalDurationDts: totalDurationTs,
-				StreamType:       stream.CodecType,
-				Language:         GetLanguageTag(stream),
-				Title:            GetTitleOrHumanizedLanguage(stream),
-				EnabledByDefault: stream.Disposition["default"] != 0,
-				TimeBase:         timeBase,
-			})
-	}
-
-	return streams, nil
-}
-
-func GetVideoStream(mediaFilePath string) (Stream, error) {
-	streams, err := GetVideoStreams(mediaFilePath)
-	if err != nil {
-		return Stream{}, err
-	}
-	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
-	if len(streams) > 1 {
-		log.Infof("File %s does not contain exactly one video stream", mediaFilePath)
-	}
-	return streams[0], nil
-
-}
-
-func GetVideoStreams(mediaFileURL string) ([]Stream, error) {
-	streams := []Stream{}
-	container, err := Probe(mediaFileURL)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, stream := range container.Streams {
-		if stream.CodecType != "video" {
-			continue
-		}
-
-		timeBase, err := parseTimeBaseString(stream.TimeBase)
-		if err != nil {
-			return []Stream{}, err
-		}
-
-		totalDurationTs := DtsTimestamp(stream.DurationTs)
-		if stream.DurationTs == 0 {
-			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
-		}
-
-		bitrate, _ := strconv.Atoi(stream.BitRate)
-		if bitrate == 0 {
-			filepath, err := mediaFileURLToFilepath(mediaFileURL)
+			timeBase, err := parseTimeBaseString(stream.TimeBase)
 			if err != nil {
-				return []Stream{}, fmt.Errorf("Could not determine local path for file %s", mediaFileURL)
+				return nil, err
 			}
-			fileinfo, err := os.Stat(filepath)
-			if err != nil {
-				return []Stream{}, fmt.Errorf("Could not determine filesize for file %s", mediaFileURL)
-			}
-			filesize := fileinfo.Size()
-			// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
-			bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
-		}
 
-		streams = append(streams,
-			Stream{
+			totalDurationTs := DtsTimestamp(stream.DurationTs)
+			if stream.DurationTs == 0 {
+				totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
+			}
+
+			streams.AudioStreams = append(streams.AudioStreams,
+				Stream{
+					StreamKey: StreamKey{
+						MediaFileURL: mediaFileURL,
+						StreamId:     int64(stream.Index),
+					},
+					Codecs:           stream.GetMime(),
+					BitRate:          int64(bitrate),
+					TotalDuration:    container.Format.Duration(),
+					TotalDurationDts: totalDurationTs,
+					StreamType:       stream.CodecType,
+					Language:         GetLanguageTag(stream),
+					Title:            GetTitleOrHumanizedLanguage(stream),
+					EnabledByDefault: stream.Disposition["default"] != 0,
+					TimeBase:         timeBase,
+				})
+		} else if stream.CodecType == "video" {
+			timeBase, err := parseTimeBaseString(stream.TimeBase)
+			if err != nil {
+				return nil, err
+			}
+
+			totalDurationTs := DtsTimestamp(stream.DurationTs)
+			if stream.DurationTs == 0 {
+				totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
+			}
+
+			bitrate, _ := strconv.Atoi(stream.BitRate)
+			if bitrate == 0 {
+				filepath, err := mediaFileURLToFilepath(mediaFileURL)
+				if err != nil {
+					return nil, fmt.Errorf("Could not determine local path for file %s", mediaFileURL)
+				}
+				fileinfo, err := os.Stat(filepath)
+				if err != nil {
+					return nil, fmt.Errorf("Could not determine filesize for file %s", mediaFileURL)
+				}
+				filesize := fileinfo.Size()
+				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
+				bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
+			}
+
+			streams.VideoStreams = append(streams.VideoStreams, Stream{
 				StreamKey: StreamKey{
 					MediaFileURL: mediaFileURL,
 					StreamId:     int64(stream.Index),
@@ -154,32 +128,15 @@ func GetVideoStreams(mediaFileURL string) ([]Stream, error) {
 				CodecName:        stream.CodecName,
 				Profile:          stream.Profile,
 			})
-	}
+		} else if stream.CodecType == "subtitle" {
+			totalDuration := container.Format.Duration()
+			// TODO(Leon Handreke): This usually happens for next-to-the-file .srt files, ffprobe doesn't return
+			// a duration for them. Do something more intelligent (such as actually parsing the file).
+			if totalDuration == 0 {
+				totalDuration = time.Duration(time.Second * 100000)
+			}
 
-	return streams, nil
-}
-
-func GetSubtitleStreams(mediaFileURL string) ([]Stream, error) {
-	streams := []Stream{}
-	container, err := Probe(mediaFileURL)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, stream := range container.Streams {
-		if stream.CodecType != "subtitle" {
-			continue
-		}
-
-		totalDuration := container.Format.Duration()
-		// TODO(Leon Handreke): This usually happens for next-to-the-file .srt files, ffprobe doesn't return
-		// a duration for them. Do something more intelligent (such as actually parsing the file).
-		if totalDuration == 0 {
-			totalDuration = time.Duration(time.Second * 100000)
-		}
-
-		streams = append(streams,
-			Stream{
+			streams.SubtitleStreams = append(streams.SubtitleStreams, Stream{
 				StreamKey: StreamKey{
 					MediaFileURL: mediaFileURL,
 					StreamId:     int64(stream.Index),
@@ -192,7 +149,28 @@ func GetSubtitleStreams(mediaFileURL string) ([]Stream, error) {
 				Title:            GetTitleOrHumanizedLanguage(stream),
 				EnabledByDefault: stream.Disposition["default"] != 0,
 			})
+
+		}
 	}
+
+	externalSubtitles, _ := buildExternalSubtitleStreams(mediaFileURL, container.Format.Duration())
+	streams.SubtitleStreams = append(streams.SubtitleStreams, externalSubtitles...)
+
+	return &streams, nil
+
+}
+
+func (s *Streams) GetVideoStream() Stream {
+	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
+	if len(s.VideoStreams) > 1 {
+		log.Infof("File %s does not contain exactly one video stream", s.VideoStreams[0].MediaFileURL)
+	}
+	return s.VideoStreams[0]
+
+}
+
+func buildExternalSubtitleStreams(mediaFileURL string, duration time.Duration) ([]Stream, error) {
+	streams := []Stream{}
 
 	mediaFilePath, err := mediaFileURLToFilepath(mediaFileURL)
 	if err == nil {
@@ -220,7 +198,7 @@ func GetSubtitleStreams(mediaFileURL string) ([]Stream, error) {
 						MediaFileURL: subtitleFile,
 						StreamId:     0,
 					},
-					TotalDuration:    container.Format.Duration(),
+					TotalDuration:    duration,
 					StreamType:       "subtitle",
 					Language:         lang,
 					Title:            tag,
@@ -234,11 +212,9 @@ func GetSubtitleStreams(mediaFileURL string) ([]Stream, error) {
 
 func GetStream(streamKey StreamKey) (Stream, error) {
 	// TODO(Leon Handreke): Error handling
-	videoStreams, _ := GetVideoStreams(streamKey.MediaFileURL)
-	audioStreams, _ := GetAudioStreams(streamKey.MediaFileURL)
-	subtitleStreams, _ := GetSubtitleStreams(streamKey.MediaFileURL)
+	c, _ := GetStreams(streamKey.MediaFileURL)
 
-	streams := append(videoStreams, append(audioStreams, subtitleStreams...)...)
+	streams := append(c.VideoStreams, append(c.AudioStreams, c.SubtitleStreams...)...)
 	for _, s := range streams {
 		if s.StreamKey == streamKey {
 			return s, nil

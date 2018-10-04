@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/hls"
@@ -8,14 +9,27 @@ import (
 	"strconv"
 )
 
-func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
+func getMediaFileURLOrFail(r *http.Request) (string, Error) {
 	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
-		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
-		return
+		return "", StatusError{
+			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),
+			Code: http.StatusInternalServerError,
+		}
 	}
 	if !mediaFileURLExists(mediaFileURL) {
-		http.NotFound(w, r)
+		return "", StatusError{
+			Err:  fmt.Errorf("Media file \"%s\" doee not exist.", mediaFileURL),
+			Code: http.StatusNotFound,
+		}
+	}
+	return mediaFileURL, nil
+}
+
+func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
+	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
 		return
 	}
 
@@ -24,21 +38,15 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		PlayableCodecs: playableCodecs,
 	}
 
-	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(mediaFileURL)
 	if err != nil {
-		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	videoRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(videoStream, capabilities)
-
-	audioStreams, err := ffmpeg.GetAudioStreams(mediaFileURL)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	videoRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(streams.GetVideoStream(), capabilities)
 
 	audioStreamRepresentations := []ffmpeg.StreamRepresentation{}
-	for _, s := range audioStreams {
+	for _, s := range streams.AudioStreams {
 		r, err := ffmpeg.GetTransmuxedOrTranscodedRepresentation(s, capabilities)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -47,8 +55,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, r)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
-	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -65,31 +72,20 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
-	if err != nil {
-		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !mediaFileURLExists(mediaFileURL) {
-		http.NotFound(w, r)
-		return
+	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
 
-	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(mediaFileURL)
 	if err != nil {
-		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(videoStream)
-
-	audioStreams, err := ffmpeg.GetAudioStreams(mediaFileURL)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(streams.GetVideoStream())
 
 	audioStreamRepresentations := []ffmpeg.StreamRepresentation{}
-	for _, s := range audioStreams {
+	for _, s := range streams.AudioStreams {
 		transmuxedStream, err := ffmpeg.GetTransmuxedRepresentation(s)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,8 +94,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, transmuxedStream)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
-	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -116,25 +111,21 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
-	if err != nil {
-		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
-		return
+	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
 
-	// TODO(Leon Handreke): Error handling
-	audioStreams, _ := ffmpeg.GetAudioStreams(mediaFileURL)
-
-	videoStream, err := ffmpeg.GetVideoStream(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(mediaFileURL)
 	if err != nil {
-		http.Error(w, "Failed to get video streams: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	videoRepresentation1, _ := ffmpeg.StreamRepresentationFromRepresentationId(
-		videoStream, "preset:480-1000k-video")
+		streams.GetVideoStream(), "preset:480-1000k-video")
 	videoRepresentation2, _ := ffmpeg.StreamRepresentationFromRepresentationId(
-		videoStream, "preset:720-5000k-video")
+		streams.GetVideoStream(), "preset:720-5000k-video")
 	videoRepresentations := []ffmpeg.StreamRepresentation{
 		videoRepresentation1, videoRepresentation2}
 
@@ -148,7 +139,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 			AudioGroupName: audioGroupName,
 			AudioCodecs:    "mp4a.40.2",
 		}
-		for _, s := range audioStreams {
+		for _, s := range streams.AudioStreams {
 			var audioRepresentation ffmpeg.StreamRepresentation
 			if i == 0 {
 				audioRepresentation, _ = ffmpeg.StreamRepresentationFromRepresentationId(
@@ -162,8 +153,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		representationCombinations = append(representationCombinations, c)
 	}
 
-	subtitleStreams, _ := ffmpeg.GetSubtitleStreams(mediaFileURL)
-	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(subtitleStreams)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		representationCombinations, subtitleRepresentations)
@@ -171,14 +161,9 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
-	if err != nil {
-		http.Error(w, "Failed to build media file URL: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !mediaFileURLExists(mediaFileURL) {
-		http.NotFound(w, r)
-		return
+	_, statusErr := getMediaFileURLOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
 
 	streamKey, err := getStreamKey(
