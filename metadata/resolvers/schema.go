@@ -40,7 +40,8 @@ var SchemaTxt = `
 		# Create a invite code so a user can register on the server
 		createUserInvite(): UserInviteResponse!
 
-		# Create a playstate for the given media item
+		# Create a playstate for the given media item can be the UUID of an episode or movie.
+		# Playtime should always be given in seconds.
 		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): CreatePSResponse!
 
 		# Request permission to play a certain file

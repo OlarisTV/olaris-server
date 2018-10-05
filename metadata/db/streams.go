@@ -83,9 +83,13 @@ func UpdateStreams(mediaUUID *string) bool {
 
 // CollectStreams collects all stream information for the given file.
 func CollectStreams(filePath string) []Stream {
-	s, _ := ffmpeg.GetStreams(filePath)
-
 	var streams []Stream
+
+	s, err := ffmpeg.GetStreams("file://" + filePath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
+		return streams
+	}
 
 	streams = append(streams, Stream{Stream: s.GetVideoStream()})
 
