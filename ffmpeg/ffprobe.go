@@ -145,6 +145,10 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 		return nil, err
 	}
 
+	if len(v.Streams) == 0 {
+		return nil, fmt.Errorf("no streams found, is this an actual media file")
+	}
+
 	return &v, nil
 }
 

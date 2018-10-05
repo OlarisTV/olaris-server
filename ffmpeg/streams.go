@@ -212,7 +212,10 @@ func buildExternalSubtitleStreams(mediaFileURL string, duration time.Duration) (
 
 func GetStream(streamKey StreamKey) (Stream, error) {
 	// TODO(Leon Handreke): Error handling
-	c, _ := GetStreams(streamKey.MediaFileURL)
+	c, err := GetStreams(streamKey.MediaFileURL)
+	if err != nil {
+		return Stream{}, err
+	}
 
 	streams := append(c.VideoStreams, append(c.AudioStreams, c.SubtitleStreams...)...)
 	for _, s := range streams {
