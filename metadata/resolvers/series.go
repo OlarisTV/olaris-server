@@ -282,6 +282,11 @@ type PlayStateResolver struct {
 	r db.PlayState
 }
 
+// UUID returns UUID of the mediaItem
+func (res *PlayStateResolver) UUID() string {
+	return res.r.UUID
+}
+
 // Finished returns a bool when content has been watched.
 func (r *PlayStateResolver) Finished() bool {
 	return r.r.Finished

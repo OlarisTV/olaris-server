@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 // PlayState holds status information about media files, it keeps track of progress and whether or not the content has been viewed
@@ -75,22 +76,24 @@ func LatestPlayStates(limit uint, userID uint) []PlayState {
 }
 
 // CreatePlayState creates new playstate for the given user and media content.
-func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime float64) bool {
+func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime float64) *PlayState {
 	count := 0
 	var movie Movie
 	var episode Episode
 	var ps PlayState
+	log.WithFields(log.Fields{"mediaUUID": mediaUUID}).Debugln("Looking for media to update playstate.")
 
 	db.Where("uuid = ?", mediaUUID).Find(&movie).Count(&count)
 	if count > 0 {
 		db.FirstOrInit(&ps, PlayState{OwnerID: movie.ID, UserID: userID, OwnerType: "movies"})
 		ps.Finished = finished
 		ps.Playtime = playtime
+		log.WithFields(log.Fields{"type": "movie", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
 		db.Save(&ps)
 
 		movie.PlayState = ps
 		db.Save(&movie)
-		return true
+		return &ps
 	}
 
 	count = 0
@@ -100,9 +103,12 @@ func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime floa
 		ps.Finished = finished
 		ps.Playtime = playtime
 		episode.PlayState = ps
+		log.WithFields(log.Fields{"type": "episode", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
 		db.Save(&episode)
-		return true
+		return &ps
 	}
 
-	return false
+	log.WithFields(log.Fields{"mediaUUID": mediaUUID}).Debugln("Could not find media to update.")
+	return &ps
+
 }

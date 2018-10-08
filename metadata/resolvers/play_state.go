@@ -23,11 +23,11 @@ func (res *CreatePSResponseResolver) Success() bool {
 }
 
 // CreatePlayState creates a new playstate (or overwrite an existing one) for the given media.
-func (r *Resolver) CreatePlayState(ctx context.Context, args *playStateArgs) *CreatePSResponseResolver {
+func (r *Resolver) CreatePlayState(ctx context.Context, args *playStateArgs) *PlayStateResolver {
 	userID, _ := auth.UserID(ctx)
-	ok := db.CreatePlayState(userID, args.UUID, args.Finished, args.Playtime)
+	ps := db.CreatePlayState(userID, args.UUID, args.Finished, args.Playtime)
 	// Supply simple struct with true or false only for now
-	return &CreatePSResponseResolver{success: ok}
+	return &PlayStateResolver{*ps}
 }
 
 // BoolResponseResolver is a resolver with a bool success flag
