@@ -42,7 +42,7 @@ var SchemaTxt = `
 
 		# Create a playstate for the given media item can be the UUID of an episode or movie.
 		# Playtime should always be given in seconds.
-		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): PlayState!
+		createPlayState(uuid: String!, finished: Boolean!, playtime: Float!): PlayStateResponse!
 
 		# Request permission to play a certain file
 		createStreamingTicket(uuid: String!): CreateSTResponse!
@@ -107,6 +107,11 @@ var SchemaTxt = `
 		finished: Boolean!
 		playtime: Float!
 		uuid: String!
+	}
+
+	type PlayStateResponse {
+		uuid: String!
+		playState: PlayState
 	}
 
 	# A media library
