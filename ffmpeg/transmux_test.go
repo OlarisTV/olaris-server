@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func testGuessTransmuxedSegmentList(t *testing.T) {
+func testGuessTransmuxed[]Segment(t *testing.T) {
 	timeBase := int64(1000)
 	keyframeIntervals := []Interval{
 		{timeBase, 0, 1000},
@@ -13,7 +13,7 @@ func testGuessTransmuxedSegmentList(t *testing.T) {
 		{timeBase, 6000, 10100},
 		{timeBase, 10100, 10200},
 	}
-	result := guessTransmuxedSegmentList(keyframeIntervals)
+	result := guessTransmuxed[]Segment(keyframeIntervals)
 	assert.Equal(t,
 		[]Segment{
 			{Interval{timeBase, 0, 6000}, 0},

@@ -16,16 +16,6 @@ type Segment struct {
 	SegmentId int
 }
 
-type SegmentList []Segment
-
-func (l *SegmentList) Contains(ts DtsTimestamp) bool {
-	return (*l)[0].StartTimestamp <= ts && ts <= (*l)[len(*l)-1].EndTimestamp
-}
-
-func (l *SegmentList) ContainsSegmentId(i int) bool {
-	return (*l)[0].SegmentId <= i && i <= (*l)[len(*l)-1].SegmentId
-}
-
 func (i *Interval) Duration() time.Duration {
 	return i.EndDuration() - i.StartDuration()
 }

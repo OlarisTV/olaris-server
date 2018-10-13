@@ -13,7 +13,7 @@ import (
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
 func NewTransmuxingSession(
 	stream StreamRepresentation,
-	segments SegmentList,
+	segments []Segment,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
@@ -85,7 +85,7 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp,
 	}
 	if stream.StreamType == "audio" {
-		representation.SegmentStartTimestamps = []SegmentList{
+		representation.SegmentStartTimestamps = [][]Segment{
 			BuildConstantSegmentDurations(
 				totalInterval, TransmuxedSegDuration, 0),
 		}
@@ -96,10 +96,10 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 	return representation, nil
 }
 
-func guessTransmuxedSegmentList(keyframeIntervals []Interval) []SegmentList {
+func guessTransmuxedSegmentList(keyframeIntervals []Interval) [][]Segment {
 	//fmt.Println(keyframeIntervals)
 	segmentId := 0
-	sessions := []SegmentList{}
+	var sessions [][]Segment
 	timeBase := keyframeIntervals[0].TimeBase
 	segDurationTs := DtsTimestamp(TransmuxedSegDuration.Seconds() * float64(timeBase))
 

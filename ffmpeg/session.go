@@ -16,7 +16,7 @@ type TranscodingSession struct {
 	cmd        *exec.Cmd
 	Stream     StreamRepresentation
 	outputDir  string
-	segments   SegmentList
+	segments   []Segment
 	terminated bool
 }
 

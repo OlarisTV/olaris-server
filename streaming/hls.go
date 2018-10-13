@@ -1,30 +1,12 @@
 package streaming
 
 import (
-	"fmt"
 	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/hls"
 	"net/http"
 	"strconv"
 )
-
-func getMediaFileURLOrFail(r *http.Request) (string, Error) {
-	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
-	if err != nil {
-		return "", StatusError{
-			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),
-			Code: http.StatusInternalServerError,
-		}
-	}
-	if !mediaFileURLExists(mediaFileURL) {
-		return "", StatusError{
-			Err:  fmt.Errorf("Media file \"%s\" doee not exist.", mediaFileURL),
-			Code: http.StatusNotFound,
-		}
-	}
-	return mediaFileURL, nil
-}
 
 func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	mediaFileURL, statusErr := getMediaFileURLOrFail(r)

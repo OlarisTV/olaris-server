@@ -23,7 +23,7 @@ const transcodedAudioSegmentDuration = 4992 * time.Millisecond
 
 func NewAudioTranscodingSession(
 	stream StreamRepresentation,
-	segments SegmentList,
+	segments []Segment,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
@@ -121,10 +121,10 @@ func GetTranscodedAudioRepresentation(stream Stream, representationId string, en
 	}
 }
 
-func buildAudioSegmentDurations(interval Interval, segmentDuration time.Duration) []SegmentList {
-	sessions := []SegmentList{}
+func buildAudioSegmentDurations(interval Interval, segmentDuration time.Duration) [][]Segment {
+	sessions := [][]Segment{}
 
-	session := SegmentList{}
+	session := []Segment{}
 	currentTimestamp := interval.StartTimestamp
 	segmentId := 0
 
@@ -133,7 +133,7 @@ func buildAudioSegmentDurations(interval Interval, segmentDuration time.Duration
 	for currentTimestamp < interval.EndTimestamp {
 		if len(session) >= segmentsPerSession {
 			sessions = append(sessions, session)
-			session = SegmentList{}
+			session = []Segment{}
 		}
 
 		session = append(session, Segment{

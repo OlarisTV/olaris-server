@@ -4,8 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -108,4 +110,21 @@ func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, 
 		StreamId:     int64(streamId),
 		MediaFileURL: url,
 	}, nil
+}
+
+func getMediaFileURLOrFail(r *http.Request) (string, Error) {
+	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
+	if err != nil {
+		return "", StatusError{
+			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),
+			Code: http.StatusInternalServerError,
+		}
+	}
+	if !mediaFileURLExists(mediaFileURL) {
+		return "", StatusError{
+			Err:  fmt.Errorf("Media file \"%s\" doee not exist.", mediaFileURL),
+			Code: http.StatusNotFound,
+		}
+	}
+	return mediaFileURL, nil
 }

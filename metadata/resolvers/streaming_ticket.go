@@ -55,7 +55,9 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	if err != nil {
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
+
 	StreamingPath := fmt.Sprintf("/s/files/jwt/%s/hls-manifest.m3u8", token)
+	//StreamingPath := fmt.Sprintf("/s/files/jwt/%s/dash-manifest.mpd", token)
 
 	return &CreateSTResponseResolver{CreateSTResponse{Error: nil, Jwt: token, StreamingPath: StreamingPath}}
 }

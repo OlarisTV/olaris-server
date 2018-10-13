@@ -23,7 +23,7 @@ const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,
-	segments SegmentList,
+	segments []Segment,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
@@ -101,7 +101,7 @@ func GetTranscodedVideoRepresentation(
 	}
 }
 
-func buildVideoSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) []SegmentList {
+func buildVideoSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) [][]Segment {
 	timeBase := keyframeIntervals[0].TimeBase
 	sessionIntervals := []Interval{
 		Interval{
@@ -125,7 +125,7 @@ func buildVideoSegmentDurations(keyframeIntervals []Interval, segmentDuration ti
 	}
 
 	segmentIndex := 0
-	sessions := []SegmentList{}
+	sessions := [][]Segment{}
 	for _, sessionInterval := range sessionIntervals {
 		session := BuildConstantSegmentDurations(sessionInterval, segmentDuration, segmentIndex)
 		sessions = append(sessions, session)

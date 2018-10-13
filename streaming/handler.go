@@ -19,6 +19,7 @@ func GetHandler() http.Handler {
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/hls-manifest.m3u8", serveHlsMasterPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/dash-manifest.mpd", serveDASHManifest)
 	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveMediaSegment)
 	router.HandleFunc("/files/{fileLocator:.*}/{streamId}/{representationId}/{segmentId:[0-9]+}.vtt", serveSubtitleSegment)

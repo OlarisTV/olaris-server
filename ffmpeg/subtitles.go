@@ -10,7 +10,7 @@ import (
 
 func NewSubtitleSession(
 	stream StreamRepresentation,
-	segments SegmentList,
+	segments []Segment,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "subtitle-session-")
@@ -44,8 +44,8 @@ func GetSubtitleStreamRepresentation(stream Stream) StreamRepresentation {
 		Representation: Representation{
 			RepresentationId: "webvtt",
 		},
-		SegmentStartTimestamps: []SegmentList{
-			SegmentList{
+		SegmentStartTimestamps: [][]Segment{
+			[]Segment{
 				Segment{
 					Interval: Interval{
 						stream.TimeBase,

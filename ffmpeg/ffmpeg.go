@@ -31,7 +31,7 @@ type StreamRepresentation struct {
 	Stream         Stream
 	Representation Representation
 
-	SegmentStartTimestamps []SegmentList
+	SegmentStartTimestamps [][]Segment
 }
 
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
@@ -45,12 +45,26 @@ const TransmuxedSegDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
-func ComputeSegmentDurations(sessions []SegmentList) []time.Duration {
+func (sr *StreamRepresentation) SegmentDurations() []time.Duration {
 	segmentDurations := []time.Duration{}
 
-	for _, session := range sessions {
+	for _, session := range sr.SegmentStartTimestamps {
 		for _, segment := range session {
 			segmentDurations = append(segmentDurations, segment.Duration())
+
+		}
+	}
+
+	return segmentDurations
+}
+
+func (sr *StreamRepresentation) SegmentDurationsMilliseconds() []int64 {
+	segmentDurations := []int64{}
+
+	for _, session := range sr.SegmentStartTimestamps {
+		for _, segment := range session {
+			segmentDurations = append(segmentDurations,
+				int64(segment.Duration())/int64(time.Millisecond))
 
 		}
 	}
@@ -160,10 +174,10 @@ func StreamRepresentationFromRepresentationId(
 }
 
 func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingSession, error) {
-	var segments SegmentList
+	var segments []Segment
 
 	for _, s := range s.SegmentStartTimestamps {
-		if s.ContainsSegmentId(segmentId) {
+		if s[0].SegmentId <= segmentId && segmentId <= s[len(s)-1].SegmentId {
 			segments = s
 			break
 		}
