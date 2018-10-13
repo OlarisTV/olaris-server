@@ -88,7 +88,8 @@ var SchemaTxt = `
 	type CreateSTResponse {
 		error: Error
 		# Path with a JWT that will stream your file.
-		streamingPath: String!
+		hlsStreamingPath: String!
+		dashStreamingPath: String!
 		jwt: String!
 	}
 

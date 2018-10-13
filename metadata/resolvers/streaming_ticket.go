@@ -9,9 +9,10 @@ import (
 
 // CreateSTResponse  holds new jwt data.
 type CreateSTResponse struct {
-	Error         *ErrorResolver
-	Jwt           string
-	StreamingPath string
+	Error             *ErrorResolver
+	Jwt               string
+	DASHStreamingPath string
+	HLSStreamingPath  string
 }
 
 // CreateSTResponseResolver resolves CreateSTResponse.
@@ -20,8 +21,13 @@ type CreateSTResponseResolver struct {
 }
 
 // StreamingPath returns URI to HLS manifest.
-func (r *CreateSTResponseResolver) StreamingPath() string {
-	return r.r.StreamingPath
+func (r *CreateSTResponseResolver) HLSStreamingPath() string {
+	return r.r.HLSStreamingPath
+}
+
+// StreamingPath returns URI to HLS manifest.
+func (r *CreateSTResponseResolver) DASHStreamingPath() string {
+	return r.r.DASHStreamingPath
 }
 
 // Jwt returns streaming token.
@@ -56,8 +62,13 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
 
-	StreamingPath := fmt.Sprintf("/s/files/jwt/%s/hls-manifest.m3u8", token)
-	//StreamingPath := fmt.Sprintf("/s/files/jwt/%s/dash-manifest.mpd", token)
+	HLSStreamingPath := fmt.Sprintf("/s/files/jwt/%s/hls-manifest.m3u8", token)
+	DASHStreamingPath := fmt.Sprintf("/s/files/jwt/%s/dash-manifest.mpd", token)
 
-	return &CreateSTResponseResolver{CreateSTResponse{Error: nil, Jwt: token, StreamingPath: StreamingPath}}
+	return &CreateSTResponseResolver{CreateSTResponse{
+		Error:             nil,
+		Jwt:               token,
+		HLSStreamingPath:  HLSStreamingPath,
+		DASHStreamingPath: DASHStreamingPath,
+	}}
 }
