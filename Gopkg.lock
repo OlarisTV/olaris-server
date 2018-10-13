@@ -2,34 +2,10 @@
 
 
 [[projects]]
-  name = "cloud.google.com/go"
-  packages = ["compute/metadata"]
-  revision = "0fd7230b2a7505833d5f69b75cbd6c9582401479"
-  version = "v0.23.0"
-
-[[projects]]
   name = "github.com/Jeffail/tunny"
   packages = ["."]
   revision = "59cfa8fcb19f5acba8db07a0dd3cb2fa7edbc228"
   version = "0.1.1"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/Unknwon/goconfig"
-  packages = ["."]
-  revision = "ef1e4c783f8f0478bd8bff0edb3dd0bade552599"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/VividCortex/ewma"
-  packages = ["."]
-  revision = "43880d236f695d39c62cf7aa4ebd4508c258e6c0"
-
-[[projects]]
-  name = "github.com/abbot/go-http-auth"
-  packages = ["."]
-  revision = "0ddd408d5d60ea76e320503cc7dd091992dee608"
-  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -42,12 +18,6 @@
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
   revision = "0b96aaa707760d6ab28d9b9d1913ff5993328bae"
-
-[[projects]]
-  name = "github.com/djherbis/times"
-  packages = ["."]
-  revision = "95292e44976d1217cf3611dc7c8d9466877d3ed5"
-  version = "v1.0.1"
 
 [[projects]]
   name = "github.com/elazarl/go-bindata-assetfs"
@@ -66,12 +36,6 @@
   name = "github.com/golang/glog"
   packages = ["."]
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
-
-[[projects]]
-  name = "github.com/golang/protobuf"
-  packages = ["proto"]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -146,41 +110,6 @@
   version = "v1.7.0"
 
 [[projects]]
-  name = "github.com/ncw/rclone"
-  packages = [
-    "backend/drive",
-    "backend/dropbox/dbhash",
-    "backend/local",
-    "backend/onedrive/quickxorhash",
-    "cmd/serve/httplib",
-    "fs",
-    "fs/accounting",
-    "fs/asyncreader",
-    "fs/config",
-    "fs/config/flags",
-    "fs/config/obscure",
-    "fs/driveletter",
-    "fs/filter",
-    "fs/fserrors",
-    "fs/fshttp",
-    "fs/hash",
-    "fs/list",
-    "fs/log",
-    "fs/march",
-    "fs/object",
-    "fs/operations",
-    "fs/rc",
-    "fs/walk",
-    "lib/dircache",
-    "lib/oauthutil",
-    "lib/pacer",
-    "lib/readers",
-    "vfs"
-  ]
-  revision = "e4c380b2a86faba7699385fa264964a7721b1ee6"
-  version = "v1.41"
-
-[[projects]]
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
@@ -233,12 +162,6 @@
   version = "v1.0.6"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/skratchdot/open-golang"
-  packages = ["open"]
-  revision = "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
-
-[[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
   revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
@@ -278,37 +201,14 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = [
-    "bcrypt",
-    "blowfish",
-    "internal/subtle",
-    "nacl/secretbox",
-    "poly1305",
-    "salsa20/salsa",
-    "ssh/terminal"
-  ]
+  packages = ["ssh/terminal"]
   revision = "a8fb68e7206f8c78be19b432c58eb52a6aa34462"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = [
-    "context",
-    "context/ctxhttp"
-  ]
+  packages = ["context"]
   revision = "1e491301e022f8f977054da4c2d852decd59571f"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/oauth2"
-  packages = [
-    ".",
-    "google",
-    "internal",
-    "jws",
-    "jwt"
-  ]
-  revision = "1e0a3fa8ba9a5c9eb35c271780101fdaf1b205d7"
 
 [[projects]]
   branch = "master"
@@ -319,57 +219,9 @@
   ]
   revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
 
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/text"
-  packages = [
-    "internal/gen",
-    "internal/triegen",
-    "internal/ucd",
-    "transform",
-    "unicode/cldr",
-    "unicode/norm"
-  ]
-  revision = "5c1cf69b5978e5a34c5f9ba09a83e56acc4b7877"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
-
-[[projects]]
-  branch = "master"
-  name = "google.golang.org/api"
-  packages = [
-    "drive/v3",
-    "gensupport",
-    "googleapi",
-    "googleapi/internal/uritemplates"
-  ]
-  revision = "2eea9ba0a3d94f6ab46508083e299a00bbbc65f6"
-
-[[projects]]
-  name = "google.golang.org/appengine"
-  packages = [
-    ".",
-    "internal",
-    "internal/app_identity",
-    "internal/base",
-    "internal/datastore",
-    "internal/log",
-    "internal/modules",
-    "internal/remote_api",
-    "internal/urlfetch",
-    "log",
-    "urlfetch"
-  ]
-  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
-  version = "v1.0.0"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "12aad3efa67fd25acc244a4d535bb7cce6b217a407b8dbdb1456053ffbec01e3"
+  inputs-digest = "8b148106da4f24ceb1cc3f62cbf0c0ed219223f9f46b61dd8526d1a90191cb27"
   solver-name = "gps-cdcl"
   solver-version = 1
