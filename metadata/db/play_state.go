@@ -31,7 +31,10 @@ type latestEpResult struct {
 
 // UpNextMovies returns a list of movies that are recently added and not watched yet.
 func UpNextMovies(userID uint) (movies []*Movie) {
-	db.Joins("JOIN play_states on play_states.owner_id = movies.id").Where("play_states.finished = 0 and play_states.owner_type = 'movies'").Find(&movies)
+	db.Joins("JOIN play_states ON play_states.owner_id = movies.id").Where("play_states.finished = 0 AND play_states.owner_type = 'movies'").Find(&movies)
+	for i := range movies {
+		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
+	}
 	return movies
 }
 
@@ -64,6 +67,9 @@ func UpNextEpisodes(userID uint) []*Episode {
 			db.Where("ID = ?", result.EpisodeID).First(&ep)
 			eps = append(eps, &ep)
 		}
+	}
+	for i := range eps {
+		db.Model(eps[i]).Preload("Streams").Association("EpisodeFiles").Find(&eps[i].EpisodeFiles)
 	}
 	return eps
 }

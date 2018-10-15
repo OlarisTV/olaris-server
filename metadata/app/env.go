@@ -87,7 +87,7 @@ func (l *GormLogger) Print(values ...interface{}) {
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, false)
+	return NewMDContext(dbPath, true)
 }
 
 // NewMDContext lets you create a more custom environment.
