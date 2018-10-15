@@ -42,7 +42,13 @@ var langTagToHumanized = map[string]string{
 	"unk": "Unknown",
 }
 
-var humanizedToLangTag = reverseMap(langTagToHumanized)
+var humanizedToLangTag = GetHumanizedToLangTag()
+
+func GetHumanizedToLangTag() map[string]string {
+	humanizedToLangTag := reverseMap(langTagToHumanized)
+	humanizedToLangTag["Polski"] = "pol"
+	return humanizedToLangTag
+}
 
 func GetTitleOrHumanizedLanguage(stream ProbeStream) string {
 	title := stream.Tags["title"]

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
+const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 <MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns="urn:mpeg:dash:schema:mpd:2011"
 	xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -20,7 +20,7 @@ const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	minBufferTime="PT30S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
 		<AdaptationSet contentType="video">
-			{{ range $si, $s := .videoStreams -}}
+			{{ range $si, $s := .videoStream.Representations -}}
 			<Representation
 					id="{{$s.Representation.RepresentationId}}"
 					mimeType="video/mp4"
@@ -34,11 +34,13 @@ const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
-			{{- end }}
+			{{ end }}
 		</AdaptationSet>
-		<AdaptationSet contentType="audio">
-			{{ range $si, $s := .audioStreams -}}
-			<Representation id="{{ $s.Representation.RepresentationId }}"
+		{{ range $i, $audioStream := .audioStreams -}}
+		<AdaptationSet contentType="audio" lang="{{ $audioStream.Stream.Language }}">
+			{{ range $si, $s := $audioStream.Representations -}}
+			<Representation
+					id="{{ $s.Representation.RepresentationId }}"
 					mimeType="audio/mp4" codecs="mp4a.40.2"
 					bandwidth="{{$s.Representation.BitRate}}">
 				<SegmentTemplate timescale="1000" duration="4992" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
@@ -46,24 +48,45 @@ const transcodingManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 			</Representation>
 			{{ end }}
 		</AdaptationSet>
+		{{ end }}
+		{{ range $i, $s := .subtitleStreams -}}
+		<AdaptationSet contentType="text" lang="{{ $s.Stream.Language }}" title="lol">
+			<Representation id="{{ $s.Representation.RepresentationId }}"
+					mimeType="application/mp4" codecs="wvtt">
+				<BaseURL>{{ $s.URI }}</BaseURL>
+			</Representation>
+		</AdaptationSet>
+		{{ end }}
 	</Period>
 </MPD>`
 
-func BuildManifest(
-	videoStreams []ffmpeg.StreamRepresentation,
-	audioStreams []ffmpeg.StreamRepresentation) string {
+type SubtitleStreamRepresentation struct {
+	ffmpeg.StreamRepresentation
+	URI string
+}
 
-	totalDuration := videoStreams[0].Stream.TotalDuration.Round(time.Millisecond)
+type StreamRepresentations struct {
+	Stream          ffmpeg.Stream
+	Representations []ffmpeg.StreamRepresentation
+}
+
+func BuildManifest(
+	videoStream StreamRepresentations,
+	audioStreams []StreamRepresentations,
+	subtitleStreams []SubtitleStreamRepresentation) string {
+
+	totalDuration := videoStream.Stream.TotalDuration.Round(time.Millisecond)
 	durationXml := toXmlDuration(totalDuration)
 
 	templateData := map[string]interface{}{
-		"videoStreams": videoStreams,
-		"audioStreams": audioStreams,
-		"duration":     durationXml,
+		"videoStream":     videoStream,
+		"audioStreams":    audioStreams,
+		"subtitleStreams": subtitleStreams,
+		"duration":        durationXml,
 	}
 
 	buf := bytes.Buffer{}
-	t := template.Must(template.New("manifest").Parse(transcodingManifestTemplate))
+	t := template.Must(template.New("manifest").Parse(dashManifestTemplate))
 	t.Execute(&buf, templateData)
 	return buf.String()
 }
