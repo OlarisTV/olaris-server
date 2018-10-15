@@ -91,12 +91,12 @@ func FindContentByUUID(uuid string) *MediaResult {
 
 // RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
 func RecentlyAddedMovies() (movies []*Movie) {
-	db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
+	db.Preload("MovieFiles.Streams").Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
 
 // RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
 func RecentlyAddedEpisodes() (eps []*Episode) {
-	db.Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
+	db.Preload("EpisodeFiles.Streams").Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
 	return eps
 }
