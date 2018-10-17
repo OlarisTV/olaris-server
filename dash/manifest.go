@@ -60,6 +60,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	</Period>
 </MPD>`
 
+// NOTE(Leon Handreke): Duplicated from hls/manifest.go - factor out, but where to?
 type SubtitleStreamRepresentation struct {
 	ffmpeg.StreamRepresentation
 	URI string

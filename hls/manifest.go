@@ -2,9 +2,7 @@ package hls
 
 import (
 	"bytes"
-	"fmt"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
-	"net/url"
 	"text/template"
 )
 
@@ -83,24 +81,10 @@ const subtitleMediaPlaylistTemplate = `#EXTM3U
 
 func BuildMasterPlaylistFromFile(
 	representationCombinations []RepresentationCombination,
-	subtitleStreamRepresentations []ffmpeg.StreamRepresentation) string {
+	subtitlePlaylistItems []SubtitlePlaylistItem) string {
 
 	buf := bytes.Buffer{}
 	t := template.Must(template.New("manifest").Parse(transcodingMasterPlaylistTemplate))
-
-	// Subtitles may be in another file, so we need to list their absolute URI.
-	subtitlePlaylistItems := []SubtitlePlaylistItem{}
-	for _, s := range subtitleStreamRepresentations {
-		mediaFileURL, _ := url.Parse(s.Stream.MediaFileURL)
-		subtitlePlaylistItems = append(subtitlePlaylistItems,
-			SubtitlePlaylistItem{
-				StreamRepresentation: s,
-				URI: fmt.Sprintf("/s/files%s/%d/%s/media.m3u8",
-					mediaFileURL.Path,
-					s.Stream.StreamId,
-					s.Representation.RepresentationId),
-			})
-	}
 
 	t.Execute(&buf, map[string]interface{}{
 		"subtitlePlaylistItems":      subtitlePlaylistItems,

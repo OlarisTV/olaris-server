@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/dash"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
 	"net/url"
 )
@@ -60,10 +61,17 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 	for _, s := range subtitleRepresentations {
 		// TODO(Leon Handreke): Build a JWT here
 		mediaFileURLAsURL, _ := url.Parse(s.Stream.MediaFileURL)
+		// NOTE(Leon Handreke): Because we'd have to propagate the UserID here through
+		// context or something like that and it's not used anyway, just use 0 here.
+		jwt, err := auth.CreateStreamingJWT(0, mediaFileURLAsURL.Path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		subtitleStreams = append(subtitleStreams, dash.SubtitleStreamRepresentation{
 			StreamRepresentation: s,
-			URI: fmt.Sprintf("/s/files%s/%d/%s/0.vtt",
-				mediaFileURLAsURL.Path,
+			URI: fmt.Sprintf("/s/files/jwt/%s/%d/%s/0.vtt",
+				jwt,
 				s.Stream.StreamId,
 				s.Representation.RepresentationId),
 		})

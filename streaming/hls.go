@@ -1,10 +1,13 @@
 package streaming
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/hls"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -49,8 +52,6 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		audioStreamRepresentations = append(audioStreamRepresentations, r)
 	}
 
-	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-
 	combinations := []hls.RepresentationCombination{}
 	for _, v := range videoRepresentations {
 		combinations = append(combinations, hls.RepresentationCombination{
@@ -62,7 +63,10 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	manifest := hls.BuildMasterPlaylistFromFile(combinations, subtitleRepresentations)
+	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+
+	manifest := hls.BuildMasterPlaylistFromFile(combinations, subtitlePlaylistItems)
 	w.Write([]byte(manifest))
 }
 
@@ -90,6 +94,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -101,7 +106,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 				AudioCodecs: "mp4a.40.2",
 			},
 		},
-		subtitleRepresentations)
+		subtitlePlaylistItems)
 	w.Write([]byte(manifest))
 }
 
@@ -149,9 +154,10 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
 
 	manifest := hls.BuildMasterPlaylistFromFile(
-		representationCombinations, subtitleRepresentations)
+		representationCombinations, subtitlePlaylistItems)
 	w.Write([]byte(manifest))
 }
 
@@ -175,4 +181,24 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 
 	manifest := hls.BuildTranscodingMediaPlaylistFromFile(streamRepresentation)
 	w.Write([]byte(manifest))
+}
+
+func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation) []hls.SubtitlePlaylistItem {
+	// Subtitles may be in another file, so we need to list their absolute URI.
+	subtitlePlaylistItems := []hls.SubtitlePlaylistItem{}
+	for _, s := range representations {
+		mediaFileURL, _ := url.Parse(s.Stream.MediaFileURL)
+		// NOTE(Leon Handreke): Because we'd have to propagate the UserID here through
+		// context or something like that and it's not used anyway, just use 0 here.
+		jwt, _ := auth.CreateStreamingJWT(0, mediaFileURL.Path)
+		subtitlePlaylistItems = append(subtitlePlaylistItems,
+			hls.SubtitlePlaylistItem{
+				StreamRepresentation: s,
+				URI: fmt.Sprintf("/s/files/jwt/%s/%d/%s/media.m3u8",
+					jwt,
+					s.Stream.StreamId,
+					s.Representation.RepresentationId),
+			})
+	}
+	return subtitlePlaylistItems
 }
