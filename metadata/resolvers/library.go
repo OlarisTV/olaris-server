@@ -3,15 +3,15 @@ package resolvers
 import (
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"path/filepath"
+	"strconv"
 )
 
-var refreshMDLocks = make(map[uint]bool)
 var rescanningLibraries bool
 
 // Library wrapper around the db.Library package so it can contain related resolvers.
@@ -62,19 +62,6 @@ type createLibraryArgs struct {
 	Kind     int32
 }
 
-func withLock(fn func(), id uint) {
-	log.WithFields(log.Fields{"lockID": id}).Debugln("Checking for lock.")
-	if refreshMDLocks[id] == false {
-		log.WithFields(log.Fields{"lockID": id}).Debugln("No lock.")
-		refreshMDLocks[id] = true
-		fn()
-		refreshMDLocks[id] = false
-		log.WithFields(log.Fields{"lockID": id}).Debugln("Lock released.")
-	} else {
-		log.WithFields(log.Fields{"lockID": id}).Warnln("Already had a lock, ignoring.")
-	}
-}
-
 // RefreshAgentMetadata refreshes all metadata from agent
 func (r *Resolver) RefreshAgentMetadata(args struct {
 	LibraryID *int32
@@ -85,39 +72,19 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 		libID := int(*args.LibraryID)
 		library := db.FindLibrary(libID)
 		if library.ID != 0 {
-			go withLock(func() {
+			go mhelpers.WithLock(func() {
 				if library.Kind == db.MediaTypeMovie {
 					managers.RefreshAllMovieMD()
 				} else if library.Kind == db.MediaTypeSeries {
 					managers.RefreshAllSeriesMD()
 				}
-			}, library.ID)
+			}, "libid"+strconv.FormatUint(uint64(library.ID), 10))
 		}
 		return true
 	}
 
-	series := db.FindSeriesByUUID(args.UUID)
-	if len(series) > 0 {
-		go withLock(func() {
-			managers.UpdateSeriesMD(&series[0])
-		}, series[0].ID)
-		return true
-	}
-
-	season := db.FindSeasonByUUID(args.UUID)
-	if season.ID != 0 {
-		go withLock(func() {
-			managers.UpdateSeasonMD(&season, season.GetSeries())
-		}, season.ID)
-		return true
-	}
-
-	episode := db.FindEpisodeByUUID(args.UUID, 0)
-	if episode.ID != 0 {
-		go withLock(func() {
-			managers.UpdateEpisodeMD(episode, episode.GetSeason(), episode.GetSeries())
-		}, episode.ID)
-		return true
+	if args.UUID != nil {
+		return managers.RefreshAgentMetadataForUUID(*args.UUID)
 	}
 
 	return false

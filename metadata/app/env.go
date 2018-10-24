@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/jasonlvhit/gocron"
 	"github.com/jinzhu/gorm"
 	"math/rand"
 	"reflect"
@@ -116,6 +117,9 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	go libraryManager.RefreshAll()
 
 	go env.startWatcher(exitChan)
+
+	gocron.Every(2).Hours().Do(managers.RefreshAgentMetadataWithMissingArt)
+	gocron.Start()
 
 	return env
 }

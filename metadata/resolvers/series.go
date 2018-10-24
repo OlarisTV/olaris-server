@@ -44,9 +44,9 @@ func newSeries(dbSeries *db.Series, userID uint) Series {
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
 	userID, _ := auth.UserID(ctx)
-	dbepisode := db.FindEpisodeByUUID(args.UUID, userID)
-	if dbepisode != nil {
-		ep := newEpisode(dbepisode, userID)
+	dbepisode := db.FindEpisodeByUUID(*args.UUID, userID)
+	if dbepisode.ID != 0 {
+		ep := newEpisode(&dbepisode, userID)
 		return &EpisodeResolver{r: ep}
 	}
 	return &EpisodeResolver{r: Episode{}}
@@ -56,7 +56,7 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 // Season returns season.
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	userID, _ := auth.UserID(ctx)
-	dbseason := db.FindSeasonByUUID(args.UUID)
+	dbseason := db.FindSeasonByUUID(*args.UUID)
 	season := newSeason(&dbseason, userID)
 
 	return &SeasonResolver{r: season}
@@ -69,7 +69,7 @@ func (r *Resolver) Series(ctx context.Context, args *mustUUIDArgs) []*SeriesReso
 	var series []db.Series
 
 	if args.UUID != nil {
-		series = db.FindSeriesByUUID(args.UUID)
+		series = db.FindSeriesByUUID(*args.UUID)
 	} else {
 		series = db.FindAllSeries()
 	}
@@ -288,13 +288,13 @@ func (res *PlayStateResolver) UUID() string {
 }
 
 // Finished returns a bool when content has been watched.
-func (r *PlayStateResolver) Finished() bool {
-	return r.r.Finished
+func (res *PlayStateResolver) Finished() bool {
+	return res.r.Finished
 }
 
 // Playtime current playtime.
-func (r *PlayStateResolver) Playtime() float64 {
-	return r.r.Playtime
+func (res *PlayStateResolver) Playtime() float64 {
+	return res.r.Playtime
 }
 
 // EpisodeFileResolver resolves episodefile.

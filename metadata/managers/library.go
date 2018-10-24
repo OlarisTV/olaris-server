@@ -7,6 +7,7 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"os"
 	"path/filepath"
@@ -317,6 +318,43 @@ func ValidFile(filePath string) bool {
 	return true
 }
 
+// RefreshAgentMetadataWithMissingArt loops over all series/episodes/seasons and movies with missing art (posters/backdrop) and tries to retrieve them.
+func RefreshAgentMetadataWithMissingArt() {
+	log.Debugln("Checking and updating media items for missing art.")
+	for _, UUID := range db.ItemsWithMissingMetadata() {
+		RefreshAgentMetadataForUUID(UUID)
+	}
+}
+
+// RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
+func RefreshAgentMetadataForUUID(UUID string) bool {
+	log.WithFields(log.Fields{"uuid": UUID}).Debugln("Looking to refresh metadata agent data.")
+	series := db.FindSeriesByUUID(UUID)
+	if len(series) > 0 {
+		go mhelpers.WithLock(func() {
+			UpdateSeriesMD(&series[0])
+		}, series[0].UUID)
+		return true
+	}
+
+	season := db.FindSeasonByUUID(UUID)
+	if season.ID != 0 {
+		go mhelpers.WithLock(func() {
+			UpdateSeasonMD(&season, season.GetSeries())
+		}, season.UUID)
+		return true
+	}
+
+	episode := db.FindEpisodeByUUID(UUID, 0)
+	if episode.ID != 0 {
+		go mhelpers.WithLock(func() {
+			UpdateEpisodeMD(&episode, episode.GetSeason(), episode.GetSeries())
+		}, episode.UUID)
+		return true
+	}
+	return false
+}
+
 // ProbeMovies goes over the given library and attempts to get movie information from filenames.
 func (man *LibraryManager) ProbeMovies(library *db.Library) {
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
@@ -382,6 +420,8 @@ func (man *LibraryManager) RefreshAll() {
 		man.UpdateMD(&lib)
 
 	}
+
+	RefreshAgentMetadataWithMissingArt()
 
 	db.MergeDuplicateMovies()
 

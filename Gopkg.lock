@@ -90,6 +90,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/jasonlvhit/gocron"
+  packages = ["."]
+  revision = "54194c9749d48b073c9aeb2c787b6882e95dd0cd"
+
+[[projects]]
+  branch = "master"
   name = "github.com/jinzhu/gorm"
   packages = [
     ".",
@@ -222,6 +228,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8b148106da4f24ceb1cc3f62cbf0c0ed219223f9f46b61dd8526d1a90191cb27"
+  inputs-digest = "92dcd63830ddb69e093e065d73867cb01d33d049e89121ccf3b07f789f4238de"
   solver-name = "gps-cdcl"
   solver-version = 1

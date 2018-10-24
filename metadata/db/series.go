@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-
 	"github.com/jinzhu/gorm"
 )
 
@@ -206,7 +205,7 @@ func FindSerie(seriesID uint) (series Series) {
 }
 
 // FindSeriesByUUID retrives a serie based on it's UUID.
-func FindSeriesByUUID(uuid *string) (series []Series) {
+func FindSeriesByUUID(uuid string) (series []Series) {
 	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
 	return series
@@ -255,7 +254,7 @@ func FindAllSeasons() (seasons []Season) {
 }
 
 // FindSeasonByUUID finds the season based on it's UUID.
-func FindSeasonByUUID(uuid *string) (season Season) {
+func FindSeasonByUUID(uuid string) (season Season) {
 	db.Where("uuid = ?", uuid).Find(&season)
 	return season
 }
@@ -267,11 +266,11 @@ func FindSeason(seasonID uint) (season Season) {
 }
 
 // FindEpisodeByUUID finds a episode based on it's UUID.
-func FindEpisodeByUUID(uuid *string, userID uint) (episode *Episode) {
+func FindEpisodeByUUID(uuid string, userID uint) (episode Episode) {
 	var episodes []Episode
 	db.Where("uuid = ?", uuid).First(&episodes)
 	if len(episodes) == 1 {
-		episode = &episodes[0]
+		episode = episodes[0]
 		db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
 		db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "episodes").First(&episode.PlayState)
 	}
@@ -348,4 +347,36 @@ func FirstOrCreateEpisode(episode *Episode, episodeDef Episode) {
 // FirstOrCreateSeason returns the first instance or writes a episodes to the db.
 func FirstOrCreateSeason(season *Season, seasonDef Season) {
 	db.FirstOrCreate(season, seasonDef)
+}
+
+// ItemsWithMissingMetadata fetches series with missing metadata.
+func ItemsWithMissingMetadata() []string {
+	var uuids []string
+
+	// We can probably optimise this by only initiating strings somehow
+	var episodes []Episode
+	db.Select("uuid").Where("still_path = ''").Find(&episodes)
+	for _, episode := range episodes {
+		uuids = append(uuids, episode.UUID)
+	}
+
+	var movies []Movie
+	db.Select("uuid").Where("poster_path = ''").Or("backdrop_path = ''").Find(&movies)
+	for _, movie := range movies {
+		uuids = append(uuids, movie.UUID)
+	}
+
+	var seasons []Season
+	db.Select("uuid").Where("poster_path = ''").Find(&seasons)
+	for _, season := range seasons {
+		uuids = append(uuids, season.UUID)
+	}
+
+	var series []Series
+	db.Select("uuid").Where("poster_path = ''").Or("backdrop_path = ''").Find(&series)
+	for _, s := range series {
+		uuids = append(uuids, s.UUID)
+	}
+
+	return uuids
 }
