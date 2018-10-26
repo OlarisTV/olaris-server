@@ -120,8 +120,8 @@ func FindAllMovies(userID uint) (movies []Movie) {
 	return movies
 }
 
-// FindMovieWithUUID finds the movie specified by the given uuid.
-func FindMovieWithUUID(uuid *string, userID uint) (movies []Movie) {
+// FindMovieByUUID finds the movie specified by the given uuid.
+func FindMovieByUUID(uuid *string, userID uint) (movies []Movie) {
 	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
 	CollectMovieInfo(movies, userID)
 

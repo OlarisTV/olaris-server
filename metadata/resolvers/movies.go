@@ -16,7 +16,7 @@ func (r *Resolver) Movies(ctx context.Context, args *uuidArgs) []*MovieResolver 
 	var l []*MovieResolver
 	var movies []db.Movie
 	if args.Uuid != nil {
-		movies = db.FindMovieWithUUID(args.Uuid, userID)
+		movies = db.FindMovieByUUID(args.Uuid, userID)
 	} else {
 		movies = db.FindAllMovies(userID)
 	}

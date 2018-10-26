@@ -62,72 +62,86 @@ func (a *TmdbAgent) UpdateSeasonMD(season *db.Season, series *db.Series) error {
 
 // UpdateSeriesMD updates the metadata information for the given series.
 func (a *TmdbAgent) UpdateSeriesMD(series *db.Series) error {
-	// TODO: Right now this is being used for refresh as well as first scan. If we already have a tmdbID we want to refresh based on that.
-	log.WithFields(log.Fields{"seriesName": series.Name}).Debugln("Looking for series metadata.")
-	var options = make(map[string]string)
+	if series.TmdbID == 0 {
+		log.WithFields(log.Fields{"seriesName": series.Name}).Debugln("No TmdbID yet, looking for series metadata based on the parsed name.")
+		var options = make(map[string]string)
 
-	if series.FirstAirYear != 0 {
-		options["first_air_date_year"] = strconv.FormatUint(series.FirstAirYear, 10)
-	}
-	searchRes, err := a.Tmdb.SearchTv(series.Name, options)
-
-	if err != nil {
-		return err
-	}
-
-	if len(searchRes.Results) > 0 {
-		log.Debugln("Found Series that matches, using first result and doing deepscan.")
-		tv := searchRes.Results[0] // Take the first result for now
-		fullTv, err := a.Tmdb.GetTvInfo(tv.ID, nil)
-		if err == nil {
-			series.Overview = fullTv.Overview
-			series.Status = fullTv.Status
-			series.Type = fullTv.Type
-		} else {
-			log.Warnln("Could not get full results, only adding search results. Error:", err)
+		if series.FirstAirYear != 0 {
+			options["first_air_date_year"] = strconv.FormatUint(series.FirstAirYear, 10)
 		}
-		series.TmdbID = tv.ID
-		series.FirstAirDate = tv.FirstAirDate
-		series.OriginalName = tv.OriginalName
-		series.BackdropPath = tv.BackdropPath
-		series.PosterPath = tv.PosterPath
-		log.WithFields(log.Fields{"seriesName": series.Name, "tmdbID": tv.ID}).Debugln("Found series metadata.")
+		searchRes, err := a.Tmdb.SearchTv(series.Name, options)
+
+		if err != nil {
+			return err
+		}
+
+		if len(searchRes.Results) > 0 {
+			log.Debugln("Found Series that matches, using first result and doing deepscan.")
+			tv := searchRes.Results[0] // Take the first result for now
+			series.TmdbID = tv.ID
+			series.FirstAirDate = tv.FirstAirDate
+			series.OriginalName = tv.OriginalName
+		}
+	}
+
+	fullTv, err := a.Tmdb.GetTvInfo(series.TmdbID, nil)
+	if err == nil {
+		log.WithFields(log.Fields{"seriesName": series.Name, "tmdbID": series.TmdbID}).Debugln("Updating metadata from tmdb agent.")
+		series.Overview = fullTv.Overview
+		series.Status = fullTv.Status
+		series.Type = fullTv.Type
+		series.BackdropPath = fullTv.BackdropPath
+		series.PosterPath = fullTv.PosterPath
+	} else {
+		log.WithFields(log.Fields{"seriesName": series.Name, "tmdbID": series.TmdbID, "error": err}).Debugln("Could not grab full TV details.")
+		return err
 	}
 	return nil
 }
 
 // UpdateMovieMD the given movie with Metadata from themoviedatabase.org
 func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
-	var options = make(map[string]string)
-	if movie.Year > 0 {
-		options["year"] = movie.YearAsString()
-	}
-	searchRes, err := a.Tmdb.SearchMovie(movie.Title, options)
+	if movie.TmdbID == 0 {
+		var options = make(map[string]string)
+		if movie.Year > 0 {
+			options["year"] = movie.YearAsString()
+		}
+		searchRes, err := a.Tmdb.SearchMovie(movie.Title, options)
 
-	if err != nil {
+		if err != nil {
+			return err
+		}
+
+		if len(searchRes.Results) > 0 {
+			log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
+			mov := searchRes.Results[0] // Take the first result for now
+			movie.OriginalTitle = mov.OriginalTitle
+			movie.ReleaseDate = mov.ReleaseDate
+			movie.TmdbID = mov.ID
+			log.WithFields(movie.LogFields()).Println("Identified movie.")
+		} else {
+			log.WithFields(log.Fields{
+				"title": movie.Title,
+				"year":  movie.Year,
+			}).Warnln("Could not find match based on parsed title and given year.")
+		}
+	}
+
+	fullMov, err := a.Tmdb.GetMovieInfo(movie.TmdbID, nil)
+	if err == nil {
+		log.WithFields(log.Fields{
+			"title": movie.Title,
+			"year":  movie.Year,
+		}).Debugln("Updating metadata from tmdb agent.")
+
+		movie.Overview = fullMov.Overview
+		movie.BackdropPath = fullMov.BackdropPath
+		movie.PosterPath = fullMov.PosterPath
+		movie.ImdbID = fullMov.ImdbID
+	} else {
+		log.WithFields(log.Fields{"error": err}).Warnln("Could not get full results.")
 		return err
 	}
 
-	if len(searchRes.Results) > 0 {
-		log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
-		mov := searchRes.Results[0] // Take the first result for now
-		fullMov, err := a.Tmdb.GetMovieInfo(mov.ID, nil)
-		if err == nil {
-			movie.Overview = fullMov.Overview
-			movie.ImdbID = fullMov.ImdbID
-		} else {
-			log.Warnln("Could not get full results, only adding search results. Error:", err)
-		}
-		movie.TmdbID = mov.ID
-		movie.ReleaseDate = mov.ReleaseDate
-		movie.OriginalTitle = mov.OriginalTitle
-		movie.BackdropPath = mov.BackdropPath
-		movie.PosterPath = mov.PosterPath
-		log.WithFields(movie.LogFields()).Println("identified movie.")
-	} else {
-		log.WithFields(log.Fields{
-			"title": movie.Title,
-		}).Warnln("Could not find match based on parsed title.")
-	}
 	return nil
 }
