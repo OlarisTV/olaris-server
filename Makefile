@@ -84,7 +84,7 @@ build-all:
 	make crossbuild GOOS=linux GOARCH=386
 	make crossbuild GOOS=linux GOARCH=arm64
 	make crossbuild GOOS=linux GOARCH=amd64
-	.PHONY: list
 
+.PHONY: list
 list:
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs
