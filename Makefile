@@ -28,12 +28,14 @@ download-olaris-react:
 	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
 	unzip -o react/static.zip -d react/
 	rm react/static.zip
+	make generate
 
 .PHONY: build-olaris-react
 build-olaris-react:
 	if [ ! -d "./builds/olaris-react" ]; then cd builds && git clone $(REACT_REPO) olaris-react; fi
 	cd builds/olaris-react && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
 	cp -r builds/olaris-react/build ./react/
+	make generate
 
 .PHONY: build
 build: generate
@@ -82,3 +84,7 @@ build-all:
 	make crossbuild GOOS=linux GOARCH=386
 	make crossbuild GOOS=linux GOARCH=arm64
 	make crossbuild GOOS=linux GOARCH=amd64
+	.PHONY: list
+
+list:
+	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' | xargs

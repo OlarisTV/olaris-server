@@ -49,7 +49,7 @@ func UpNextEpisodes(userID uint) []*Episode {
 		" where play_states.user_id = ?"+
 		" GROUP BY series.id"+
 		" ORDER BY height DESC", userID).Scan(&result)
-	// TODO(Maran): I'm not 100% the order_by height here is being used 'before' the grouping, if not then we might not always pick the latest episode
+	// I'm not 100% the order_by height here is being used 'before' the grouping, if not then we might not always pick the latest episode
 	for _, r := range result {
 		if r.Finished == false {
 			ep := Episode{}
