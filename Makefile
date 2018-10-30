@@ -21,7 +21,17 @@ IDENTIFIER=$(BINARY_NAME)-$(GOOS)-$(GOARCH)
 all: generate
 
 .PHONY: ready-ci
-ready-ci: download-olaris-react generate
+ready-ci: download-olaris-react download-ffmpeg
+
+.PHONY: download-ffmpeg
+download-ffmpeg:
+	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Fffmpeg/jobs/artifacts/master/download?job=compile' > ffmpeg/executable/build.zip
+	unzip -o ffmpeg/executable/build.zip -d ffmpeg/executable/
+	cp ffmpeg/executable/ffmpeg-static/bin/ffmpeg ffmpeg/executable/build/
+	cp ffmpeg/executable/ffmpeg-static/bin/ffprobe ffmpeg/executable/build/
+	rm ffmpeg/executable/build.zip
+	rm -rf ffmpeg/executable/ffmpeg-static
+	make generate
 
 .PHONY: download-olaris-react
 download-olaris-react:
