@@ -23,10 +23,10 @@ func GetHome() string {
 // EnsurePath ensures the given filesystem path exists, if not it will create it.
 func EnsurePath(pathName string) error {
 	if _, err := os.Stat(pathName); os.IsNotExist(err) {
-		log.WithFields(log.Fields{"path": path}).Debugln("Creating folder as it does not exist yet.")
+		log.WithFields(log.Fields{"pathName": pathName}).Debugln("Creating folder as it does not exist yet.")
 		err = os.MkdirAll(pathName, 0755)
 		if err != nil {
-			log.WithFields(log.Fields{"path": path}).Debugln("Could not create path.")
+			log.WithFields(log.Fields{"pathName": pathName}).Debugln("Could not create path.")
 			return err
 		}
 	}

@@ -68,7 +68,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	session, _ := getOrStartTranscodingSession(streamRepresentation, segmentId)
 
 	segmentPath, err := session.GetSegment(segmentId, 20*time.Second)
-	log.WithFields(log.Fields{"path": segmentPath, "mime": mimeTYpe}).Debugln("Serving segment")
+	log.WithFields(log.Fields{"path": segmentPath, "mime": mimeType}).Debugln("Serving segment")
 	w.Header().Set("Content-Type", mimeType)
 	http.ServeFile(w, r, segmentPath)
 }
