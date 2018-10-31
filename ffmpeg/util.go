@@ -3,7 +3,7 @@ package ffmpeg
 import (
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io"
 	"net/url"
@@ -161,7 +161,7 @@ func getTranscodingLogSink(prefix string) io.WriteCloser {
 	filepath := path.Join(helpers.LogPath(), filename)
 	f, err := os.OpenFile(filepath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 	if err != nil {
-		glog.Error("Failed to open log file ", filepath, ": ", err.Error())
+		log.Fatal("Failed to open log file ", filepath, ": ", err.Error())
 		f, _ = os.OpenFile(os.DevNull, os.O_RDWR, 0600)
 	}
 	fmt.Println(filepath)

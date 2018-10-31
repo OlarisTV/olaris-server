@@ -1,8 +1,8 @@
 package streaming
 
 import (
-	"github.com/golang/glog"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
 	"strconv"
@@ -68,7 +68,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	session, _ := getOrStartTranscodingSession(streamRepresentation, segmentId)
 
 	segmentPath, err := session.GetSegment(segmentId, 20*time.Second)
-	glog.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
+	log.WithFields(log.Fields{"path": segmentPath, "mime": mimeTYpe}).Debugln("Serving segment")
 	w.Header().Set("Content-Type", mimeType)
 	http.ServeFile(w, r, segmentPath)
 }

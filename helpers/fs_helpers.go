@@ -3,7 +3,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/user"
@@ -23,12 +22,11 @@ func GetHome() string {
 
 // EnsurePath ensures the given filesystem path exists, if not it will create it.
 func EnsurePath(pathName string) error {
-	glog.Infof("Ensuring folder %s exists.\n", pathName)
 	if _, err := os.Stat(pathName); os.IsNotExist(err) {
-		glog.Infof("Path %s does not exist, creating", pathName)
+		log.WithFields(log.Fields{"path": path}).Debugln("Creating folder as it does not exist yet.")
 		err = os.MkdirAll(pathName, 0755)
 		if err != nil {
-			glog.Errorf("Could not create %s", pathName)
+			log.WithFields(log.Fields{"path": path}).Debugln("Could not create path.")
 			return err
 		}
 	}

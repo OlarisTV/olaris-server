@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"path"
@@ -37,14 +37,14 @@ func GetSharedDB() *DB {
 	if sharedDb.db == nil {
 		sharedDb.db, err = NewDb(path.Join(helpers.BaseConfigPath(), "keyframedb"))
 		if err != nil {
-			glog.Exit("Failed to open database: ", err.Error())
+			log.Fatal("Failed to open database: ", err.Error())
 		}
 	}
 	return sharedDb.db
 }
 
 func NewDb(file string) (*DB, error) {
-	glog.Info("Opening database at ", file)
+	log.WithFields(log.Fields{"file": file}).Debugln("Opening transcoding-server database")
 	db, err := leveldb.OpenFile(file, nil)
 	ldb := &DB{db: db, path: file}
 	return ldb, err
