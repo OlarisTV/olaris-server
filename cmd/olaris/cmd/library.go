@@ -8,7 +8,8 @@ import (
 )
 
 var libraryCmd = &cobra.Command{
-	Use: "library",
+	Use:   "library",
+	Short: "Manage libraries",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return errors.New("Subcommand required")
 	},

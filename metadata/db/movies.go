@@ -164,6 +164,7 @@ func CreateMovie(movie *Movie) {
 
 // UpdateMovie updates a movie in the database.
 func UpdateMovie(movie *Movie) {
+	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
 	db.Save(movie)
 }
 
