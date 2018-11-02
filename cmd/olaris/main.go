@@ -12,7 +12,6 @@ func main() {
 	envflag.Parse()
 
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-	pflag.Parse()
 
 	cmd.Execute()
 
