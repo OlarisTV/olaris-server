@@ -49,6 +49,7 @@ var serveCmd = &cobra.Command{
 
 		stopChan := make(chan os.Signal)
 		signal.Notify(stopChan, os.Interrupt)
+		signal.Notify(stopChan, os.Kill)
 
 		// Wait for termination signal
 		<-stopChan
@@ -58,6 +59,8 @@ var serveCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		srv.Shutdown(ctx)
+
+		streaming.Cleanup()
 	},
 }
 
