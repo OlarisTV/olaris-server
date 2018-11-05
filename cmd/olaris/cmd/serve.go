@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var port string
+
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
@@ -34,11 +36,6 @@ var serveCmd = &cobra.Command{
 
 		handler := handlers.LoggingHandler(os.Stdout, r)
 
-		var port = os.Getenv("PORT")
-		// Set a default port if there is nothing in the environment
-		if port == "" {
-			port = "8080"
-		}
 		log.Infoln("binding on port", port)
 		srv := &http.Server{Addr: ":" + port, Handler: handler}
 		go func() {
@@ -62,5 +59,6 @@ var serveCmd = &cobra.Command{
 }
 
 func init() {
+	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "http port")
 	rootCmd.AddCommand(serveCmd)
 }

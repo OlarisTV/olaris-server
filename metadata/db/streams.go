@@ -23,6 +23,7 @@ var collectingKeyframes bool
 func CollectStreamKeyFrames() {
 	log.Infoln("Starting keyframe cache generation.")
 	if collectingKeyframes == false {
+		// TODO: Make this a task queue.
 		mutex.Lock()
 		collectingKeyframes = true
 		mutex.Unlock()

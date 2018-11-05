@@ -8,7 +8,8 @@ import (
 )
 
 var userCmd = &cobra.Command{
-	Use: "user",
+	Use:   "user",
+	Short: "Manage users",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return errors.New("Subcommand required")
 	},
