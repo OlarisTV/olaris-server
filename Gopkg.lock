@@ -162,6 +162,12 @@
   version = "v1.0.6"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/snowzach/rotatefilehook"
+  packages = ["."]
+  revision = "2f64f265f58cb742f59d68b12f956c9296746e2d"
+
+[[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
   revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
@@ -219,9 +225,15 @@
   ]
   revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
 
+[[projects]]
+  name = "gopkg.in/natefinch/lumberjack.v2"
+  packages = ["."]
+  revision = "a96e63847dc3c67d17befa69c303767e2f84e54f"
+  version = "v2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dbe174b5a3ae5cc1e5b9498bcd836584e89aa5bcf2450c9f728a951e377a87cc"
+  inputs-digest = "25e2940c3c4feb7fd0751c2e5ef753610ccb5703d0eefa1611dd634272c90b4e"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -2,22 +2,29 @@ package helpers
 
 import (
 	log "github.com/sirupsen/logrus"
-	"io"
+	"github.com/snowzach/rotatefilehook"
 	"os"
 	"path"
+	"time"
 )
 
 // InitLoggers sets the default logger options
 func InitLoggers(level log.Level) {
-	f, err := os.OpenFile(path.Join(LogPath(), "olaris-server.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	rotateFileHook, err := rotatefilehook.NewRotateFileHook(rotatefilehook.RotateFileConfig{
+		Filename:   path.Join(LogPath(), "olaris-server.log"),
+		MaxSize:    2,  // megabytes
+		MaxBackups: 7,  // amount
+		MaxAge:     28, //days
+		Level:      log.DebugLevel,
+		Formatter: &log.JSONFormatter{
+			TimestampFormat: time.RFC822,
+		},
+	})
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Tried opening logfile for writing but got an error instead. Only logging to stdout.")
-		log.SetOutput(os.Stdout)
-	} else {
-		mw := io.MultiWriter(os.Stdout, f)
-		log.SetOutput(mw)
+		log.WithFields(log.Fields{"error": err}).Warnln("Could not setup logfile.")
 	}
-
+	log.SetOutput(os.Stdout)
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetLevel(level)
+	log.AddHook(rotateFileHook)
 }
