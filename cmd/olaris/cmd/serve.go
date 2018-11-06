@@ -19,6 +19,7 @@ import (
 
 var port string
 var dbLog bool
+var verbose bool
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
@@ -29,7 +30,7 @@ var serveCmd = &cobra.Command{
 		r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 		defer streaming.Cleanup()
 
-		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog)
+		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
 		defer mctx.Db.Close()
 
 		r.PathPrefix("/app").Handler(http.StripPrefix("/app", react.GetHandler()))
@@ -62,6 +63,7 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "http port")
+	serveCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "verbose logging")
 	serveCmd.Flags().BoolVar(&dbLog, "db-log", true, "sets whether the database should log queries")
 	rootCmd.AddCommand(serveCmd)
 }

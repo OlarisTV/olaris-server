@@ -88,14 +88,20 @@ func (l *GormLogger) Print(values ...interface{}) {
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, true)
+	return NewMDContext(dbPath, true, true)
 }
 
 // NewMDContext lets you create a more custom environment.
-func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
+func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataContext {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	helpers.InitLoggers()
+	logLevel := log.InfoLevel
+	if verboseLog == true {
+		logLevel = log.DebugLevel
+	}
+
+	helpers.InitLoggers(logLevel)
+
 	log.Printf("olaris metadata server - v%s", helpers.Version())
 
 	db := db.NewDb(dbPath, dbLogMode)

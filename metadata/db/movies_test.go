@@ -26,7 +26,6 @@ func setupTest(t *testing.T) func() {
 	if err != nil {
 		t.Error("Could not create tmpfile for database tests:", err)
 	}
-	//	env := app.NewMDContext(tmp, false)
 
 	dbc := db.NewDb(tmp, false)
 

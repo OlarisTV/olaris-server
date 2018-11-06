@@ -9,7 +9,7 @@ import (
 )
 
 func TestBeforeCreate(t *testing.T) {
-	app.NewMDContext("/tmp/", false)
+	app.NewMDContext("/tmp/", false, false)
 	stream := db.Stream{Stream: ffmpeg.Stream{Codecs: "test"}}
 	db.CreateStream(&stream)
 	if stream.UUID == "" {

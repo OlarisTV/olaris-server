@@ -377,7 +377,7 @@ func (man *LibraryManager) ProbeMovies(library *db.Library) {
 			if !db.MovieFileExists(walkPath) {
 				man.ProbeFile(library, walkPath)
 			} else {
-				log.WithFields(log.Fields{"path": walkPath}).Println("File already exists in library, not adding again.")
+				log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
 			}
 		}
 
