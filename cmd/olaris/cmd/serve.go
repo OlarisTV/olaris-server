@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata"
 	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/react"
@@ -17,6 +18,7 @@ import (
 )
 
 var port string
+var dbLog bool
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
@@ -27,7 +29,7 @@ var serveCmd = &cobra.Command{
 		r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 		defer streaming.Cleanup()
 
-		mctx := app.NewDefaultMDContext()
+		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog)
 		defer mctx.Db.Close()
 
 		r.PathPrefix("/app").Handler(http.StripPrefix("/app", react.GetHandler()))
@@ -60,5 +62,6 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "http port")
+	serveCmd.Flags().BoolVar(&dbLog, "db-log", true, "sets whether the database should log queries")
 	rootCmd.AddCommand(serveCmd)
 }

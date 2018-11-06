@@ -96,7 +96,7 @@ func NewMDContext(dbPath string, dbLogMode bool) *MetadataContext {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	helpers.InitLoggers()
-	log.Printf("Olaris-server - v%s", helpers.Version())
+	log.Printf("olaris metadata server - v%s", helpers.Version())
 
 	db := db.NewDb(dbPath, dbLogMode)
 	db.SetLogger(&GormLogger{})
