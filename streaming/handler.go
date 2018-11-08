@@ -3,12 +3,9 @@ package streaming
 import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	log "github.com/sirupsen/logrus"
 	"net/http"
-	"sync"
 )
-
-// Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
-var sessionsMutex = sync.Mutex{}
 
 var router = mux.NewRouter()
 
@@ -32,6 +29,11 @@ func GetHandler() http.Handler {
 
 func Cleanup() {
 	for _, s := range playbackSessions {
-		s.Cleanup()
+		s.referenceCount--
+		s.CleanupIfRequired()
+
+		if s.referenceCount > 0 {
+			log.Warn("Playback session reference count leak: ", s.transcodingSession)
+		}
 	}
 }

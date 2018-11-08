@@ -3,10 +3,13 @@ package streaming
 import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
 	"strconv"
 	"time"
 )
+
+var videoMIMEType = "video/mp4"
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	sessionID := mux.Vars(r)["sessionID"]
@@ -27,9 +30,27 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		mux.Vars(r)["representationId"],
 		sessionID,
 	}
-	playbackSession, err := GetPlaybackSession(playbackSessionKey, 0)
+	// TODO(Leon Handreke): Add a special getter that will give us any of the
+	// existing sessions, they all have a valid initial segment
+	playbackSession, err := GetPlaybackSession(playbackSessionKey, -1)
+	defer ReleasePlaybackSession(playbackSession)
 
-	http.ServeFile(w, r, playbackSession.transcodingSession.InitialSegment())
+	for {
+		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if segmentPath, ok := availableSegments[ffmpeg.InitialSegmentIdx]; ok {
+			log.Info("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
+			w.Header().Set("Content-Type", videoMIMEType)
+			http.ServeFile(w, r, segmentPath)
+			return
+		} else {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+	}
 }
 
 func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
@@ -58,6 +79,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	}
 
 	playbackSession, err := GetPlaybackSession(playbackSessionKey, segmentIdx)
+	defer ReleasePlaybackSession(playbackSession)
 
 	for {
 		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
@@ -77,12 +99,11 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-
 	}
 }
 
 func serveMediaSegment(w http.ResponseWriter, r *http.Request) {
-	serveSegment(w, r, "video/mp4")
+	serveSegment(w, r, videoMIMEType)
 }
 
 func serveSubtitleSegment(w http.ResponseWriter, r *http.Request) {

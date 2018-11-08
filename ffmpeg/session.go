@@ -1,6 +1,7 @@
 package ffmpeg
 
 import (
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -8,14 +9,17 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
-	"time"
 )
+
+// Magic segment index value to denote the inital segment
+var InitialSegmentIdx int = -1
 
 type TranscodingSession struct {
 	cmd        *exec.Cmd
 	Stream     StreamRepresentation
 	outputDir  string
 	terminated bool
+	throttled  bool
 }
 
 func (s *TranscodingSession) Start() error {
@@ -49,6 +53,13 @@ func (s *TranscodingSession) Destroy() error {
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	res := make(map[int]string)
 
+	initialSegmentPath := filepath.Join(s.outputDir, "init.mp4")
+	if stat, err := os.Stat(initialSegmentPath); err == nil {
+		if stat.Size() > 0 {
+			res[InitialSegmentIdx] = initialSegmentPath
+		}
+	}
+
 	files, err := ioutil.ReadDir(s.outputDir)
 	if err != nil {
 		return nil, err
@@ -78,19 +89,11 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	return res, nil
 }
 
-// InitialSegment returns the path of the initial segment for the given stream
-// or error if no initial segment is available for the given stream.
-func (s *TranscodingSession) InitialSegment() string {
-	segmentPath := filepath.Join(s.outputDir, "init.mp4")
-
-	for {
-		if stat, err := os.Stat(segmentPath); err == nil {
-			if stat.Size() > 0 {
-				return segmentPath
-			}
-		}
-		// TODO(Leon Handreke): Unify with GetSegment (special index number)
-		// and do the waiting in the server
-		time.Sleep(500 * time.Millisecond)
+func (s *TranscodingSession) SetThrottled(throttled bool) {
+	log.Infof("Toggling throttled state to %t on %s", throttled, s.outputDir)
+	if throttled {
+		s.cmd.Process.Signal(syscall.SIGUSR1)
+	} else {
+		s.cmd.Process.Signal(syscall.SIGUSR2)
 	}
 }
