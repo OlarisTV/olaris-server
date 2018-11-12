@@ -29,7 +29,6 @@ Everything we build should be open-source. We feel strongly that more can be ach
 
 ### Build dependencies
   * Install Go
-  * Build and install [ffchunk](https://gitlab.com/olaris/ffchunk)
 	* go get github.com/jteeuwen/go-bindata/...
 	* go get github.com/elazarl/go-bindata-assetfs/...
 
