@@ -88,6 +88,7 @@ func GetTranscodedVideoRepresentation(
 			Container:        "video/mp4",
 			Codecs:           encoderParams.Codecs,
 			transcoded:       true,
+			encoderParams:    encoderParams,
 		},
 	}
 }
