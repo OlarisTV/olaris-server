@@ -92,11 +92,6 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ur.Code == "" {
-		writeError("No invite code supplied", w, http.StatusBadRequest)
-		return
-	}
-
 	user, err := db.CreateUserWithCode(ur.Username, ur.Password, ur.Code)
 	if err != nil {
 		writeError(err.Error(), w, http.StatusUnauthorized)
