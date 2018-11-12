@@ -8,12 +8,13 @@ import (
 
 type PlaybackSessionKey struct {
 	ffmpeg.StreamKey
-	representationID string
-	sessionID        string
+	sessionID string
 }
 
 type PlaybackSession struct {
 	transcodingSession *ffmpeg.TranscodingSession
+
+	representationID string
 	// lastRequestedSegmentIdx is the last segment index requested by the client. Some clients notice that the segments
 	// we serve are actually longer than 5s and therefore skip segment indices, some will just request the next segment
 	// regardless of how long the previously-loaded segment was. We have a window of max 5 (defined below), allowing
@@ -34,19 +35,22 @@ var sessionsMutex = sync.Mutex{}
 
 var playbackSessions = map[PlaybackSessionKey]*PlaybackSession{}
 
-func NewPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSession, error) {
-	streamRepresentation, err := streamRepresentationFromPlaybackSessionKey(key)
+func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, segmentIdx int) (*PlaybackSession, error) {
+	stream, err := ffmpeg.GetStream(streamKey)
 	if err != nil {
 		return nil, err
 	}
+	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
+		stream, representationID)
 
-	transcodingSession, err := ffmpeg.NewTranscodingSession(*streamRepresentation, segmentIdx)
+	transcodingSession, err := ffmpeg.NewTranscodingSession(streamRepresentation, segmentIdx)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &PlaybackSession{
 		transcodingSession: transcodingSession,
+		representationID:   representationID,
 		// TODO(Leon Handreke): Make this nicer, introduce a "new" state
 		lastRequestedSegmentIdx: segmentIdx - 1,
 		lastServedSegmentIdx:    segmentIdx - 1,
@@ -54,6 +58,9 @@ func NewPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSessio
 	}
 	go func() {
 		for range time.Tick(5000 * time.Millisecond) {
+			if s.transcodingSession.Terminated {
+				return
+			}
 			s.throttleIfRequired()
 		}
 	}()
@@ -66,7 +73,7 @@ func NewPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSessio
 // and start a new playback session.
 // If segmentIdx == -1, any session will be returned for the given key. This is useful to get a session
 // to serve the init segment from.
-func GetPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSession, error) {
+func GetPlaybackSession(key PlaybackSessionKey, representationId string, segmentIdx int) (*PlaybackSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
 
@@ -81,6 +88,7 @@ func GetPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSessio
 	}
 
 	if s == nil ||
+		s.representationID != representationId ||
 		// This is a really crude heuristic. VideoJS will skip requesting a segment
 		// if the previous segment already covers the whole duration of that segment.
 		// E.g. if the playlist has 5s segment lengths but a segment is 15s long,
@@ -96,7 +104,7 @@ func GetPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSessio
 			s.CleanupIfRequired()
 		}
 
-		s, err := NewPlaybackSession(key, segmentIdx)
+		s, err := NewPlaybackSession(key.StreamKey, representationId, segmentIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -113,18 +121,6 @@ func GetPlaybackSession(key PlaybackSessionKey, segmentIdx int) (*PlaybackSessio
 func ReleasePlaybackSession(s *PlaybackSession) {
 	s.referenceCount--
 	s.CleanupIfRequired()
-}
-
-func streamRepresentationFromPlaybackSessionKey(key PlaybackSessionKey) (*ffmpeg.StreamRepresentation, error) {
-	stream, err := ffmpeg.GetStream(key.StreamKey)
-	if err != nil {
-		return nil, err
-	}
-	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
-		stream, key.representationID)
-
-	return &streamRepresentation, err
-
 }
 
 func (s *PlaybackSession) CleanupIfRequired() {

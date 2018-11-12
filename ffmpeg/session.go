@@ -18,7 +18,7 @@ type TranscodingSession struct {
 	cmd        *exec.Cmd
 	Stream     StreamRepresentation
 	outputDir  string
-	terminated bool
+	Terminated bool
 	throttled  bool
 }
 
@@ -29,7 +29,7 @@ func (s *TranscodingSession) Start() error {
 	// Prevent zombies
 	go func() {
 		s.cmd.Wait()
-		s.terminated = true
+		s.Terminated = true
 	}()
 	return nil
 }
@@ -82,7 +82,7 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	}
 
 	// We delete the "newest" segment because it may still be written to to avoid races.
-	if len(res) > 0 && !s.terminated {
+	if len(res) > 0 && !s.Terminated {
 		delete(res, maxSegmentId)
 	}
 
@@ -90,10 +90,13 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 }
 
 func (s *TranscodingSession) SetThrottled(throttled bool) {
-	log.Infof("Toggling throttled state to %t on %s", throttled, s.outputDir)
-	if throttled {
-		s.cmd.Process.Signal(syscall.SIGUSR1)
-	} else {
-		s.cmd.Process.Signal(syscall.SIGUSR2)
+	if s.throttled != throttled {
+		log.Infof("Toggling throttled state to %t on %s", throttled, s.outputDir)
+		if throttled {
+			s.cmd.Process.Signal(syscall.SIGUSR1)
+		} else {
+			s.cmd.Process.Signal(syscall.SIGUSR2)
+		}
+		s.throttled = throttled
 	}
 }

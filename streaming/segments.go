@@ -27,12 +27,13 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 
 	playbackSessionKey := PlaybackSessionKey{
 		streamKey,
-		mux.Vars(r)["representationId"],
 		sessionID,
 	}
+	representationId := mux.Vars(r)["representationId"]
+
 	// TODO(Leon Handreke): Add a special getter that will give us any of the
 	// existing sessions, they all have a valid initial segment
-	playbackSession, err := GetPlaybackSession(playbackSessionKey, -1)
+	playbackSession, err := GetPlaybackSession(playbackSessionKey, representationId, -1)
 	defer ReleasePlaybackSession(playbackSession)
 
 	for {
@@ -74,11 +75,11 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 
 	playbackSessionKey := PlaybackSessionKey{
 		streamKey,
-		mux.Vars(r)["representationId"],
 		sessionID,
 	}
+	representationId := mux.Vars(r)["representationId"]
 
-	playbackSession, err := GetPlaybackSession(playbackSessionKey, segmentIdx)
+	playbackSession, err := GetPlaybackSession(playbackSessionKey, representationId, segmentIdx)
 	defer ReleasePlaybackSession(playbackSession)
 
 	for {
