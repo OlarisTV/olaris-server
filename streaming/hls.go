@@ -64,7 +64,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(combinations, subtitlePlaylistItems)
 	w.Write([]byte(manifest))
@@ -94,7 +94,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -154,7 +154,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		representationCombinations, subtitlePlaylistItems)
@@ -183,7 +183,7 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(manifest))
 }
 
-func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation) []hls.SubtitlePlaylistItem {
+func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation, sessionID string) []hls.SubtitlePlaylistItem {
 	// Subtitles may be in another file, so we need to list their absolute URI.
 	subtitlePlaylistItems := []hls.SubtitlePlaylistItem{}
 	for _, s := range representations {
@@ -194,8 +194,9 @@ func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation) [
 		subtitlePlaylistItems = append(subtitlePlaylistItems,
 			hls.SubtitlePlaylistItem{
 				StreamRepresentation: s,
-				URI: fmt.Sprintf("/s/files/jwt/%s/%d/%s/media.m3u8",
+				URI: fmt.Sprintf("/s/files/jwt/%s/%s/%d/%s/media.m3u8",
 					jwt,
+					sessionID,
 					s.Stream.StreamId,
 					s.Representation.RepresentationId),
 			})
