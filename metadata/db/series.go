@@ -105,14 +105,14 @@ func (file *EpisodeFile) IsSingleFile() bool {
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
 func (file *EpisodeFile) DeleteSelfAndMD() {
 	// Delete all stream information
-	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
+	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episodes'", &file.ID)
 
 	var episode Episode
 	db.First(&episode, file.EpisodeID)
 
 	if file.IsSingleFile() {
 		// Delete all PlayState information
-		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episode_files'", file.EpisodeID)
+		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episodes'", file.EpisodeID)
 
 		// Delete Episode
 		db.Delete(&episode)

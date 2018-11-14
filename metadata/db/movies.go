@@ -53,7 +53,7 @@ func (file *MovieFile) DeleteSelfAndMD() {
 	db.Where("id = ?", file.MovieID).Find(&file.Movie)
 
 	if file.IsSingleFile() {
-		// Delete all PlayState information
+		// TODO: Figure out if we can use gorm associations for this
 		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
 
 		// Delete movie
