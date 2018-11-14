@@ -42,7 +42,7 @@ download-olaris-react:
 
 .PHONY: build-olaris-react
 build-olaris-react:
-	if [ ! -d "./builds/olaris-react" ]; then cd builds && git clone $(REACT_REPO) olaris-react; fi
+	if [ ! -d "./builds/olaris-react" ]; then mkdir -p builds && cd builds && git clone $(REACT_REPO) olaris-react; fi
 	cd builds/olaris-react && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
 	cp -r builds/olaris-react/build ./react/
 	make generate
