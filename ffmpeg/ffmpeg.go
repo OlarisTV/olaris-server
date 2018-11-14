@@ -20,8 +20,8 @@ type Representation struct {
 	Codecs string
 
 	// Mutually exclusive
-	transcoded bool
-	transmuxed bool
+	Transcoded bool
+	Transmuxed bool
 
 	encoderParams EncoderParams
 }

@@ -74,7 +74,7 @@ func GetTranscodedAudioRepresentation(stream Stream, representationId string, en
 			BitRate:          encoderParams.audioBitrate,
 			Container:        "audio/mp4",
 			Codecs:           encoderParams.Codecs,
-			transcoded:       true,
+			Transcoded:       true,
 		},
 	}
 }
