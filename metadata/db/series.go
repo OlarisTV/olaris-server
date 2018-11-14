@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/jinzhu/gorm"
 )
 
@@ -105,17 +104,17 @@ func (file *EpisodeFile) IsSingleFile() bool {
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
 func (file *EpisodeFile) DeleteSelfAndMD() {
 	// Delete all stream information
-	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'episodes'", &file.ID)
+	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
 
 	var episode Episode
 	db.First(&episode, file.EpisodeID)
 
 	if file.IsSingleFile() {
 		// Delete all PlayState information
-		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'episodes'", file.EpisodeID)
+		db.Unscoped().Delete(PlayState{}, "owner_id = ? AND owner_type = 'episodes'", file.EpisodeID)
 
 		// Delete Episode
-		db.Delete(&episode)
+		db.Unscoped().Delete(&episode)
 
 		count := 0
 		var season Season
@@ -123,22 +122,21 @@ func (file *EpisodeFile) DeleteSelfAndMD() {
 
 		db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
 
-		fmt.Println(count)
 		// If there are no more episodes to this season, delete the season.
 		if count == 0 {
-			db.Delete(Season{}, "id = ?", episode.SeasonID)
+			db.Unscoped().Delete(Season{}, "id = ?", episode.SeasonID)
 		}
 
 		// If there are no more seasons to this series, delete it.
 		count = 0
 		db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
 		if count == 0 {
-			db.Delete(Series{}, "id = ?", season.SeriesID)
+			db.Unscoped().Delete(Series{}, "id = ?", season.SeriesID)
 		}
 	}
 
 	// Delete all file information
-	db.Delete(&file)
+	db.Unscoped().Delete(&file)
 
 }
 

@@ -48,20 +48,20 @@ func (file *MovieFile) IsSingleFile() bool {
 // DeleteSelfAndMD removes this file and any metadata involved for the movie.
 func (file *MovieFile) DeleteSelfAndMD() {
 	// Delete all stream information since it's only for this file
-	db.Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
+	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
 
 	db.Where("id = ?", file.MovieID).Find(&file.Movie)
 
 	if file.IsSingleFile() {
 		// TODO: Figure out if we can use gorm associations for this
-		db.Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
+		db.Unscoped().Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
 
 		// Delete movie
-		db.Delete(&file.Movie)
+		db.Unscoped().Delete(&file.Movie)
 	}
 
 	// Delete all file information
-	db.Delete(&file)
+	db.Unscoped().Delete(&file)
 
 }
 
