@@ -264,6 +264,10 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 
 			// TODO(Maran) We might be adding double files in case it already exist
 			db.UpdateEpisodeFile(&epFile)
+
+			UpdateSeriesMD(&series)
+			UpdateSeasonMD(&season, &series)
+			UpdateEpisodeMD(&ep, &season, &series)
 		} else {
 			log.WithFields(log.Fields{"title": parsedInfo.Title}).Warnln("Could not identify episode based on parsed filename.")
 		}
@@ -287,6 +291,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 		movieFile.Streams = db.CollectStreams(filePath)
 		db.CreateMovieFile(&movieFile)
 
+		UpdateMovieMD(&movie)
 	}
 	return nil
 }

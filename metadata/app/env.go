@@ -35,15 +35,7 @@ type GormLogger struct{}
 
 var sqlRegexp = regexp.MustCompile(`(\$\d+)|\?`)
 
-// Print is the print method for db logging
-//func (*GormLogger) Print(v ...interface{}) {
-//	if v[0] == "sql" {
-//		log.WithFields(log.Fields{"module": "gorm", "type": "sql", "duration": v[2]}).Debugln(v[3])
-//	}
-//	if v[0] == "log" {
-//		log.WithFields(log.Fields{"module": "gorm", "type": "log"}).Print(v[2])
-//	}
-//}
+// Print ensures the db logs as default logrus
 func (l *GormLogger) Print(values ...interface{}) {
 	entry := log.WithField("name", "database")
 	if len(values) > 1 {
