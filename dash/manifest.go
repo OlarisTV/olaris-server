@@ -27,11 +27,6 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					codecs="{{$s.Representation.Codecs}}"
 					height="480" bandwidth="{{$s.Representation.BitRate}}">
 				<SegmentTemplate timescale="1000" duration="5000" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
-					<SegmentTimeline>
-						{{ range $index, $d := $s.SegmentDurationsMilliseconds -}}
-						<S {{ if eq $index 0}}t="0" {{ end }}d="{{ $d }}"></S> <!-- {{ $index }} -->
-						{{ end }}
-					</SegmentTimeline>
 				</SegmentTemplate>
 			</Representation>
 			{{ end }}

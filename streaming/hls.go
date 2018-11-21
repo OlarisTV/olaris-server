@@ -33,12 +33,17 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	fullQualityRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(streams.GetVideoStream(), capabilities)
 	videoRepresentations := []ffmpeg.StreamRepresentation{fullQualityRepresentation}
 
-	// Build lower-quality transcoded versions
-	for _, preset := range []string{"preset:480-1000k-video", "preset:720-5000k-video", "preset:1080-10000k-video"} {
-		r, _ := ffmpeg.StreamRepresentationFromRepresentationId(
-			streams.GetVideoStream(), preset)
-		if r.Representation.BitRate < fullQualityRepresentation.Representation.BitRate {
-			videoRepresentations = append(videoRepresentations, r)
+	// TODO(Leon Handreke): I've observed issues with switching from transmuxed representations to transcoded
+	// (garbled output). Therefore, serve alternative streams only for transcoded for now. See
+	// https://gitlab.com/olaris/olaris-server/issues/48
+	if fullQualityRepresentation.Representation.Transcoded {
+		// Build lower-quality transcoded versions
+		for _, preset := range []string{"preset:480-1000k-video", "preset:720-5000k-video", "preset:1080-10000k-video"} {
+			r, _ := ffmpeg.StreamRepresentationFromRepresentationId(
+				streams.GetVideoStream(), preset)
+			if r.Representation.BitRate < fullQualityRepresentation.Representation.BitRate {
+				videoRepresentations = append(videoRepresentations, r)
+			}
 		}
 	}
 
@@ -64,7 +69,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(combinations, subtitlePlaylistItems)
 	w.Write([]byte(manifest))
@@ -94,7 +99,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		[]hls.RepresentationCombination{
@@ -154,7 +159,7 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
-	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations)
+	subtitlePlaylistItems := buildSubtitlePlaylistItems(subtitleRepresentations, mux.Vars(r)["sessionID"])
 
 	manifest := hls.BuildMasterPlaylistFromFile(
 		representationCombinations, subtitlePlaylistItems)
@@ -183,7 +188,7 @@ func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(manifest))
 }
 
-func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation) []hls.SubtitlePlaylistItem {
+func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation, sessionID string) []hls.SubtitlePlaylistItem {
 	// Subtitles may be in another file, so we need to list their absolute URI.
 	subtitlePlaylistItems := []hls.SubtitlePlaylistItem{}
 	for _, s := range representations {
@@ -194,8 +199,9 @@ func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation) [
 		subtitlePlaylistItems = append(subtitlePlaylistItems,
 			hls.SubtitlePlaylistItem{
 				StreamRepresentation: s,
-				URI: fmt.Sprintf("/s/files/jwt/%s/%d/%s/media.m3u8",
+				URI: fmt.Sprintf("/s/files/jwt/%s/%s/%d/%s/media.m3u8",
 					jwt,
+					sessionID,
 					s.Stream.StreamId,
 					s.Representation.RepresentationId),
 			})

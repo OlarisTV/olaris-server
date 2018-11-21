@@ -1,7 +1,7 @@
 package ffmpeg
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -9,15 +9,17 @@ import (
 	"regexp"
 	"strconv"
 	"syscall"
-	"time"
 )
+
+// Magic segment index value to denote the inital segment
+var InitialSegmentIdx int = -1
 
 type TranscodingSession struct {
 	cmd        *exec.Cmd
 	Stream     StreamRepresentation
 	outputDir  string
-	segments   []Segment
-	terminated bool
+	Terminated bool
+	throttled  bool
 }
 
 func (s *TranscodingSession) Start() error {
@@ -27,7 +29,7 @@ func (s *TranscodingSession) Start() error {
 	// Prevent zombies
 	go func() {
 		s.cmd.Wait()
-		s.terminated = true
+		s.Terminated = true
 	}()
 	return nil
 }
@@ -48,31 +50,15 @@ func (s *TranscodingSession) Destroy() error {
 	return nil
 }
 
-// GetSegment return the filename of the given segment if it is projected to be available by the given deadline.
-// It will block for at most deadline.
-func (s *TranscodingSession) GetSegment(segmentId int, deadline time.Duration) (string, error) {
-
-	if !s.IsProjectedAvailable(segmentId, deadline) {
-		return "", fmt.Errorf("Segment not projected to be available within deadline %s", deadline)
-	}
-
-	for {
-		availableSegments, _ := s.AvailableSegments()
-		if path, ok := availableSegments[segmentId]; ok {
-			return path, nil
-		}
-		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
-		time.Sleep(500 * time.Millisecond)
-	}
-}
-
-func (s *TranscodingSession) IsProjectedAvailable(segmentId int, deadline time.Duration) bool {
-	return s.segments[0].SegmentId <= segmentId &&
-		segmentId <= s.segments[len(s.segments)-1].SegmentId
-}
-
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	res := make(map[int]string)
+
+	initialSegmentPath := filepath.Join(s.outputDir, "init.mp4")
+	if stat, err := os.Stat(initialSegmentPath); err == nil {
+		if stat.Size() > 0 {
+			res[InitialSegmentIdx] = initialSegmentPath
+		}
+	}
 
 	files, err := ioutil.ReadDir(s.outputDir)
 	if err != nil {
@@ -96,25 +82,21 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	}
 
 	// We delete the "newest" segment because it may still be written to to avoid races.
-	if len(res) > 0 && !s.terminated {
+	if len(res) > 0 && !s.Terminated {
 		delete(res, maxSegmentId)
 	}
 
 	return res, nil
 }
 
-// InitialSegment returns the path of the initial segment for the given stream
-// or error if no initial segment is available for the given stream.
-func (s *TranscodingSession) InitialSegment() string {
-	segmentPath := filepath.Join(s.outputDir, "init.mp4")
-
-	for {
-		if stat, err := os.Stat(segmentPath); err == nil {
-			if stat.Size() > 0 {
-				return segmentPath
-			}
+func (s *TranscodingSession) SetThrottled(throttled bool) {
+	if s.throttled != throttled {
+		log.Infof("Toggling throttled state to %t on %s", throttled, s.outputDir)
+		if throttled {
+			s.cmd.Process.Signal(syscall.SIGUSR1)
+		} else {
+			s.cmd.Process.Signal(syscall.SIGUSR2)
 		}
-		// TODO(Leon Handreke): Maybe a condition variable? Or maybe this blocking should move to the server module?
-		time.Sleep(500 * time.Millisecond)
+		s.throttled = throttled
 	}
 }

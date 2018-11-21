@@ -4,7 +4,6 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"time"
@@ -21,8 +20,8 @@ type Representation struct {
 	Codecs string
 
 	// Mutually exclusive
-	transcoded bool
-	transmuxed bool
+	Transcoded bool
+	Transmuxed bool
 
 	encoderParams EncoderParams
 }
@@ -30,8 +29,6 @@ type Representation struct {
 type StreamRepresentation struct {
 	Stream         Stream
 	Representation Representation
-
-	SegmentStartTimestamps [][]Segment
 }
 
 // MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
@@ -45,10 +42,14 @@ const TransmuxedSegDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
-func (sr *StreamRepresentation) SegmentDurations() []time.Duration {
+type ClientCodecCapabilities struct {
+	PlayableCodecs []string `json:"playableCodecs"`
+}
+
+func ComputeSegmentDurations(sessions [][]Segment) []time.Duration {
 	segmentDurations := []time.Duration{}
 
-	for _, session := range sr.SegmentStartTimestamps {
+	for _, session := range sessions {
 		for _, segment := range session {
 			segmentDurations = append(segmentDurations, segment.Duration())
 
@@ -56,24 +57,6 @@ func (sr *StreamRepresentation) SegmentDurations() []time.Duration {
 	}
 
 	return segmentDurations
-}
-
-func (sr *StreamRepresentation) SegmentDurationsMilliseconds() []int64 {
-	segmentDurations := []int64{}
-
-	for _, session := range sr.SegmentStartTimestamps {
-		for _, segment := range session {
-			segmentDurations = append(segmentDurations,
-				int64(segment.Duration())/int64(time.Millisecond))
-
-		}
-	}
-
-	return segmentDurations
-}
-
-type ClientCodecCapabilities struct {
-	PlayableCodecs []string `json:"playableCodecs"`
 }
 
 func GetTransmuxedOrTranscodedRepresentation(
@@ -173,21 +156,14 @@ func StreamRepresentationFromRepresentationId(
 			s.StreamId, representationId, s.MediaFileURL)
 }
 
-func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingSession, error) {
-	var segments []Segment
-
-	for _, s := range s.SegmentStartTimestamps {
-		if s[0].SegmentId <= segmentId && segmentId <= s[len(s)-1].SegmentId {
-			segments = s
-			break
-		}
-	}
-	if segments == nil {
-		return nil, errors.New("Segment ID not found in StreamRepresentation")
-	}
-
+func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int) (*TranscodingSession, error) {
+	startTime := time.Duration(int64(segmentStartIndex) * int64(TransmuxedSegDuration))
 	if s.Representation.RepresentationId == "direct" {
-		session, err := NewTransmuxingSession(s, segments, os.TempDir())
+		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, os.TempDir())
+		if err != nil {
+			return nil, err
+		}
+		session.Start()
 		if err != nil {
 			return nil, err
 		}
@@ -197,14 +173,16 @@ func NewTranscodingSession(s StreamRepresentation, segmentId int) (*TranscodingS
 		var err error
 
 		if s.Stream.StreamType == "video" {
-			session, err = NewVideoTranscodingSession(s, segments, os.TempDir())
-			return session, nil
+			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, os.TempDir())
 		} else if s.Stream.StreamType == "audio" {
-			session, err = NewAudioTranscodingSession(s, segments, os.TempDir())
-			return session, nil
+			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, os.TempDir())
 		} else if s.Stream.StreamType == "subtitle" {
-			session, err = NewSubtitleSession(s, segments, os.TempDir())
+			session, err = NewSubtitleSession(s, os.TempDir())
 		}
+		if err != nil {
+			return nil, err
+		}
+		session.Start()
 		if err != nil {
 			return nil, err
 		}

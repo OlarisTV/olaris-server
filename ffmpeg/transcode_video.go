@@ -23,7 +23,8 @@ const transcodedVideoSegmentDuration = 4992 * time.Millisecond
 
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,
-	segments []Segment,
+	startTime time.Duration,
+	segmentStartIndex int,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
@@ -31,15 +32,12 @@ func NewVideoTranscodingSession(
 		return nil, err
 	}
 
-	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
-	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
 	encoderParams := stream.Representation.encoderParams
 
 	args := []string{
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
+		"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
 		"-i", stream.Stream.MediaFileURL,
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
@@ -48,7 +46,7 @@ func NewVideoTranscodingSession(
 		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
+		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedVideoSegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
@@ -74,7 +72,6 @@ func NewVideoTranscodingSession(
 		cmd:       cmd,
 		Stream:    stream,
 		outputDir: outputDir,
-		segments:  segments,
 	}, nil
 }
 
@@ -83,11 +80,6 @@ func GetTranscodedVideoRepresentation(
 	representationId string,
 	encoderParams EncoderParams) StreamRepresentation {
 
-	keyFrameItervals, _ := GetKeyframeIntervals(stream)
-
-	segmentStartTimestamps := buildVideoSegmentDurations(
-		keyFrameItervals, transcodedVideoSegmentDuration)
-
 	return StreamRepresentation{
 		Stream: stream,
 		Representation: Representation{
@@ -95,9 +87,9 @@ func GetTranscodedVideoRepresentation(
 			BitRate:          encoderParams.videoBitrate,
 			Container:        "video/mp4",
 			Codecs:           encoderParams.Codecs,
-			transcoded:       true,
+			Transcoded:       true,
+			encoderParams:    encoderParams,
 		},
-		SegmentStartTimestamps: segmentStartTimestamps,
 	}
 }
 

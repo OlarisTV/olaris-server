@@ -1,14 +1,12 @@
 package ffmpeg
 
 import (
-	"bufio"
 	_ "bytes"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"gitlab.com/olaris/olaris-server/helpers"
-	"gitlab.com/olaris/olaris-server/streaming/db"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -150,121 +148,6 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	}
 
 	return &v, nil
-}
-
-// probeKeyframes scans for keyframes in a file and returns a list of timestamps at which keyframes were found.
-func probeKeyframes(s StreamKey) ([]DtsTimestamp, error) {
-	// NOTE(Leon Handreke): This is a really ugly hack to account for the fact
-	// that MP4 seeking seems to happen by PTS, despite AVFMT_SEEK_TO_PTS
-	// not being set.
-	seekByPTS := false
-	if strings.HasSuffix(s.MediaFileURL, ".mp4") {
-		seekByPTS = true
-	}
-
-	cmd := exec.Command(
-		executable.GetFFprobeExecutablePath(),
-		"-select_streams", strconv.Itoa(int(s.StreamId)),
-		// Use dts_time here because ffmpeg seeking works by DTS,
-		// see http://www.mjbshaw.com/2012/04/seeking-in-ffmpeg-know-your-timestamp.html
-		"-show_entries", "packet=pts,dts,flags",
-		"-v", "quiet",
-		"-of", "csv",
-		s.MediaFileURL)
-	cmd.Stderr = os.Stderr
-
-	rawReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-
-	keyframes := []DtsTimestamp{}
-	scanner := bufio.NewScanner(rawReader)
-	for scanner.Scan() {
-		// Each line has the format "packet,4.223000,K_"
-		line := strings.Split(scanner.Text(), ",")
-		// Sometimes there are empty lines at the end
-		if len(line) != 4 {
-			continue
-		}
-		if line[3][0] == 'K' {
-			dts := int64(0)
-			if line[2] != "N/A" {
-				if seekByPTS {
-					dts, err = strconv.ParseInt(line[1], 10, 64)
-					if err != nil {
-						return nil, err
-					}
-				} else {
-					dts, err = strconv.ParseInt(line[2], 10, 64)
-					if err != nil {
-						return nil, err
-					}
-				}
-			} else {
-				// NOTE(Leon Handreke): Use PTS as fallback here. The issue is that at the beginning,
-				// DTS is sometimes N/A. Just setting it to zero breaks our cut prediction algorithm.
-				// ffmpeg internally splits by PTS (i.e. PTS of first packet it sees + n*seglength).
-				// TODO(Leon Handreke): The ideal thing would be to extract both PTS and DTS here
-				// and do the cut prediction by PTS but the seeking by DTS.
-				dts, err = strconv.ParseInt(line[1], 10, 64)
-				if err != nil {
-					return nil, err
-				}
-			}
-			keyframes = append(keyframes, DtsTimestamp(dts))
-		}
-	}
-
-	cmd.Wait()
-	return keyframes, nil
-}
-
-func GetOrCacheKeyFrames(stream Stream) ([]DtsTimestamp, error) {
-	// TODO(Leon Handreke): In the DB we sometimes use the absolute path,
-	// sometimes just a name. We need some other good descriptor for files,
-	// preferably including a checksum
-	keyframeCache, err := db.GetSharedDB().GetKeyframeCache(stream.MediaFileURL)
-	if err != nil {
-		return []DtsTimestamp{}, err
-	}
-
-	keyframeTimestamps := []DtsTimestamp{}
-	if keyframeCache != nil {
-		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL}).Debugln("We already have a keyframeCache.")
-		for _, v := range keyframeCache.KeyframeTimestamps {
-			keyframeTimestamps = append(keyframeTimestamps, DtsTimestamp(v))
-		}
-	} else {
-		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL}).Debugln("No keyframeCache yet, generating.")
-		start := time.Now()
-		keyframeTimestamps, err = probeKeyframes(stream.StreamKey)
-		if err != nil {
-			return []DtsTimestamp{}, err
-		}
-
-		keyframeCache := db.KeyframeCache{Filename: stream.MediaFileURL}
-		for _, v := range keyframeTimestamps {
-			keyframeCache.KeyframeTimestamps = append(keyframeCache.KeyframeTimestamps, int64(v))
-		}
-		db.GetSharedDB().InsertOrUpdateKeyframeCache(keyframeCache)
-		elapsed := time.Since(start)
-		log.WithFields(log.Fields{"mediaFileUrl": stream.MediaFileURL, "timeSpend": fmt.Sprintf("%s", elapsed)}).Debugln("Keyframe cache generated.")
-	}
-	return keyframeTimestamps, nil
-}
-
-func GetKeyframeIntervals(stream Stream) ([]Interval, error) {
-	keyframeTimestamps, err := GetOrCacheKeyFrames(stream)
-	if err != nil {
-		return []Interval{}, nil
-	}
-	return buildIntervals(keyframeTimestamps, stream.TotalDurationDts, stream.TimeBase), nil
 }
 
 func parseTimeBaseString(timeBaseString string) (int64, error) {

@@ -2,6 +2,7 @@ package streaming
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/dash"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
@@ -70,8 +71,9 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 		}
 		subtitleStreams = append(subtitleStreams, dash.SubtitleStreamRepresentation{
 			StreamRepresentation: s,
-			URI: fmt.Sprintf("/s/files/jwt/%s/%d/%s/0.vtt",
+			URI: fmt.Sprintf("/s/files/jwt/%s/%s/%d/%s/0.vtt",
 				jwt,
+				mux.Vars(r)["sessionID"],
 				s.Stream.StreamId,
 				s.Representation.RepresentationId),
 		})

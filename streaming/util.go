@@ -88,7 +88,7 @@ func getMediaFileURL(fileLocatorStr string) (string, error) {
 func mediaFileURLExists(mediaFileURLStr string) bool {
 	mediaFileURL, _ := url.Parse(mediaFileURLStr)
 	if mediaFileURL.Scheme == "file" {
-		if _, err := os.Stat(mediaFileURL.Path); os.IsNotExist(err) {
+		if fi, err := os.Stat(mediaFileURL.Path); os.IsNotExist(err) || fi.IsDir() {
 			return false
 		}
 	}

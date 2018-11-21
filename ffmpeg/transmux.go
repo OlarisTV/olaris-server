@@ -8,12 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"time"
 )
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
 func NewTransmuxingSession(
 	stream StreamRepresentation,
-	segments []Segment,
+	startTime time.Duration,
+	segmentStartIndex int,
 	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
@@ -21,20 +23,16 @@ func NewTransmuxingSession(
 		return nil, err
 	}
 
-	startDuration := timestampToDuration(segments[0].StartTimestamp, stream.Stream.TimeBase)
-	endDuration := timestampToDuration(segments[len(segments)-1].EndTimestamp, stream.Stream.TimeBase)
-
 	args := []string{
 		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startDuration.Seconds()),
+		"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
 		"-i", stream.Stream.MediaFileURL,
 		"-copyts",
-		"-to", fmt.Sprintf("%.3f", endDuration.Seconds()),
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "copy",
 		"-threads", "2",
 		"-f", "hls",
-		"-start_number", fmt.Sprintf("%d", segments[0].SegmentId),
+		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", TransmuxedSegDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
@@ -58,7 +56,6 @@ func NewTransmuxingSession(
 		cmd:       cmd,
 		Stream:    stream,
 		outputDir: outputDir,
-		segments:  segments,
 	}, nil
 }
 
@@ -70,27 +67,8 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 			Container:        "video/mp4",
 			Codecs:           stream.Codecs,
 			BitRate:          int(stream.BitRate),
-			transmuxed:       true,
+			Transmuxed:       true,
 		},
-	}
-
-	keyframeIntervals, err := GetKeyframeIntervals(stream)
-	if err != nil {
-		return StreamRepresentation{}, err
-	}
-
-	totalInterval := Interval{
-		keyframeIntervals[0].TimeBase,
-		keyframeIntervals[0].StartTimestamp,
-		keyframeIntervals[len(keyframeIntervals)-1].EndTimestamp,
-	}
-	if stream.StreamType == "audio" {
-		representation.SegmentStartTimestamps = [][]Segment{
-			BuildConstantSegmentDurations(
-				totalInterval, TransmuxedSegDuration, 0),
-		}
-	} else if stream.StreamType == "video" {
-		representation.SegmentStartTimestamps = guessTransmuxedSegmentList(keyframeIntervals)
 	}
 
 	return representation, nil
