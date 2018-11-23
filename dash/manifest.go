@@ -36,7 +36,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 			{{ range $si, $s := $audioStream.Representations -}}
 			<Representation
 					id="{{ $s.Representation.RepresentationId }}"
-					mimeType="audio/mp4" codecs="mp4a.40.2"
+					mimeType="audio/mp4" codecs="{{ $s.Representation.Codecs }}"
 					bandwidth="{{$s.Representation.BitRate}}">
 				<SegmentTemplate timescale="1000" duration="4992" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
