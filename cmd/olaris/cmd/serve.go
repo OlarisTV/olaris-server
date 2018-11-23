@@ -33,7 +33,12 @@ var serveCmd = &cobra.Command{
 		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
 		defer mctx.Db.Close()
 
-		r.PathPrefix("/app").Handler(http.StripPrefix("/app", react.GetHandler()))
+		appRoute := r.PathPrefix("/app").
+			Handler(http.StripPrefix("/app", react.GetHandler())).
+			Name("app")
+
+		appURL, _ := appRoute.URL()
+		r.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 
 		r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
 
