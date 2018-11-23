@@ -30,7 +30,6 @@ func NewTransmuxingSession(
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "copy",
-		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", TransmuxedSegDuration.Seconds()),

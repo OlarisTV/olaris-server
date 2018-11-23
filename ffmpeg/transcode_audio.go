@@ -41,7 +41,6 @@ func NewAudioTranscodingSession(
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
-		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),

@@ -44,7 +44,6 @@ func NewVideoTranscodingSession(
 		"-preset:0", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", transcodedVideoSegmentDuration.Seconds()),
 		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
-		"-threads", "2",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", transcodedVideoSegmentDuration.Seconds()),
