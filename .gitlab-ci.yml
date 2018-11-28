@@ -37,5 +37,8 @@ compile:
       - make build-all
     artifacts:
       paths:
-        - build/
-      expire_in: 2 week
+        - build/olaris-linux-386
+        - build/olaris-linux-amd64
+        - build/olaris-linux-arm
+        - build/olaris-linux-arm64
+      expire_in: 4 week
