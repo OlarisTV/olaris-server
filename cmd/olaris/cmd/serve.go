@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/pkg/profile"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gitlab.com/olaris/olaris-server/helpers"
@@ -13,6 +12,7 @@ import (
 	"gitlab.com/olaris/olaris-server/react"
 	"gitlab.com/olaris/olaris-server/streaming"
 	"net/http"
+	"net/http/pprof" // For Profiling
 	"os"
 	"os/signal"
 	"time"
@@ -26,10 +26,9 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
 	Run: func(cmd *cobra.Command, args []string) {
-		defer profile.Start(profile.MemProfile).Stop()
-
 		r := mux.NewRouter()
 
+		r.PathPrefix("/debug/pprof/").HandlerFunc(pprof.Index)
 		r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
 		defer streaming.Cleanup()
 
