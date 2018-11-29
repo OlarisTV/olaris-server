@@ -25,7 +25,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					id="{{$s.Representation.RepresentationId}}"
 					mimeType="video/mp4"
 					codecs="{{$s.Representation.Codecs}}"
-					height="{{$s.Representation.Width}}" bandwidth="{{$s.Representation.BitRate}}">
+					height="{{$s.Representation.Height}}" bandwidth="{{$s.Representation.BitRate}}">
 				<SegmentTemplate timescale="1000" duration="5000" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
