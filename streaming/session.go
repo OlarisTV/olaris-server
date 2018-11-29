@@ -1,9 +1,10 @@
 package streaming
 
 import (
+	"fmt"
+	"github.com/google/uuid"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"sync"
-	"time"
 )
 
 type PlaybackSessionKey struct {
@@ -12,6 +13,9 @@ type PlaybackSessionKey struct {
 }
 
 type PlaybackSession struct {
+	// Identifier, currently only used for ffmpeg feedback
+	playbackSessionID string
+
 	transcodingSession *ffmpeg.TranscodingSession
 
 	representationID string
@@ -43,12 +47,20 @@ func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, seg
 	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
 		stream, representationID)
 
-	transcodingSession, err := ffmpeg.NewTranscodingSession(streamRepresentation, segmentIdx)
+	playbackSessionID := uuid.New().String()
+	// TODO(Leon Handreke): Find a better way to build URLs
+	feedbackURL := fmt.Sprintf("http://127.0.0.1:8080/s/ffmpeg/%s/feedback", playbackSessionID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to build FFmpeg feedback url: %s", err.Error())
+	}
+
+	transcodingSession, err := ffmpeg.NewTranscodingSession(streamRepresentation, segmentIdx, feedbackURL)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &PlaybackSession{
+		playbackSessionID:  playbackSessionID,
 		transcodingSession: transcodingSession,
 		representationID:   representationID,
 		// TODO(Leon Handreke): Make this nicer, introduce a "new" state
@@ -56,14 +68,6 @@ func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, seg
 		lastServedSegmentIdx:    segmentIdx - 1,
 		referenceCount:          1,
 	}
-	go func() {
-		for range time.Tick(5000 * time.Millisecond) {
-			if s.transcodingSession.Terminated {
-				return
-			}
-			s.throttleIfRequired()
-		}
-	}()
 
 	return s, nil
 }
@@ -73,6 +77,7 @@ func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, seg
 // and start a new playback session.
 // If segmentIdx == -1, any session will be returned for the given key. This is useful to get a session
 // to serve the init segment from.
+// The returned PlaybackSession must be released after use by calling ReleasePlaybackSession.
 func GetPlaybackSession(key PlaybackSessionKey, representationId string, segmentIdx int) (*PlaybackSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
@@ -118,6 +123,30 @@ func GetPlaybackSession(key PlaybackSessionKey, representationId string, segment
 	return s, nil
 }
 
+// GetPlaybackSessionByID gets the playback session by its ID. If one with the given ID does not exist,
+// and error is returned.
+// The returned PlaybackSession must be released after use by calling ReleasePlaybackSession.
+func GetPlaybackSessionByID(playbackSessionID string) (*PlaybackSession, error) {
+	sessionsMutex.Lock()
+	defer sessionsMutex.Unlock()
+
+	var s *PlaybackSession
+
+	for _, v := range playbackSessions {
+		if v.playbackSessionID == playbackSessionID {
+			s = v
+			break
+		}
+	}
+
+	if s == nil {
+		return nil, fmt.Errorf("No PlaybackSession with the given ID %s", playbackSessionID)
+	}
+
+	s.referenceCount++
+	return s, nil
+}
+
 func ReleasePlaybackSession(s *PlaybackSession) {
 	s.referenceCount--
 	s.CleanupIfRequired()
@@ -131,7 +160,7 @@ func (s *PlaybackSession) CleanupIfRequired() {
 	s.transcodingSession.Destroy()
 }
 
-func (s *PlaybackSession) throttleIfRequired() {
+func (s *PlaybackSession) shouldThrottle() bool {
 	segments, _ := s.transcodingSession.AvailableSegments()
 
 	maxSegmentIdx := -1
@@ -140,11 +169,5 @@ func (s *PlaybackSession) throttleIfRequired() {
 			maxSegmentIdx = segmentIdx
 		}
 	}
-
-	// We transcode to always be 10 segments "ahead"
-	if maxSegmentIdx >= (s.lastServedSegmentIdx + 10) {
-		s.transcodingSession.SetThrottled(true)
-	} else {
-		s.transcodingSession.SetThrottled(false)
-	}
+	return maxSegmentIdx >= (s.lastServedSegmentIdx + 10)
 }

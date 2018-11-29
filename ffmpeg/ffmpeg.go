@@ -158,10 +158,10 @@ func StreamRepresentationFromRepresentationId(
 			s.StreamId, representationId, s.MediaFileURL)
 }
 
-func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int) (*TranscodingSession, error) {
+func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedbackURL string) (*TranscodingSession, error) {
 	startTime := time.Duration(int64(segmentStartIndex) * int64(TransmuxedSegDuration))
 	if s.Representation.RepresentationId == "direct" {
-		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, os.TempDir())
+		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
 		if err != nil {
 			return nil, err
 		}
@@ -175,9 +175,9 @@ func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int) (*Tran
 		var err error
 
 		if s.Stream.StreamType == "video" {
-			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, os.TempDir())
+			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
 		} else if s.Stream.StreamType == "audio" {
-			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, os.TempDir())
+			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
 		} else if s.Stream.StreamType == "subtitle" {
 			session, err = NewSubtitleSession(s, os.TempDir())
 		}

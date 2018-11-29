@@ -32,6 +32,12 @@
   version = "v1.4.7"
 
 [[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/gorilla/context"
   packages = ["."]
   revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
@@ -126,12 +132,6 @@
   revision = "816c9085562cd7ee03e7f8188a1cfd942858cded"
 
 [[projects]]
-  name = "github.com/pkg/profile"
-  packages = ["."]
-  revision = "5b67d428864e92711fcbd2f8629456121a56d91f"
-  version = "v1.2.1"
-
-[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -215,6 +215,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e2b53a386cb6e3b75251bf219b7e60215f57ae34a6b57b8d6f7c3958cf216f3"
+  inputs-digest = "b51f86bf5c3e8e0b2bb7a21b9ecb09b4dd141889bd03bd0a53d7bbd3b4e7240f"
   solver-name = "gps-cdcl"
   solver-version = 1

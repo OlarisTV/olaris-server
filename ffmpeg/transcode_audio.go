@@ -25,7 +25,8 @@ func NewAudioTranscodingSession(
 	stream StreamRepresentation,
 	startTime time.Duration,
 	segmentStartIndex int,
-	outputDirBase string) (*TranscodingSession, error) {
+	outputDirBase string,
+	feedbackURL string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -46,6 +47,7 @@ func NewAudioTranscodingSession(
 		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
+		"-olaris_feedback_url", feedbackURL,
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.m3u")}
 
