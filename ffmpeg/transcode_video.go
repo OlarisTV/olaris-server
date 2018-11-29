@@ -84,6 +84,8 @@ func GetTranscodedVideoRepresentation(
 		Representation: Representation{
 			RepresentationId: representationId,
 			BitRate:          encoderParams.videoBitrate,
+			Height:           encoderParams.height,
+			Width:            encoderParams.width,
 			Container:        "video/mp4",
 			Codecs:           encoderParams.Codecs,
 			Transcoded:       true,

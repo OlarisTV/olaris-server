@@ -66,6 +66,8 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 			Container:        "video/mp4",
 			Codecs:           stream.Codecs,
 			BitRate:          int(stream.BitRate),
+			Height:           stream.Height,
+			Width:            stream.Width,
 			Transmuxed:       true,
 		},
 	}

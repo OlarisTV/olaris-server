@@ -12,8 +12,12 @@ import (
 type Representation struct {
 	RepresentationId string
 
+	encoderParams EncoderParams
+
 	// The rest is just metadata for display
 	BitRate int
+	Height  int
+	Width   int
 	// e.g. "video/mp4"
 	Container string
 	// codecs string ready for DASH/HLS serving
@@ -22,8 +26,6 @@ type Representation struct {
 	// Mutually exclusive
 	Transcoded bool
 	Transmuxed bool
-
-	encoderParams EncoderParams
 }
 
 type StreamRepresentation struct {
