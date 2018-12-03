@@ -35,6 +35,30 @@ func getFileLocator(fileLocatorStr string) (fileLocator, error) {
 
 }
 
+func getStreamingClaims(fileLocatorStr string) (*auth.StreamingClaims, error) {
+	// Allow both with and without leading slash, but canonical version is without
+	if fileLocatorStr[0] == '/' {
+		fileLocatorStr = fileLocatorStr[1:]
+	}
+
+	parts := strings.SplitN(fileLocatorStr, "/", 2)
+
+	if len(parts) != 2 {
+		return nil,
+			fmt.Errorf("Failed to split file locator \"%s\"", fileLocatorStr)
+	}
+
+	if parts[0] == "jwt" {
+		claims, err := auth.ValidateStreamingJWT(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("Failed to validate JWT: %s", err.Error())
+		}
+		return claims, nil
+	}
+
+	return nil, fmt.Errorf("No JWT in file locator")
+}
+
 func _getFileLocator(fileLocatorStr string, allowDirectFileAccess bool) (fileLocator, error) {
 	// Allow both with and without leading slash, but canonical version is without
 	if fileLocatorStr[0] == '/' {

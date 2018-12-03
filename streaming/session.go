@@ -1,20 +1,26 @@
 package streaming
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/streaming/auth"
 	"sync"
 )
 
+// TODO(Leon Handreke): Currently, this is our mechanism for evicting duplicate sessions.
+// Ideally, we would have a more generalized function that does garbage collection.
 type PlaybackSessionKey struct {
 	ffmpeg.StreamKey
-	sessionID string
+	userID uint
 }
 
 type PlaybackSession struct {
-	// Identifier, currently only used for ffmpeg feedback
+	// Unique identifier, currently only used for ffmpeg feedback
 	playbackSessionID string
+
+	sessionID string
 
 	transcodingSession *ffmpeg.TranscodingSession
 
@@ -39,7 +45,7 @@ var sessionsMutex = sync.Mutex{}
 
 var playbackSessions = map[PlaybackSessionKey]*PlaybackSession{}
 
-func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, segmentIdx int) (*PlaybackSession, error) {
+func NewPlaybackSession(ctx context.Context, sessionID string, streamKey ffmpeg.StreamKey, representationID string, segmentIdx int) (*PlaybackSession, error) {
 	stream, err := ffmpeg.GetStream(streamKey)
 	if err != nil {
 		return nil, err
@@ -61,6 +67,7 @@ func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, seg
 
 	s := &PlaybackSession{
 		playbackSessionID:  playbackSessionID,
+		sessionID:          sessionID,
 		transcodingSession: transcodingSession,
 		representationID:   representationID,
 		// TODO(Leon Handreke): Make this nicer, introduce a "new" state
@@ -78,9 +85,19 @@ func NewPlaybackSession(streamKey ffmpeg.StreamKey, representationID string, seg
 // If segmentIdx == -1, any session will be returned for the given key. This is useful to get a session
 // to serve the init segment from.
 // The returned PlaybackSession must be released after use by calling ReleasePlaybackSession.
-func GetPlaybackSession(key PlaybackSessionKey, representationId string, segmentIdx int) (*PlaybackSession, error) {
+func GetPlaybackSession(ctx context.Context, streamKey ffmpeg.StreamKey, sessionID string, representationId string, segmentIdx int) (*PlaybackSession, error) {
 	sessionsMutex.Lock()
 	defer sessionsMutex.Unlock()
+
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		// No user ID in context (probably direct file access debugging), generate a dummy.
+		userID = 0
+	}
+	key := PlaybackSessionKey{
+		userID:    userID,
+		StreamKey: streamKey,
+	}
 
 	s := playbackSessions[key]
 	if segmentIdx == -1 {
@@ -94,6 +111,7 @@ func GetPlaybackSession(key PlaybackSessionKey, representationId string, segment
 
 	if s == nil ||
 		s.representationID != representationId ||
+		s.sessionID != sessionID ||
 		// This is a really crude heuristic. VideoJS will skip requesting a segment
 		// if the previous segment already covers the whole duration of that segment.
 		// E.g. if the playlist has 5s segment lengths but a segment is 15s long,
@@ -109,7 +127,7 @@ func GetPlaybackSession(key PlaybackSessionKey, representationId string, segment
 			s.CleanupIfRequired()
 		}
 
-		s, err := NewPlaybackSession(key.StreamKey, representationId, segmentIdx)
+		s, err := NewPlaybackSession(ctx, sessionID, streamKey, representationId, segmentIdx)
 		if err != nil {
 			return nil, err
 		}

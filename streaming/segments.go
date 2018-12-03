@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/streaming/auth"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,9 +14,13 @@ var videoMIMEType = "video/mp4"
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	sessionID := mux.Vars(r)["sessionID"]
-	streamKey, err := getStreamKey(
-		mux.Vars(r)["fileLocator"],
-		mux.Vars(r)["streamId"])
+	fileLocator := mux.Vars(r)["fileLocator"]
+	streamID := mux.Vars(r)["streamId"]
+	representationId := mux.Vars(r)["representationId"]
+
+	ctx := r.Context()
+
+	streamKey, err := getStreamKey(fileLocator, streamID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -25,15 +30,14 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playbackSessionKey := PlaybackSessionKey{
-		streamKey,
-		sessionID,
+	claims, err := getStreamingClaims(fileLocator)
+	if err == nil {
+		ctx = auth.ContextWithUserIDFromStreamingClaims(ctx, claims)
 	}
-	representationId := mux.Vars(r)["representationId"]
 
 	// TODO(Leon Handreke): Add a special getter that will give us any of the
 	// existing sessions, they all have a valid initial segment
-	playbackSession, err := GetPlaybackSession(playbackSessionKey, representationId, -1)
+	playbackSession, err := GetPlaybackSession(ctx, streamKey, sessionID, representationId, -1)
 	defer ReleasePlaybackSession(playbackSession)
 
 	for {
@@ -56,14 +60,19 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 
 func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	sessionID := mux.Vars(r)["sessionID"]
+	representationId := mux.Vars(r)["representationId"]
+	fileLocator := mux.Vars(r)["fileLocator"]
+	streamID := mux.Vars(r)["streamId"]
+
 	segmentIdx, err := strconv.Atoi(mux.Vars(r)["segmentId"])
 	if err != nil {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	streamKey, err := getStreamKey(
-		mux.Vars(r)["fileLocator"],
-		mux.Vars(r)["streamId"])
+	ctx := r.Context()
+
+	streamKey, err := getStreamKey(fileLocator, streamID)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -73,13 +82,12 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 		return
 	}
 
-	playbackSessionKey := PlaybackSessionKey{
-		streamKey,
-		sessionID,
+	claims, err := getStreamingClaims(fileLocator)
+	if err == nil {
+		ctx = auth.ContextWithUserIDFromStreamingClaims(ctx, claims)
 	}
-	representationId := mux.Vars(r)["representationId"]
 
-	playbackSession, err := GetPlaybackSession(playbackSessionKey, representationId, segmentIdx)
+	playbackSession, err := GetPlaybackSession(ctx, streamKey, sessionID, representationId, segmentIdx)
 	defer ReleasePlaybackSession(playbackSession)
 
 	for {
