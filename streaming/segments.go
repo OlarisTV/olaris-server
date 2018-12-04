@@ -50,6 +50,8 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 			log.Info("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
 			w.Header().Set("Content-Type", videoMIMEType)
 			http.ServeFile(w, r, segmentPath)
+
+			playbackSession.lastAccessed = time.Now()
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)
@@ -101,8 +103,10 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 			log.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
 			w.Header().Set("Content-Type", mimeType)
 			http.ServeFile(w, r, segmentPath)
+
 			playbackSession.lastRequestedSegmentIdx = segmentIdx
 			playbackSession.lastServedSegmentIdx++
+			playbackSession.lastAccessed = time.Now()
 			return
 		} else {
 			time.Sleep(100 * time.Millisecond)

@@ -7,7 +7,10 @@ import (
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/streaming/auth"
 	"sync"
+	"time"
 )
+
+const playbackSessionTimeout = 20 * time.Minute
 
 // TODO(Leon Handreke): Currently, this is our mechanism for evicting duplicate sessions.
 // Ideally, we would have a more generalized function that does garbage collection.
@@ -38,6 +41,8 @@ type PlaybackSession struct {
 	// requests are still waiting for a product of this session.
 	// Should be initialized to 1.
 	referenceCount int
+
+	lastAccessed time.Time
 }
 
 // Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
@@ -74,7 +79,9 @@ func NewPlaybackSession(ctx context.Context, sessionID string, streamKey ffmpeg.
 		lastRequestedSegmentIdx: segmentIdx - 1,
 		lastServedSegmentIdx:    segmentIdx - 1,
 		referenceCount:          1,
+		lastAccessed:            time.Now(),
 	}
+	s.startTimeoutTicker()
 
 	return s, nil
 }
@@ -188,4 +195,22 @@ func (s *PlaybackSession) shouldThrottle() bool {
 		}
 	}
 	return maxSegmentIdx >= (s.lastServedSegmentIdx + 10)
+}
+
+func (s *PlaybackSession) startTimeoutTicker() {
+	ticker := time.NewTicker(10 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if time.Since(s.lastAccessed) > playbackSessionTimeout {
+					s.referenceCount--
+					s.CleanupIfRequired()
+
+					ticker.Stop()
+					return
+				}
+			}
+		}
+	}()
 }
