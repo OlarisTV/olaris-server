@@ -111,6 +111,7 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 
 		cmd := exec.Command(
 			executable.GetFFprobeExecutablePath(),
+			"-show_data",
 			"-show_format",
 			"-show_streams", fileURL, "-print_format", "json", "-v", "quiet")
 		cmd.Stderr = os.Stderr
