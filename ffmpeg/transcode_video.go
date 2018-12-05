@@ -13,7 +13,7 @@ import (
 )
 
 var VideoEncoderPresets = map[string]EncoderParams{
-	"480-1000k-video":   {height: 480, width: -2, videoBitrate: 1000000, Codecs: "avc1.64001e"},
+	"480-1000k-video":   {height: 480, width: -2, videoBitrate: 1000000, Codecs: "avc1.640016"},
 	"720-5000k-video":   {height: 720, width: -2, videoBitrate: 5000000, Codecs: "avc1.64001f"},
 	"1080-10000k-video": {height: 1080, width: -2, videoBitrate: 10000000, Codecs: "avc1.640028"},
 }
