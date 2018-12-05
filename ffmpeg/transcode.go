@@ -7,8 +7,8 @@ func GetSimilarEncoderParams(stream Stream) (EncoderParams, error) {
 		return EncoderParams{
 			videoBitrate: int(stream.BitRate),
 			Codecs:       "avc1.640028",
-			width:        stream.Width,
-			height:       -2,
+			width:        -2,
+			height:       stream.Height,
 		}, nil
 	} else if stream.StreamType == "audio" {
 		return EncoderParams{
