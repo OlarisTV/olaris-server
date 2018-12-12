@@ -12,14 +12,32 @@ import (
 	"time"
 )
 
-var VideoEncoderPresets = map[string]EncoderParams{
-	"480-1000k-video":   {height: 480, width: -2, videoBitrate: 1000000, Codecs: "avc1.640016"},
-	"720-5000k-video":   {height: 720, width: -2, videoBitrate: 5000000, Codecs: "avc1.64001f"},
-	"1080-10000k-video": {height: 1080, width: -2, videoBitrate: 10000000, Codecs: "avc1.640028"},
-}
-
 // Doesn't have to be the same as audio, but why not.
 const transcodedVideoSegmentDuration = 4992 * time.Millisecond
+
+func GetVideoEncoderPreset(stream Stream, name string) (EncoderParams, error) {
+	encoderParams, exists := map[string]EncoderParams{
+		"480-1000k-video": {
+			height: 480, width: -2,
+			videoBitrate: 1000000},
+		"720-5000k-video": {
+			height: 720, width: -2,
+			videoBitrate: 5000000},
+		"1080-10000k-video": {
+			height: 1080, width: -2,
+			videoBitrate: 10000000},
+	}[name]
+
+	if !exists {
+		return EncoderParams{}, fmt.Errorf("no preset \"%s\"", name)
+	}
+	scaledWidth, scaledHeight := scalePreserveAspectRatio(
+		stream.Width, stream.Height,
+		-2, encoderParams.height)
+	encoderParams.Codecs = GetAVC1Tag(uint64(encoderParams.videoBitrate), scaledWidth, scaledHeight)
+
+	return encoderParams, nil
+}
 
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,

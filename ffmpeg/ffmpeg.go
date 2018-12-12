@@ -134,7 +134,9 @@ func StreamRepresentationFromRepresentationId(
 		}
 	} else if strings.HasPrefix(representationId, "preset:") {
 		presetId := representationId[7:]
-		if encoderParams, ok := VideoEncoderPresets[presetId]; ok {
+
+		encoderParams, err := GetVideoEncoderPreset(s, presetId)
+		if err == nil {
 			return GetTranscodedVideoRepresentation(s, representationId, encoderParams), nil
 		}
 		if encoderParams, ok := AudioEncoderPresets[presetId]; ok {
