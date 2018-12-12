@@ -126,7 +126,7 @@ func GetPlaybackSession(ctx context.Context, streamKey ffmpeg.StreamKey, session
 		// 4 segments.
 		// TODO(Leon Handreke): Maybe do something more intelligent here by analyzing the
 		// duration of the previous delivered segment?
-		segmentIdx <= s.lastRequestedSegmentIdx ||
+		segmentIdx < s.lastRequestedSegmentIdx ||
 		segmentIdx > s.lastRequestedSegmentIdx+5 {
 
 		if s != nil {

@@ -104,8 +104,11 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 			w.Header().Set("Content-Type", mimeType)
 			http.ServeFile(w, r, segmentPath)
 
-			playbackSession.lastRequestedSegmentIdx = segmentIdx
-			playbackSession.lastServedSegmentIdx++
+			// Sometimes video.js seems to request the same segment twice, deal with that.
+			if playbackSession.lastRequestedSegmentIdx != segmentIdx {
+				playbackSession.lastRequestedSegmentIdx = segmentIdx
+				playbackSession.lastServedSegmentIdx++
+			}
 			playbackSession.lastAccessed = time.Now()
 			return
 		} else {
