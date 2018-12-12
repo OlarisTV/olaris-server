@@ -113,36 +113,3 @@ func GetTranscodedVideoRepresentation(
 		},
 	}
 }
-
-func buildVideoSegmentDurations(keyframeIntervals []Interval, segmentDuration time.Duration) [][]Segment {
-	timeBase := keyframeIntervals[0].TimeBase
-	sessionIntervals := []Interval{
-		Interval{
-			timeBase,
-			keyframeIntervals[0].StartTimestamp,
-			keyframeIntervals[0].StartTimestamp,
-		},
-	}
-
-	for _, keyframeInterval := range keyframeIntervals {
-		sessionIntervals[len(sessionIntervals)-1].EndTimestamp = keyframeInterval.EndTimestamp
-		sessionDuration := sessionIntervals[len(sessionIntervals)-1].Duration()
-		if sessionDuration >= (segmentsPerSession * segmentDuration) {
-			// TODO(Leon Handreke): We may end up with a zero-length session here in rare cases.
-			sessionIntervals = append(sessionIntervals, Interval{
-				timeBase,
-				keyframeInterval.EndTimestamp,
-				keyframeInterval.EndTimestamp,
-			})
-		}
-	}
-
-	segmentIndex := 0
-	sessions := [][]Segment{}
-	for _, sessionInterval := range sessionIntervals {
-		session := BuildConstantSegmentDurations(sessionInterval, segmentDuration, segmentIndex)
-		sessions = append(sessions, session)
-		segmentIndex += len(session)
-	}
-	return sessions
-}
