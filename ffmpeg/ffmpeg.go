@@ -4,7 +4,10 @@ package ffmpeg
 
 import (
 	"fmt"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"os"
+	"os/user"
+	"path"
 	"strings"
 	"time"
 )
@@ -161,9 +164,12 @@ func StreamRepresentationFromRepresentationId(
 }
 
 func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedbackURL string) (*TranscodingSession, error) {
+	runtimeDir := getTranscodingSessionRuntimeDir()
+	helpers.EnsurePath(runtimeDir)
+
 	startTime := time.Duration(int64(segmentStartIndex) * int64(TransmuxedSegDuration))
 	if s.Representation.RepresentationId == "direct" {
-		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
+		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
 		if err != nil {
 			return nil, err
 		}
@@ -177,11 +183,11 @@ func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedba
 		var err error
 
 		if s.Stream.StreamType == "video" {
-			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
+			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
 		} else if s.Stream.StreamType == "audio" {
-			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, os.TempDir(), feedbackURL)
+			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
 		} else if s.Stream.StreamType == "subtitle" {
-			session, err = NewSubtitleSession(s, os.TempDir())
+			session, err = NewSubtitleSession(s, runtimeDir)
 		}
 		if err != nil {
 			return nil, err
@@ -192,4 +198,13 @@ func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedba
 		}
 		return session, nil
 	}
+}
+
+func CleanTranscodingCache() error {
+	return os.RemoveAll(getTranscodingSessionRuntimeDir())
+}
+
+func getTranscodingSessionRuntimeDir() string {
+	u, _ := user.Current()
+	return path.Join(os.TempDir(), fmt.Sprintf("olaris-%s", u.Uid))
 }

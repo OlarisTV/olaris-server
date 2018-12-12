@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata"
 	"gitlab.com/olaris/olaris-server/metadata/app"
@@ -34,6 +35,12 @@ var serveCmd = &cobra.Command{
 
 		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
 		defer mctx.Db.Close()
+
+		// This is just to make sure that no temp files stay behind in case the
+		// garbage collection below didn't work properly for some reason.
+		// This is also relevant during development because the realize auto-reload
+		// tool doesn't properly send SIGTERM.
+		ffmpeg.CleanTranscodingCache()
 
 		appRoute := r.PathPrefix("/app").
 			Handler(http.StripPrefix("/app", react.GetHandler())).
