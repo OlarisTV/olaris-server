@@ -40,7 +40,7 @@ type StreamRepresentation struct {
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
 // force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
 // segments.
-const TransmuxedSegDuration = 5000 * time.Millisecond
+const SegmentDuration = 5000 * time.Millisecond
 
 // fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
@@ -167,7 +167,7 @@ func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedba
 	runtimeDir := getTranscodingSessionRuntimeDir()
 	helpers.EnsurePath(runtimeDir)
 
-	startTime := time.Duration(int64(segmentStartIndex) * int64(TransmuxedSegDuration))
+	startTime := time.Duration(int64(segmentStartIndex) * int64(SegmentDuration))
 	if s.Representation.RepresentationId == "direct" {
 		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
 		if err != nil {

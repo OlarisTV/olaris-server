@@ -17,10 +17,6 @@ var AudioEncoderPresets = map[string]EncoderParams{
 	"128k-audio": {audioBitrate: 128000, Codecs: "mp4a.40.2"},
 }
 
-// This is exactly 234 AAC frames (1024 samples each) @ 48kHz.
-// TODO(Leon Handreke): Do we need to set this differently for different sampling rates?
-const transcodedAudioSegmentDuration = 4992 * time.Millisecond
-
 func NewAudioTranscodingSession(
 	stream StreamRepresentation,
 	startTime time.Duration,
@@ -44,7 +40,7 @@ func NewAudioTranscodingSession(
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
-		"-hls_time", fmt.Sprintf("%.3f", transcodedAudioSegmentDuration.Seconds()),
+		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		"-olaris_feedback_url", feedbackURL,

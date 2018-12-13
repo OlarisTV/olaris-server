@@ -91,7 +91,7 @@ func BuildConstantSegmentDurations(interval Interval, segmentDuration time.Durat
 			Segment{
 				Interval{
 					timeBase,
-					// Casting time.Duration to int is OK here because segmentDuration is small
+					// Casting time.Duration to int is OK here because SegmentDuration is small
 					interval.StartTimestamp + DtsTimestamp(int64(i)*segmentDurationDts),
 					interval.StartTimestamp + DtsTimestamp(int64(i+1)*segmentDurationDts),
 				},

@@ -101,7 +101,7 @@ func BuildTranscodingMediaPlaylistFromFile(sr ffmpeg.StreamRepresentation) strin
 	}
 	segmentDurations := ffmpeg.ComputeSegmentDurations(
 		[][]ffmpeg.Segment{
-			ffmpeg.BuildConstantSegmentDurations(totalInterval, ffmpeg.TransmuxedSegDuration, 0),
+			ffmpeg.BuildConstantSegmentDurations(totalInterval, ffmpeg.SegmentDuration, 0),
 		})
 	segmentDurationsSeconds := []float64{}
 	for _, d := range segmentDurations {

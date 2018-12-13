@@ -26,7 +26,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					mimeType="video/mp4"
 					codecs="{{$s.Representation.Codecs}}"
 					height="{{$s.Representation.Height}}" bandwidth="{{$s.Representation.BitRate}}">
-				<SegmentTemplate timescale="1000" duration="5000" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
+				<SegmentTemplate timescale="1000" duration="{{$.segmentDurationMs}}" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
 			{{ end }}
@@ -38,7 +38,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 					id="{{ $s.Representation.RepresentationId }}"
 					mimeType="audio/mp4" codecs="{{ $s.Representation.Codecs }}"
 					bandwidth="{{$s.Representation.BitRate}}">
-				<SegmentTemplate timescale="1000" duration="4992" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
+				<SegmentTemplate timescale="1000" duration="{{$.segmentDurationMs}}" initialization="{{$s.Stream.StreamId}}/$RepresentationID$/init.mp4" media="{{$s.Stream.StreamId}}/$RepresentationID$/$Number$.m4s" startNumber="0">
 				</SegmentTemplate>
 			</Representation>
 			{{ end }}
@@ -75,10 +75,11 @@ func BuildManifest(
 	durationXml := toXmlDuration(totalDuration)
 
 	templateData := map[string]interface{}{
-		"videoStream":     videoStream,
-		"audioStreams":    audioStreams,
-		"subtitleStreams": subtitleStreams,
-		"duration":        durationXml,
+		"videoStream":       videoStream,
+		"audioStreams":      audioStreams,
+		"subtitleStreams":   subtitleStreams,
+		"duration":          durationXml,
+		"segmentDurationMs": int64(ffmpeg.SegmentDuration / time.Millisecond),
 	}
 
 	buf := bytes.Buffer{}

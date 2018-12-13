@@ -33,7 +33,7 @@ func NewTransmuxingSession(
 		"-c:0", "copy",
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
-		"-hls_time", fmt.Sprintf("%.3f", TransmuxedSegDuration.Seconds()),
+		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		"-olaris_feedback_url", feedbackURL,
@@ -82,7 +82,7 @@ func guessTransmuxedSegmentList(keyframeIntervals []Interval) [][]Segment {
 	segmentId := 0
 	var sessions [][]Segment
 	timeBase := keyframeIntervals[0].TimeBase
-	segDurationTs := DtsTimestamp(TransmuxedSegDuration.Seconds() * float64(timeBase))
+	segDurationTs := DtsTimestamp(SegmentDuration.Seconds() * float64(timeBase))
 
 	earliestNextCut := keyframeIntervals[0].StartTimestamp + segDurationTs
 	session := []Segment{
