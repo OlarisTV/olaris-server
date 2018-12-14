@@ -42,13 +42,13 @@ func scalePreserveAspectRatio(width int, height int, newWidth int, newHeight int
 	var nw, nh = float64(newWidth), float64(newHeight)
 
 	if nw < 0 {
-		nw = float64(width) * (float64(height) / float64(width))
+		nw = nh * (float64(width) / float64(height))
 
 		factor := float64(-newWidth)
 		nw = math.Round(nw/factor) * factor
 	}
 	if nh < 0 {
-		nh = float64(height) * (float64(width) / float64(height))
+		nh = nw * (float64(height) / float64(width))
 
 		factor := float64(-newHeight)
 		nh = math.Round(nh/factor) * factor
