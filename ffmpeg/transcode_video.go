@@ -50,25 +50,36 @@ func NewVideoTranscodingSession(
 
 	encoderParams := stream.Representation.encoderParams
 
-	args := []string{
-		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
+	args := []string{}
+	if startTime != 0 {
+		args = append(args, []string{
+			// -ss being before -i is important for fast seeking
+			"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
+		}...)
+	}
+
+	args = append(args, []string{
 		"-i", stream.Stream.MediaFileURL,
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
 		"-preset:0", "veryfast",
 		"-force_key_frames", fmt.Sprintf("expr:gte(t,n_forced*%.3f)", SegmentDuration.Seconds()),
-		"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
 		"-f", "hls",
 		"-start_number", fmt.Sprintf("%d", segmentStartIndex),
 		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
 		"-olaris_feedback_url", feedbackURL,
-		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
+	}...)
+
+	if encoderParams.width != 0 || encoderParams.height != 0 {
+		args = append(args, []string{
+			"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),
+		}...)
 	}
+	// We serve our own manifest, so we don't really care about this.
+	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 
 	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
 	log.Println("ffmpeg started with", cmd.Path, cmd.Args)

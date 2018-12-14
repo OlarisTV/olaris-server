@@ -24,9 +24,15 @@ func NewTransmuxingSession(
 		return nil, err
 	}
 
-	args := []string{
-		// -ss being before -i is important for fast seeking
-		"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
+	args := []string{}
+	if startTime != 0 {
+		args = append(args, []string{
+			// -ss being before -i is important for fast seeking
+			"-ss", fmt.Sprintf("%.3f", startTime.Seconds()),
+		}...)
+	}
+
+	args = append(args, []string{
 		"-i", stream.Stream.MediaFileURL,
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
@@ -38,7 +44,8 @@ func NewTransmuxingSession(
 		"-hls_segment_filename", "stream0_%d.m4s",
 		"-olaris_feedback_url", feedbackURL,
 		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u")}
+		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
+	}...)
 
 	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
 	log.Println("ffmpeg started with", cmd.Args)
