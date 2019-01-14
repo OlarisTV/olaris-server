@@ -16,8 +16,8 @@ before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -s $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
-  - go get github.com/jteeuwen/go-bindata
-  - go get github.com/elazarl/go-bindata-assetfs
+  - go get github.com/jteeuwen/go-bindata/...
+  - go get github.com/elazarl/go-bindata-assetfs/...
   - make ready-ci
 
 stages:
