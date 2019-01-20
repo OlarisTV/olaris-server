@@ -82,7 +82,7 @@ deps:
 
 .PHONY: generate
 generate:
-	$(GOGENERATE) -v ./...
+	$(GOGENERATE) -x -v ./...
 
 .PHONY: run
 run: all
