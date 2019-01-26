@@ -185,11 +185,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bfd0a0adee046f09022dc232a0a3bc055fd43d85e624d163eb76d18d09df510e"
+  digest = "1:b7d2f7ea91e17b7f0788d119811ce6b098e5471d6af0d358931ed9b9458a6d48"
   name = "github.com/ryanbradynd05/go-tmdb"
   packages = ["."]
   pruneopts = "UT"
-  revision = "bbb88dee73c71a9d3ef1d24d32f7efd3e62c343f"
+  revision = "291a20d25ffdda86ce43e9f703700fd287359e95"
 
 [[projects]]
   branch = "master"

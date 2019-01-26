@@ -17,8 +17,11 @@ type TmdbAgent struct {
 
 // NewTmdbAgent creates a new themoviedb agent.
 func NewTmdbAgent() *TmdbAgent {
-	return &TmdbAgent{tmdb.Init(tmdbAPIKey)}
-
+	return &TmdbAgent{tmdb.Init(tmdb.Config{
+		APIKey:   tmdbAPIKey,
+		Proxies:  nil,
+		UseProxy: false,
+	})}
 }
 
 // UpdateEpisodeMD updates the metadata information for the given episode.
