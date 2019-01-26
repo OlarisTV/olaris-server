@@ -60,15 +60,17 @@ type Movie struct {
 
 // MovieShort struct
 type MovieShort struct {
-	Adult         bool
-	BackdropPath  string `json:"backdrop_path"`
-	ID            int
-	OriginalTitle string `json:"original_title"`
-	Popularity    float32
-	PosterPath    string `json:"poster_path"`
-	ReleaseDate   string `json:"release_date"`
-	Title         string
-	Video         bool
+	Adult         bool    `json:"adult"`
+	BackdropPath  string  `json:"backdrop_path"`
+	ID            int     `json:"id"`
+	OriginalTitle string  `json:"original_title"`
+	GenreIDs      []int32 `json:"genre_ids"`
+	Popularity    float32 `json:"popularity"`
+	PosterPath    string  `json:"poster_path"`
+	ReleaseDate   string  `json:"release_date"`
+	Title         string  `json:"title"`
+	Overview      string  `json:"overview"`
+	Video         bool    `json:"video"`
 	VoteAverage   float32 `json:"vote_average"`
 	VoteCount     uint32  `json:"vote_count"`
 }
@@ -316,8 +318,13 @@ type MovieTranslations struct {
 	ID           int
 	Translations []struct {
 		Iso639_1    string `json:"iso_639_1"`
-		Name        string
+		Name        string `json:"name"`
 		EnglishName string `json:"english_name"`
+		Data        struct {
+			Title    string `json:"title,omitempty"`
+			Overview string `json:"overview,omitempty"`
+			Homepage string `json:"homepage,omitempty"`
+		} `json:"data"`
 	}
 	AlternativeTitles *MovieAlternativeTitles `json:"alternative_titles,omitempty"`
 	Credits           *MovieCredits           `json:",omitempty"`
@@ -332,11 +339,34 @@ type MovieTranslations struct {
 	Rating            *MovieRating            `json:",omitempty"`
 }
 
+// MovieRecommendations struct for movie recommendations.
+type MovieRecommendations struct {
+	Page    int `json:"page"`
+	Results []struct {
+		Adult            bool    `json:"adult"`
+		BackdropPath     string  `json:"backdrop_path"`
+		GenreIDs         []int   `json:"genre_ids"`
+		ID               int     `json:"id"`
+		OriginalLanguage string  `json:"original_language"`
+		OriginalTitle    string  `json:"original_title"`
+		Overview         string  `json:"overview"`
+		ReleaseDate      string  `json:"release_date"`
+		PosterPath       string  `json:"poster_path"`
+		Popularity       float32 `json:"popularity"`
+		Title            string  `json:"title"`
+		Video            bool    `json:"video"`
+		VoteAverage      float32 `json:"vote_average"`
+		VoteCount        uint32  `json:"vote_count"`
+	} `json:"results"`
+	TotalPages   int `json:"total_pages"`
+	TotalResults int `json:"total_results"`
+}
+
 // MovieVideos struct
 type MovieVideos struct {
 	ID      int
 	Results []struct {
-		ID       int
+		ID       string
 		Iso639_1 string `json:"iso_639_1"`
 		Key      string
 		Name     string
@@ -555,6 +585,19 @@ func (tmdb *TMDb) GetMovieTranslations(id int, options map[string]string) (*Movi
 	uri := fmt.Sprintf("%s/movie/%v/translations?api_key=%s%s", baseURL, id, tmdb.apiKey, optionsString)
 	result, err := getTmdb(uri, &translations)
 	return result.(*MovieTranslations), err
+}
+
+// GetMovieRecommendations gets a list of recommended movies for a movie by id
+// https://developers.themoviedb.org/3/movies/get-movie-recommendations
+func (tmdb *TMDb) GetMovieRecommendations(id int, options map[string]string) (*MovieRecommendations, error) {
+	var availableOptions = map[string]struct{}{
+		"language": {},
+		"page":     {}}
+	var movieRec MovieRecommendations
+	optionsString := getOptionsString(options, availableOptions)
+	uri := fmt.Sprintf("%s/movie/%v/recommendations?api_key=%s%s", baseURL, id, tmdb.apiKey, optionsString)
+	result, err := getTmdb(uri, &movieRec)
+	return result.(*MovieRecommendations), err
 }
 
 // GetMovieVideos for a specific movie id

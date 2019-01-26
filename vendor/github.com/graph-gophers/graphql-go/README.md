@@ -16,6 +16,8 @@ safe for production use.
 - resolvers are matched to the schema based on method sets (can resolve a GraphQL schema with a Go interface or Go struct).
 - handles panics in resolvers
 - parallel execution of resolvers
+- subscriptions
+   - [sample WS transport](https://github.com/graph-gophers/graphql-transport-ws)
 
 ## Roadmap
 
@@ -23,6 +25,43 @@ We're trying out the GitHub Project feature to manage `graphql-go`'s [developmen
 Feedback is welcome and appreciated.
 
 ## (Some) Documentation
+
+### Basic Sample
+
+```go
+package main
+
+import (
+        "log"
+        "net/http"
+
+        graphql "github.com/graph-gophers/graphql-go"
+        "github.com/graph-gophers/graphql-go/relay"
+)
+
+type query struct{}
+
+func (_ *query) Hello() string { return "Hello, world!" }
+
+func main() {
+        s := `
+                schema {
+                        query: Query
+                }
+                type Query {
+                        hello: String!
+                }
+        `
+        schema := graphql.MustParseSchema(s, &query{})
+        http.Handle("/query", &relay.Handler{Schema: schema})
+        log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+To test:
+```sh
+$ curl -XPOST -d '{"query": "{ hello }"}' localhost:8080/query
+```
 
 ### Resolvers
 
@@ -60,4 +99,4 @@ func (r *helloWorldResolver) Hello(ctx context.Context) (string, error) {
 
 [deltaskelta/graphql-go-pets-example](https://github.com/deltaskelta/graphql-go-pets-example) - graphql-go resolving against a sqlite database
 
-[OscarYuen/go-graphql-starter](https://github.com/OscarYuen/go-graphql-starter) - a starter application integrated with dataloader, psql and basic authenication
+[OscarYuen/go-graphql-starter](https://github.com/OscarYuen/go-graphql-starter) - a starter application integrated with dataloader, psql and basic authentication
