@@ -24,6 +24,3 @@ _testmain.go
 *.prof
 
 local.yml
-
-\.idea/
-\.vscode/

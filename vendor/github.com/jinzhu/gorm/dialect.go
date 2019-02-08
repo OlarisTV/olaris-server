@@ -83,7 +83,7 @@ var ParseFieldStructForDialect = func(field *StructField, dialect Dialect) (fiel
 	// Get redirected field type
 	var (
 		reflectType = field.Struct.Type
-		dataType, _ = field.TagSettingsGet("TYPE")
+		dataType    = field.TagSettings["TYPE"]
 	)
 
 	for reflectType.Kind() == reflect.Ptr {
@@ -112,17 +112,15 @@ var ParseFieldStructForDialect = func(field *StructField, dialect Dialect) (fiel
 	}
 
 	// Default Size
-	if num, ok := field.TagSettingsGet("SIZE"); ok {
+	if num, ok := field.TagSettings["SIZE"]; ok {
 		size, _ = strconv.Atoi(num)
 	} else {
 		size = 255
 	}
 
 	// Default type from tag setting
-	notNull, _ := field.TagSettingsGet("NOT NULL")
-	unique, _ := field.TagSettingsGet("UNIQUE")
-	additionalType = notNull + " " + unique
-	if value, ok := field.TagSettingsGet("DEFAULT"); ok {
+	additionalType = field.TagSettings["NOT NULL"] + " " + field.TagSettings["UNIQUE"]
+	if value, ok := field.TagSettings["DEFAULT"]; ok {
 		additionalType = additionalType + " DEFAULT " + value
 	}
 

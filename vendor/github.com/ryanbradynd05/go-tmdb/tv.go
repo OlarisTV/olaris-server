@@ -63,20 +63,18 @@ type TV struct {
 
 // TvShort struct
 type TvShort struct {
-	Adult         bool     `json:"adult"`
-	BackdropPath  string   `json:"backdrop_path"`
-	ID            int      `json:"id"`
+	Adult         bool
+	BackdropPath  string `json:"backdrop_path"`
+	ID            int
 	OriginalName  string   `json:"original_name"`
-	GenreIDs      []int32  `json:"genre_ids"`
 	OriginCountry []string `json:"origin_country"`
-	Popularity    float32  `json:"popularity"`
-	PosterPath    string   `json:"poster_path"`
-	FirstAirDate  string   `json:"first_air_date"`
-	Name          string   `json:"name"`
-	Overview      string   `json:"overview"`
-	Video         bool     `json:"video"`
-	VoteAverage   float32  `json:"vote_average"`
-	VoteCount     uint32   `json:"vote_count"`
+	Popularity    float32
+	PosterPath    string `json:"poster_path"`
+	FirstAirDate  string `json:"first_air_date"`
+	Name          string
+	Video         bool
+	VoteAverage   float32 `json:"vote_average"`
+	VoteCount     uint32  `json:"vote_count"`
 }
 
 // TvPagedResults struct
@@ -163,9 +161,6 @@ type TvExternalIds struct {
 	FreebaseMid string `json:"freebase_mid"`
 	TvdbID      int    `json:"tvdb_id"`
 	TvrageID    int    `json:"tvrage_id"`
-	FacebookID  string `json:"facebook_id"`
-	InstagramID string `json:"instagram_id"`
-	TwitterID   string `json:"twitter_id"`
 }
 
 // TvImage struct
@@ -200,37 +195,6 @@ type TvKeywords struct {
 	Similar           *TvPagedResults      `json:",omitempty"`
 	Translations      *TvTranslations      `json:",omitempty"`
 	Videos            *TvVideos            `json:",omitempty"`
-}
-
-// TvRecommendations struct for TV show recommendations.
-type TvRecommendations struct {
-	Page    int `json:"page"`
-	Results []struct {
-		BackdropPath     string   `json:"backdrop_path"`
-		FirstAirDate     string   `json:"first_air_date"`
-		GenreIDs         []int    `json:"genre_ids"`
-		ID               int      `json:"id"`
-		OriginalLanguage string   `json:"original_language"`
-		OriginalName     string   `json:"original_name"`
-		Overview         string   `json:"overview"`
-		OriginCountry    []string `json:"origin_country"`
-		PosterPath       string   `json:"poster_path"`
-		Popularity       float32  `json:"popularity"`
-		Name             string   `json:"name"`
-		Networks         []struct {
-			ID   int `json:"id"`
-			Logo struct {
-				Path        string  `json:"path"`
-				AspectRatio float32 `json:"aspect_ratio"`
-			} `json:"logo"`
-			Name          string `json:"name"`
-			OriginCountry string `json:"origin_country"`
-		} `json:"networks"`
-		VoteAverage float32 `json:"vote_average"`
-		VoteCount   uint32  `json:"vote_count"`
-	} `json:"results"`
-	TotalPages   int `json:"total_pages"`
-	TotalResults int `json:"total_results"`
 }
 
 // TvTranslations struct
@@ -363,19 +327,6 @@ func (tmdb *TMDb) GetTvKeywords(id int, options map[string]string) (*TvKeywords,
 	uri := fmt.Sprintf("%s/tv/%v/keywords?api_key=%s%s", baseURL, id, tmdb.apiKey, optionsString)
 	result, err := getTmdb(uri, &keywords)
 	return result.(*TvKeywords), err
-}
-
-// GetTvRecommendations gets the list of TV show recommendations by id
-// https://developers.themoviedb.org/3/tv/get-tv-recommendations
-func (tmdb *TMDb) GetTvRecommendations(id int, options map[string]string) (*TvRecommendations, error) {
-	var availableOptions = map[string]struct{}{
-		"language": {},
-		"page":     {}}
-	var tvRec TvRecommendations
-	optionsString := getOptionsString(options, availableOptions)
-	uri := fmt.Sprintf("%s/tv/%v/recommendations?api_key=%s%s", baseURL, id, tmdb.apiKey, optionsString)
-	result, err := getTmdb(uri, &tvRec)
-	return result.(*TvRecommendations), err
 }
 
 // GetTvLatest gets the latest TV show

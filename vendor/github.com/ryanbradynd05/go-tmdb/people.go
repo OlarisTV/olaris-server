@@ -6,16 +6,14 @@ import (
 
 // Person struct
 type Person struct {
-	ID              int                    `json:"id"`
-	Name            string                 `json:"name"`
-	Overview        string                 `json:"overview"`
-	Adult           bool                   `json:"adult"`
-	Biography       string                 `json:"biography"`
-	Birthday        string                 `json:"birthday"`
-	Deathday        string                 `json:"deathday"`
-	Gender          int                    `json:"gender"`
-	ImdbID          string                 `json:"imdb_id"`
-	Homepage        string                 `json:"homepage"`
+	ID              int
+	Name            string
+	Overview        string
+	Adult           bool
+	Biography       string
+	Birthday        string
+	Deathday        string
+	Homepage        string
 	AlsoKnownAs     []string               `json:"also_known_as"`
 	PlaceOfBirth    string                 `json:"place_of_birth"`
 	ProfilePath     string                 `json:"profile_path"`
@@ -26,22 +24,6 @@ type Person struct {
 	ExternalIds     *TvExternalIds         `json:"external_ids,omitempty"`
 	Images          *PersonImages          `json:",omitempty"`
 	TaggedImages    *PersonTaggedImages    `json:"tagged_images,omitempty"`
-	Translations    *PersonTranslations    `json:"translations,omitempty"`
-}
-
-// PersonTranslations struct
-type PersonTranslations struct {
-	ID           int
-	Translations []struct {
-		Iso639_1    string `json:"iso_639_1"`
-		Name        string `json:"name"`
-		EnglishName string `json:"english_name"`
-		Data        struct {
-			Title    string `json:"title,omitempty"`
-			Overview string `json:"overview,omitempty"`
-			Homepage string `json:"homepage,omitempty"`
-		} `json:"data"`
-	}
 }
 
 // PersonShort struct
@@ -100,9 +82,9 @@ type PersonImages struct {
 	Profiles []struct {
 		AspectRatio float32 `json:"aspect_ratio"`
 		FilePath    string  `json:"file_path"`
-		ID          string  `json:"id"`
-		Width       int     `json:"width"`
-		Height      int     `json:"height"`
+		ID          string
+		Width       int
+		Height      int
 		Iso639_1    string  `json:"iso_639_1"`
 		VoteAverage float32 `json:"vote_average"`
 		VoteCount   int     `json:"vote_count"`

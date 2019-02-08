@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sync"
 
@@ -30,10 +29,6 @@ func (r *Request) handlePanic(ctx context.Context) {
 		r.Logger.LogPanic(ctx, value)
 		r.AddError(makePanicError(value))
 	}
-}
-
-type extensionser interface {
-	Extensions() map[string]interface{}
 }
 
 func makePanicError(value interface{}) *errors.QueryError {
@@ -192,9 +187,6 @@ func execFieldSelection(ctx context.Context, r *Request, f *fieldToExec, path *p
 			err := errors.Errorf("%s", resolverErr)
 			err.Path = path.toSlice()
 			err.ResolverError = resolverErr
-			if ex, ok := callOut[1].Interface().(extensionser); ok {
-				err.Extensions = ex.Extensions()
-			}
 			return err
 		}
 		return nil
@@ -217,8 +209,7 @@ func (r *Request) execSelectionSet(ctx context.Context, sels []selected.Selectio
 	t, nonNull := unwrapNonNull(typ)
 	switch t := t.(type) {
 	case *schema.Object, *schema.Interface, *schema.Union:
-		// a reflect.Value of a nil interface will show up as an Invalid value
-		if resolver.Kind() == reflect.Invalid || ((resolver.Kind() == reflect.Ptr || resolver.Kind() == reflect.Interface) && resolver.IsNil()) {
+		if resolver.Kind() == reflect.Ptr && resolver.IsNil() {
 			if nonNull {
 				panic(errors.Errorf("got nil for non-null %q", t))
 			}
@@ -279,17 +270,13 @@ func (r *Request) execSelectionSet(ctx context.Context, sels []selected.Selectio
 		v := resolver.Interface()
 		data, err := json.Marshal(v)
 		if err != nil {
-			panic(errors.Errorf("could not marshal %v: %s", v, err))
+			panic(errors.Errorf("could not marshal %v", v))
 		}
 		out.Write(data)
 
 	case *schema.Enum:
-		var stringer fmt.Stringer = resolver
-		if s, ok := resolver.Interface().(fmt.Stringer); ok {
-			stringer = s
-		}
 		out.WriteByte('"')
-		out.WriteString(stringer.String())
+		out.WriteString(resolver.String())
 		out.WriteByte('"')
 
 	default:

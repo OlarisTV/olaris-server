@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
+// +build darwin dragonfly freebsd linux netbsd openbsd solaris
 
 package unix
 
 import (
 	"bytes"
+	"runtime"
 	"sort"
 	"sync"
 	"syscall"
@@ -18,6 +19,13 @@ var (
 	Stdin  = 0
 	Stdout = 1
 	Stderr = 2
+)
+
+const (
+	darwin64Bit    = runtime.GOOS == "darwin" && sizeofPtr == 8
+	dragonfly64Bit = runtime.GOOS == "dragonfly" && sizeofPtr == 8
+	netbsd32Bit    = runtime.GOOS == "netbsd" && sizeofPtr == 4
+	solaris64Bit   = runtime.GOOS == "solaris" && sizeofPtr == 8
 )
 
 // Do the interface allocations only once for common
@@ -211,7 +219,7 @@ func Getpeername(fd int) (sa Sockaddr, err error) {
 	if err = getpeername(fd, &rsa, &len); err != nil {
 		return
 	}
-	return anyToSockaddr(fd, &rsa)
+	return anyToSockaddr(&rsa)
 }
 
 func GetsockoptByte(fd, level, opt int) (value byte, err error) {
@@ -283,7 +291,7 @@ func Recvfrom(fd int, p []byte, flags int) (n int, from Sockaddr, err error) {
 		return
 	}
 	if rsa.Addr.Family != AF_UNSPEC {
-		from, err = anyToSockaddr(fd, &rsa)
+		from, err = anyToSockaddr(&rsa)
 	}
 	return
 }
@@ -349,6 +357,13 @@ func Socketpair(domain, typ, proto int) (fd [2]int, err error) {
 		fd[1] = int(fdx[1])
 	}
 	return
+}
+
+func Sendfile(outfd int, infd int, offset *int64, count int) (written int, err error) {
+	if raceenabled {
+		raceReleaseMerge(unsafe.Pointer(&ioSync))
+	}
+	return sendfile(outfd, infd, offset, count)
 }
 
 var ioSync int64
