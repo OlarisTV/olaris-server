@@ -31,7 +31,10 @@ func GetVideoEncoderPreset(stream Stream, name string) (EncoderParams, error) {
 	scaledWidth, scaledHeight := scalePreserveAspectRatio(
 		stream.Width, stream.Height,
 		-2, encoderParams.height)
-	encoderParams.Codecs = GetAVC1Tag(uint64(encoderParams.videoBitrate), scaledWidth, scaledHeight)
+	encoderParams.Codecs = GetAVC1Tag(
+		scaledWidth, scaledHeight,
+		int64(encoderParams.videoBitrate),
+		stream.FrameRate)
 
 	return encoderParams, nil
 }

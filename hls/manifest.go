@@ -95,7 +95,7 @@ func BuildMasterPlaylistFromFile(
 
 func BuildTranscodingMediaPlaylistFromFile(sr ffmpeg.StreamRepresentation) string {
 	totalInterval := ffmpeg.Interval{
-		TimeBase:       sr.Stream.TimeBase,
+		TimeBase:       sr.Stream.TimeBase.Denom().Int64(),
 		StartTimestamp: 0,
 		EndTimestamp:   sr.Stream.TotalDurationDts,
 	}

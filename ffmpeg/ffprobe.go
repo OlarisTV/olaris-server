@@ -8,6 +8,7 @@ import (
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"os/exec"
 	"regexp"
@@ -44,6 +45,7 @@ type ProbeStream struct {
 	Disposition   map[string]int    `json:"disposition"`
 	TimeBase      string            `json:"time_base"`
 	DurationTs    int               `json:"duration_ts"`
+	RFrameRate    string            `json:"r_frame_rate"`
 }
 
 func (ps *ProbeStream) String() string {
@@ -150,10 +152,25 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	return &v, nil
 }
 
-func parseTimeBaseString(timeBaseString string) (int64, error) {
-	// TODO(Leon Handreke): This is very primitive, maybe just parse the whole fraction and use 1/result?
-	if !strings.HasPrefix(timeBaseString, "1/") {
-		return 0, fmt.Errorf("%s does not look like a timebase", timeBaseString)
+func parseRational(r string) (*big.Rat, error) {
+	var a, b int64
+	var err error
+
+	components := strings.Split(r, "/")
+	if len(components) != 2 {
+		goto fail
 	}
-	return strconv.ParseInt(timeBaseString[2:], 10, 64)
+	a, err = strconv.ParseInt(components[0], 10, 64)
+	if err != nil {
+		goto fail
+	}
+	b, err = strconv.ParseInt(components[1], 10, 64)
+	if err != nil {
+		goto fail
+	}
+	return big.NewRat(a, b), nil
+
+fail:
+	return &big.Rat{}, fmt.Errorf("%s does not look like a timebase", r)
+
 }

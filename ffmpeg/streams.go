@@ -3,6 +3,7 @@ package ffmpeg
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,13 +24,14 @@ type Stream struct {
 
 	TotalDuration time.Duration
 
-	TimeBase         int64
+	TimeBase         *big.Rat
 	TotalDurationDts DtsTimestamp
 	// codecs string ready for DASH/HLS serving
 	Codecs    string
 	CodecName string
 	Profile   string
 	BitRate   int64
+	FrameRate *big.Rat
 
 	Width  int
 	Height int
@@ -57,18 +59,18 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 	}
 
 	for _, stream := range container.Streams {
+
+		timeBase, err := parseRational(stream.TimeBase)
+		if err != nil {
+			return nil, err
+		}
+		totalDurationTs := DtsTimestamp(stream.DurationTs)
+		if stream.DurationTs == 0 {
+			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase.Denom().Int64()))
+		}
+
 		if stream.CodecType == "audio" {
 			bitrate, _ := strconv.Atoi(stream.BitRate)
-
-			timeBase, err := parseTimeBaseString(stream.TimeBase)
-			if err != nil {
-				return nil, err
-			}
-
-			totalDurationTs := DtsTimestamp(stream.DurationTs)
-			if stream.DurationTs == 0 {
-				totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
-			}
 
 			streams.AudioStreams = append(streams.AudioStreams,
 				Stream{
@@ -87,17 +89,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					TimeBase:         timeBase,
 				})
 		} else if stream.CodecType == "video" {
-			timeBase, err := parseTimeBaseString(stream.TimeBase)
-			if err != nil {
-				return nil, err
-			}
-
-			totalDurationTs := DtsTimestamp(stream.DurationTs)
-			if stream.DurationTs == 0 {
-				totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase))
-			}
-
 			bitrate, _ := strconv.Atoi(stream.BitRate)
+
 			if bitrate == 0 {
 				filepath, err := mediaFileURLToFilepath(mediaFileURL)
 				if err != nil {
@@ -111,6 +104,10 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
 				bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
 			}
+			frameRate, err := parseRational(stream.RFrameRate)
+			if err != nil {
+				return nil, fmt.Errorf("Could not parse r_frame_rate %s", stream.RFrameRate)
+			}
 
 			streams.VideoStreams = append(streams.VideoStreams, Stream{
 				StreamKey: StreamKey{
@@ -119,6 +116,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				},
 				Codecs:           stream.GetMime(),
 				BitRate:          int64(bitrate),
+				FrameRate:        frameRate,
 				Width:            stream.Width,
 				Height:           stream.Height,
 				TotalDuration:    container.Format.Duration(),
@@ -143,7 +141,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				},
 				TotalDuration:    totalDuration,
 				TotalDurationDts: DtsTimestamp(totalDuration.Seconds() * 1000),
-				TimeBase:         1000,
+				TimeBase:         big.NewRat(1, 1000),
 				StreamType:       "subtitle",
 				Language:         GetLanguageTag(stream),
 				Title:            GetTitleOrHumanizedLanguage(stream),
