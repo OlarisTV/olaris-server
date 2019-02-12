@@ -89,8 +89,9 @@ func NewPlaybackSession(ctx context.Context, sessionID string, streamKey ffmpeg.
 // GetPlaybackSession gets a playback session with the given key and for the given segment index.
 // If the segment index is too far in the future, it will conclude that the user likely skipped ahead
 // and start a new playback session.
-// If segmentIdx == -1, any session will be returned for the given key. This is useful to get a session
-// to serve the init segment from.
+// If segmentIdx == -1, any session will be returned for the given (StreamKey, representationID). This is useful to get
+// a session to serve the init segment from because it doesn't matter where ffmpeg seeked to, the init segment will
+// always be the same.
 // The returned PlaybackSession must be released after use by calling ReleasePlaybackSession.
 func GetPlaybackSession(ctx context.Context, streamKey ffmpeg.StreamKey, sessionID string, representationId string, segmentIdx int) (*PlaybackSession, error) {
 	sessionsMutex.Lock()
@@ -108,7 +109,7 @@ func GetPlaybackSession(ctx context.Context, streamKey ffmpeg.StreamKey, session
 
 	s := playbackSessions[key]
 	if segmentIdx == -1 {
-		if s != nil {
+		if s != nil && s.representationID == representationId {
 			s.referenceCount++
 			return s, nil
 		}
