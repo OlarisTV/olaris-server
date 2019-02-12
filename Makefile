@@ -8,6 +8,7 @@ GOVET=$(GOCMD) vet
 GOGET=$(GOCMD) get
 GOGENERATE=$(GOCMD) generate
 BIN_LOC=build
+FFMPEG_LOC=ffmpeg/executable/build
 BINARY_NAME=olaris
 GODEP=dep
 CMD_SERVER_PATH=cmd/olaris/main.go
@@ -27,8 +28,9 @@ ready-ci: download-olaris-react download-ffmpeg
 download-ffmpeg:
 	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Fffmpeg/jobs/artifacts/master/download?job=compile' > ffmpeg/executable/build.zip
 	unzip -o ffmpeg/executable/build.zip -d ffmpeg/executable/
-	cp ffmpeg/executable/ffmpeg-static/bin/ffmpeg ffmpeg/executable/build/
-	cp ffmpeg/executable/ffmpeg-static/bin/ffprobe ffmpeg/executable/build/
+	mkdir -p $(FFMPEG_LOC)/linux-amd64
+	cp ffmpeg/executable/ffmpeg-static/bin/ffmpeg $(FFMPEG_LOC)/linux-amd64/ffmpeg
+	cp ffmpeg/executable/ffmpeg-static/bin/ffprobe $(FFMPEG_LOC)/linux-amd64/ffprobe
 	rm ffmpeg/executable/build.zip
 	rm -rf ffmpeg/executable/ffmpeg-static
 	make generate
@@ -82,6 +84,7 @@ deps:
 
 .PHONY: generate
 generate:
+	rm **/bindata.go
 	$(GOGENERATE) -x -v ./...
 
 .PHONY: run

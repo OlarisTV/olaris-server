@@ -10,7 +10,8 @@ import (
 	"path"
 )
 
-//go:generate go-bindata -pkg $GOPACKAGE -prefix "build/" build/...
+//go:generate mkdir -p build/$GOOS-$GOARCH
+//go:generate go-bindata -pkg $GOPACKAGE -prefix "build/$GOOS-$GOARCH" build/$GOOS-$GOARCH/...
 
 var useSystemFFmpeg = flag.Bool(
 	"use_system_ffmpeg",
@@ -23,19 +24,24 @@ func getExecutablePath(name string) string {
 	}
 	binaryDir := path.Join(helpers.CacheDir(), "ffmpeg")
 	binaryPath := path.Join(binaryDir, name)
-	// TODO(Leon Handreke): Add ability to update the ffmpeg binary, maybe by size?
-	if _, err := os.Stat(binaryPath); err != nil {
-		data, err := Asset(name)
-		if err != nil {
-			log.Warnf("No %s compiled in, using system system version instead", name)
-			return name
-		}
+
+	info, err := AssetInfo(name)
+	if err != nil {
+		log.Warnf("No %s compiled in, using system system version instead", name)
+		return name
+	}
+	if stat, err := os.Stat(binaryPath); err != nil || stat.Size() != info.Size() {
+		log.Infof("Installing built-in binary for %s to %s", name, binaryPath)
+
+		data, _ := Asset(name)
 		helpers.EnsurePath(binaryDir)
+
 		if err := ioutil.WriteFile(binaryPath, data, 0700); err != nil {
 			fmt.Println(err.Error())
 			log.Warnf("Failed to write %s built-in binary, using system version instead", name)
 			return name
 		}
+		os.Chmod(binaryPath, 0700)
 	}
 	return binaryPath
 }
