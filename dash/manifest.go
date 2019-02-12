@@ -16,8 +16,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	profiles="urn:mpeg:dash:profile:isoff-live:2011"
 	type="static"
 	mediaPresentationDuration="{{ .duration }}"
-	maxSegmentDuration="PT10S"
-	minBufferTime="PT30S">
+	maxSegmentDuration="PT20S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
 		<AdaptationSet contentType="video">
 			{{ range $si, $s := .videoStream.Representations -}}
