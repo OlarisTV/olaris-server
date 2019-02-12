@@ -84,7 +84,6 @@ deps:
 
 .PHONY: generate
 generate:
-	rm **/bindata.go
 	$(GOGENERATE) -x -v ./...
 
 .PHONY: run
