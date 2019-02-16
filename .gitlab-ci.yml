@@ -34,7 +34,7 @@ format:
 compile:
     stage: build
     script:
-      - make build-all
+      - make build-linux
     artifacts:
       paths:
         - build/olaris-linux-386

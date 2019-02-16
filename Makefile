@@ -90,8 +90,8 @@ generate:
 run: all
 	$(GOCMD) $(CMD_SERVER_PATH)
 
-.PHONY: build-all
-build-all:
+.PHONY: build-linux
+build-linux:
 	make crossbuild GOOS=linux GOARCH=arm
 	make crossbuild GOOS=linux GOARCH=386
 	make crossbuild GOOS=linux GOARCH=arm64
