@@ -24,7 +24,7 @@ func InitLoggers(level log.Level) {
 		log.WithFields(log.Fields{"error": err}).Warnln("Could not setup logfile.")
 	}
 	log.SetOutput(os.Stdout)
-	log.SetFormatter(&log.TextFormatter{})
+	log.SetFormatter(&log.TextFormatter{ForceColors: true})
 	log.SetLevel(level)
 	log.AddHook(rotateFileHook)
 }
