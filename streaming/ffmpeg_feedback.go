@@ -13,7 +13,7 @@ func serveFFmpegFeedback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	defer ReleasePlaybackSession(s)
+	defer s.Release()
 
 	if s.shouldThrottle() {
 		w.Write([]byte("throttle\n"))

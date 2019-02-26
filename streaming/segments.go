@@ -4,7 +4,6 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
-	"gitlab.com/olaris/olaris-server/streaming/auth"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,8 +17,6 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 	streamID := mux.Vars(r)["streamId"]
 	representationId := mux.Vars(r)["representationId"]
 
-	ctx := r.Context()
-
 	streamKey, err := getStreamKey(fileLocator, streamID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -31,14 +28,19 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims, err := getStreamingClaims(fileLocator)
-	if err == nil {
-		ctx = auth.ContextWithUserIDFromStreamingClaims(ctx, claims)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	// TODO(Leon Handreke): Add a special getter that will give us any of the
-	// existing sessions, they all have a valid initial segment
-	playbackSession, err := GetPlaybackSession(ctx, streamKey, sessionID, representationId, -1)
-	defer ReleasePlaybackSession(playbackSession)
+	playbackSession, err := GetPlaybackSession(
+		PlaybackSessionKey{
+			StreamKey:        streamKey,
+			sessionID:        sessionID,
+			representationID: representationId,
+			userID:           claims.UserID},
+		InitSegmentIdx)
+	defer playbackSession.Release()
 
 	for {
 		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
@@ -71,8 +73,6 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	ctx := r.Context()
-
 	streamKey, err := getStreamKey(fileLocator, streamID)
 
 	if err != nil {
@@ -85,12 +85,20 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	}
 
 	claims, err := getStreamingClaims(fileLocator)
-	if err == nil {
-		ctx = auth.ContextWithUserIDFromStreamingClaims(ctx, claims)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	playbackSession, err := GetPlaybackSession(ctx, streamKey, sessionID, representationId, segmentIdx)
-	defer ReleasePlaybackSession(playbackSession)
+	playbackSession, err := GetPlaybackSession(
+		PlaybackSessionKey{
+			streamKey,
+			sessionID,
+			representationId,
+			claims.UserID,
+		},
+		segmentIdx)
+	playbackSession.Release()
 
 	for {
 		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
