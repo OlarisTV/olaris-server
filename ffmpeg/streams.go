@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// WARNING: These structs are cached in the database, so adding fields or changing types
+// will cause mayhem. See https://gitlab.com/olaris/olaris-server/issues/55
+
 type StreamKey struct {
 	MediaFileURL string
 	// StreamId from ffmpeg
