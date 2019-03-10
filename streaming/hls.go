@@ -64,7 +64,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 			AudioStreams:   audioStreamRepresentations,
 			AudioGroupName: "audio",
 			// TODO(Leon Handreke): Is just using the first one always correct?
-			AudioCodecs: audioStreamRepresentations[0].Stream.Codecs,
+			AudioCodecs: audioStreamRepresentations[0].Representation.Codecs,
 		})
 	}
 
