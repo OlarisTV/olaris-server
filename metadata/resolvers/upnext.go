@@ -21,7 +21,7 @@ func (r *Resolver) UpNext(ctx context.Context) *[]*MediaItemResolver {
 		sortables = append(sortables, ep)
 
 	}
-	sort.Sort(ByCreationDate(sortables))
+	sort.Sort(ByUpdatedAt(sortables))
 
 	l := []*MediaItemResolver{}
 

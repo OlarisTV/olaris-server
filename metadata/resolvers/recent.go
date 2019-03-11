@@ -24,6 +24,7 @@ func (r *MediaItemResolver) ToEpisode() (*EpisodeResolver, bool) {
 
 type sortable interface {
 	TimeStamp() int64
+	UpdatedAtTimeStamp() int64
 }
 
 // ByCreationDate is a sortable type to sort by creation date.
@@ -32,6 +33,13 @@ type ByCreationDate []sortable
 func (a ByCreationDate) Len() int           { return len(a) }
 func (a ByCreationDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByCreationDate) Less(i, j int) bool { return a[i].TimeStamp() > a[j].TimeStamp() }
+
+// ByUpdatedAt is a sortable type to sort by updated_at date.
+type ByUpdatedAt []sortable
+
+func (a ByUpdatedAt) Len() int           { return len(a) }
+func (a ByUpdatedAt) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByUpdatedAt) Less(i, j int) bool { return a[i].UpdatedAtTimeStamp() > a[j].UpdatedAtTimeStamp() }
 
 // RecentlyAdded returns recently added media content.
 func (r *Resolver) RecentlyAdded() *[]*MediaItemResolver {

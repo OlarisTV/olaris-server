@@ -67,6 +67,11 @@ func (ep *Episode) TimeStamp() int64 {
 	return ep.CreatedAt.Unix()
 }
 
+// UpdatedAtTimeStamp returns a unix timestamp for the given episode.
+func (ep *Episode) UpdatedAtTimeStamp() int64 {
+	return ep.UpdatedAt.Unix()
+}
+
 // GetSeason returns the associated season
 func (ep *Episode) GetSeason() *Season {
 	var season Season

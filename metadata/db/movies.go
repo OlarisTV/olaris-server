@@ -80,6 +80,11 @@ func (movie *Movie) TimeStamp() int64 {
 	return movie.CreatedAt.Unix()
 }
 
+// UpdatedAtTimeStamp returns a unix timestamp.
+func (movie *Movie) UpdatedAtTimeStamp() int64 {
+	return movie.UpdatedAt.Unix()
+}
+
 // FindAllMovieFiles Returns all movies, even once that could not be identified.
 func FindAllMovieFiles() (movies []MovieFile) {
 	db.Find(&movies)
