@@ -39,6 +39,21 @@ func GetVideoEncoderPreset(stream Stream, name string) (EncoderParams, error) {
 	return encoderParams, nil
 }
 
+// List of standard presets that are offered by default
+var standardPresets = []string{
+	"preset:480-1000k-video",
+	"preset:720-5000k-video",
+	"preset:1080-10000k-video"}
+
+func GetStandardPresetVideoRepresentations(stream Stream) []StreamRepresentation {
+	representations := []StreamRepresentation{}
+	for _, preset := range standardPresets {
+		r, _ := StreamRepresentationFromRepresentationId(stream, preset)
+		representations = append(representations, r)
+	}
+	return representations
+}
+
 func NewVideoTranscodingSession(
 	stream StreamRepresentation,
 	startTime time.Duration,

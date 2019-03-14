@@ -6,12 +6,14 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"path"
 )
 
 // CreateSTResponse  holds new jwt data.
 type CreateSTResponse struct {
 	Error             *ErrorResolver
 	Jwt               string
+	CheckCodecsPath   string
 	DASHStreamingPath string
 	HLSStreamingPath  string
 }
@@ -63,14 +65,20 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
 
-	sessionID := helpers.RandAlphaString(16)
+	basePath := fmt.Sprintf("/s/files/jwt/%s/", token)
 
-	HLSStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/hls-manifest.m3u8", token, sessionID)
-	DASHStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/dash-manifest.mpd", token, sessionID)
+	checkCodecsPath := path.Join(basePath, "check-codecs.json")
+
+	sessionID := helpers.RandAlphaString(16)
+	HLSStreamingPath := path.Join(
+		basePath, fmt.Sprintf("/session:%s/hls-manifest.m3u8", sessionID))
+	DASHStreamingPath := path.Join(
+		basePath, fmt.Sprintf("/session:%s/dash-manifest.mpd", sessionID))
 
 	return &CreateSTResponseResolver{CreateSTResponse{
 		Error:             nil,
 		Jwt:               token,
+		CheckCodecsPath:   checkCodecsPath,
 		HLSStreamingPath:  HLSStreamingPath,
 		DASHStreamingPath: DASHStreamingPath,
 	}}
