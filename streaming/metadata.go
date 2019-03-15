@@ -7,7 +7,7 @@ import (
 )
 
 type metadataResponse struct {
-	CheckCodecs []string `json:"checkCodecs""`
+	CheckCodecs []string `json:"checkCodecs"`
 }
 
 // serveMetadata generates a list of possible codecs that we could possibly serve and returns
