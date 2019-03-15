@@ -13,7 +13,7 @@ import (
 type CreateSTResponse struct {
 	Error             *ErrorResolver
 	Jwt               string
-	CheckCodecsPath   string
+	MetadataPath      string
 	DASHStreamingPath string
 	HLSStreamingPath  string
 }
@@ -21,6 +21,10 @@ type CreateSTResponse struct {
 // CreateSTResponseResolver resolves CreateSTResponse.
 type CreateSTResponseResolver struct {
 	r CreateSTResponse
+}
+
+func (r *CreateSTResponseResolver) MetadataPath() string {
+	return r.r.MetadataPath
 }
 
 // StreamingPath returns URI to HLS manifest.
@@ -67,7 +71,7 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 
 	basePath := fmt.Sprintf("/s/files/jwt/%s/", token)
 
-	checkCodecsPath := path.Join(basePath, "check-codecs.json")
+	metadataPath := path.Join(basePath, "metadata.json")
 
 	sessionID := helpers.RandAlphaString(16)
 	HLSStreamingPath := path.Join(
@@ -78,7 +82,7 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	return &CreateSTResponseResolver{CreateSTResponse{
 		Error:             nil,
 		Jwt:               token,
-		CheckCodecsPath:   checkCodecsPath,
+		MetadataPath:      metadataPath,
 		HLSStreamingPath:  HLSStreamingPath,
 		DASHStreamingPath: DASHStreamingPath,
 	}}

@@ -6,11 +6,11 @@ import (
 	"net/http"
 )
 
-type checkCodecsResponse struct {
-	CheckCodecs []string `json:"check_codecs""`
+type metadataResponse struct {
+	CheckCodecs []string `json:"checkCodecs""`
 }
 
-// serveCheckCodecs generates a list of possible codecs that we could possibly serve and returns
+// serveMetadata generates a list of possible codecs that we could possibly serve and returns
 // it to the client so that it can check them in advance of actually making a request for the
 // manifest.
 //
@@ -18,7 +18,7 @@ type checkCodecsResponse struct {
 // what the player will show and we want that control on the server. Otherwise,
 // a) would have to pass all information that we use here (e.g.
 // which stream is transmuxed) and b) we would need to implement this logic across all clients.
-func serveCheckCodecs(w http.ResponseWriter, r *http.Request) {
+func serveMetadata(w http.ResponseWriter, r *http.Request) {
 	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
@@ -58,6 +58,7 @@ func serveCheckCodecs(w http.ResponseWriter, r *http.Request) {
 			lowQualityAudio.Representation.Codecs)
 	}
 
-	response, _ := json.Marshal(checkCodecsResponse{CheckCodecs: checkCodecs})
-	w.Write(response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(metadataResponse{CheckCodecs: checkCodecs})
 }
