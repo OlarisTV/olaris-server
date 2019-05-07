@@ -67,7 +67,7 @@ func NewTransmuxingSession(
 	}, nil
 }
 
-func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
+func GetTransmuxedRepresentation(stream Stream) StreamRepresentation {
 	representation := StreamRepresentation{
 		Stream: stream,
 		Representation: Representation{
@@ -81,7 +81,7 @@ func GetTransmuxedRepresentation(stream Stream) (StreamRepresentation, error) {
 		},
 	}
 
-	return representation, nil
+	return representation
 }
 
 func guessTransmuxedSegmentList(keyframeIntervals []Interval) [][]Segment {

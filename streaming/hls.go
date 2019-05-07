@@ -86,16 +86,13 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	transmuxedVideoStream, err := ffmpeg.GetTransmuxedRepresentation(streams.GetVideoStream())
+
+	transmuxedVideoStream := ffmpeg.GetTransmuxedRepresentation(streams.GetVideoStream())
 
 	audioStreamRepresentations := []ffmpeg.StreamRepresentation{}
 	for _, s := range streams.AudioStreams {
-		transmuxedStream, err := ffmpeg.GetTransmuxedRepresentation(s)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		audioStreamRepresentations = append(audioStreamRepresentations, transmuxedStream)
+		audioStreamRepresentations = append(audioStreamRepresentations,
+			ffmpeg.GetTransmuxedRepresentation(s))
 	}
 
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)

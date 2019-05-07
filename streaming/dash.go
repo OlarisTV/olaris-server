@@ -31,13 +31,10 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 	videoStream := dash.StreamRepresentations{Stream: streams.GetVideoStream()}
 	// Get transmuxed or similar transcoded representation
 	fullQualityRepresentation, _ := ffmpeg.GetTransmuxedOrTranscodedRepresentation(streams.GetVideoStream(), capabilities)
-	videoStream.Representations = append(videoStream.Representations,
-		fullQualityRepresentation)
+	videoStream.Representations = append(videoStream.Representations, fullQualityRepresentation)
 
-	// Build lower-quality transcoded versions
-	for _, preset := range []string{"preset:480-1000k-video", "preset:720-5000k-video", "preset:1080-10000k-video"} {
-		r, _ := ffmpeg.StreamRepresentationFromRepresentationId(
-			streams.GetVideoStream(), preset)
+	lowQualityRepresentations := ffmpeg.GetStandardPresetVideoRepresentations(streams.GetVideoStream())
+	for _, r := range lowQualityRepresentations {
 		if r.Representation.BitRate < fullQualityRepresentation.Representation.BitRate {
 			videoStream.Representations = append(videoStream.Representations, r)
 		}

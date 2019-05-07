@@ -12,6 +12,7 @@ var router = mux.NewRouter()
 func GetHandler() http.Handler {
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
+	router.HandleFunc("/files/{fileLocator:.*}/metadata.json", serveMetadata)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/hls-manifest.m3u8", serveHlsMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/dash-manifest.mpd", serveDASHManifest)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/media.m3u8", serveHlsTranscodingMediaPlaylist)

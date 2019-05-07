@@ -47,17 +47,12 @@ const SegmentDuration = 5000 * time.Millisecond
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
 
-type ClientCodecCapabilities struct {
-	PlayableCodecs []string `json:"playableCodecs"`
-}
-
 func ComputeSegmentDurations(sessions [][]Segment) []time.Duration {
 	segmentDurations := []time.Duration{}
 
 	for _, session := range sessions {
 		for _, segment := range session {
 			segmentDurations = append(segmentDurations, segment.Duration())
-
 		}
 	}
 
@@ -68,57 +63,36 @@ func GetTransmuxedOrTranscodedRepresentation(
 	stream Stream,
 	capabilities ClientCodecCapabilities) (StreamRepresentation, error) {
 
+	transmuxed := GetTransmuxedRepresentation(stream)
 	// We interpret emtpy PlayableCodecs as no preference
-	if len(capabilities.PlayableCodecs) == 0 {
-		return GetTransmuxedRepresentation(stream)
+	if len(capabilities.PlayableCodecs) == 0 || capabilities.CanPlay(transmuxed) {
+		return transmuxed, nil
 	}
-
-	for _, playableCodec := range capabilities.PlayableCodecs {
-		if playableCodec == stream.Codecs {
-			return GetTransmuxedRepresentation(stream)
-		}
-	}
-	representations := []StreamRepresentation{}
-
-	similarEncoderParams, _ := GetSimilarEncoderParams(stream)
-	if stream.StreamType == "audio" {
-		representations = append(representations,
-			GetTranscodedAudioRepresentation(
-				stream,
-				// TODO(Leon Handreke): Make a util method for this prefix.
-				"transcode:"+EncoderParamsToString(similarEncoderParams),
-				similarEncoderParams))
-
-		// TODO(Leon Handreke): Ugly hardcode to 128k AAC
-		representation, _ := StreamRepresentationFromRepresentationId(
-			stream, "preset:128k-audio")
-		representations = append(representations, representation)
-	}
-	if stream.StreamType == "video" {
-		representations = append(representations,
-			GetTranscodedVideoRepresentation(
-				stream,
-				// TODO(Leon Handreke): Make a util method for this prefix.
-				"transcode:"+EncoderParamsToString(similarEncoderParams),
-				similarEncoderParams))
-
-		// TODO(Leon Handreke): Ugly hardcode to 720p-5000k H264
-		representation, _ := StreamRepresentationFromRepresentationId(
-			stream, "preset:720-5000k-video")
-		representations = append(representations, representation)
-
-	}
-	for _, r := range representations {
-		for _, playableCodec := range capabilities.PlayableCodecs {
-			if playableCodec == r.Representation.Codecs {
-				return r, nil
-			}
-		}
-	}
-	return StreamRepresentation{},
-		fmt.Errorf("Could not find appropriate representation for stream %s", stream.StreamType)
+	return GetSimilarTranscodedRepresentation(stream), nil
 }
 
+func GetSimilarTranscodedRepresentation(stream Stream) StreamRepresentation {
+	similarEncoderParams, _ := GetSimilarEncoderParams(stream)
+	if stream.StreamType == "audio" {
+		return GetTranscodedAudioRepresentation(
+			stream,
+			// TODO(Leon Handreke): Make a util method for this prefix.
+			"transcode:"+EncoderParamsToString(similarEncoderParams),
+			similarEncoderParams)
+	}
+	if stream.StreamType == "video" {
+		return GetTranscodedVideoRepresentation(
+			stream,
+			// TODO(Leon Handreke): Make a util method for this prefix.
+			"transcode:"+EncoderParamsToString(similarEncoderParams),
+			similarEncoderParams)
+
+	}
+
+	panic("GetSimliarTranscodedRepresentation for stream that is not audio/video")
+}
+
+// TODO(Leon Handreke): Should this really return an error?
 func StreamRepresentationFromRepresentationId(
 	s Stream,
 	representationId string) (StreamRepresentation, error) {
@@ -128,13 +102,7 @@ func StreamRepresentationFromRepresentationId(
 	}
 
 	if representationId == "direct" {
-		transmuxedStream, err := GetTransmuxedRepresentation(s)
-		if err != nil {
-			return StreamRepresentation{}, err
-		}
-		if transmuxedStream.Representation.RepresentationId == representationId {
-			return transmuxedStream, nil
-		}
+		return GetTransmuxedRepresentation(s), nil
 	} else if strings.HasPrefix(representationId, "preset:") {
 		presetId := representationId[7:]
 

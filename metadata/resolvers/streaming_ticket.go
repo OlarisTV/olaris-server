@@ -6,12 +6,14 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"path"
 )
 
 // CreateSTResponse  holds new jwt data.
 type CreateSTResponse struct {
 	Error             *ErrorResolver
 	Jwt               string
+	MetadataPath      string
 	DASHStreamingPath string
 	HLSStreamingPath  string
 }
@@ -19,6 +21,10 @@ type CreateSTResponse struct {
 // CreateSTResponseResolver resolves CreateSTResponse.
 type CreateSTResponseResolver struct {
 	r CreateSTResponse
+}
+
+func (r *CreateSTResponseResolver) MetadataPath() string {
+	return r.r.MetadataPath
 }
 
 // StreamingPath returns URI to HLS manifest.
@@ -63,14 +69,20 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
 
-	sessionID := helpers.RandAlphaString(16)
+	basePath := fmt.Sprintf("/s/files/jwt/%s/", token)
 
-	HLSStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/hls-manifest.m3u8", token, sessionID)
-	DASHStreamingPath := fmt.Sprintf("/s/files/jwt/%s/session:%s/dash-manifest.mpd", token, sessionID)
+	metadataPath := path.Join(basePath, "metadata.json")
+
+	sessionID := helpers.RandAlphaString(16)
+	HLSStreamingPath := path.Join(
+		basePath, fmt.Sprintf("/session:%s/hls-manifest.m3u8", sessionID))
+	DASHStreamingPath := path.Join(
+		basePath, fmt.Sprintf("/session:%s/dash-manifest.mpd", sessionID))
 
 	return &CreateSTResponseResolver{CreateSTResponse{
 		Error:             nil,
 		Jwt:               token,
+		MetadataPath:      metadataPath,
 		HLSStreamingPath:  HLSStreamingPath,
 		DASHStreamingPath: DASHStreamingPath,
 	}}
