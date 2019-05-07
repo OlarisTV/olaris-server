@@ -26,10 +26,14 @@ func (ir *InviteResolver) User() (user *UserResolver) {
 }
 
 // Invites returns all current invites.
-func (r *Resolver) Invites() *[]*InviteResolver {
+func (r *Resolver) Invites(ctx context.Context) *[]*InviteResolver {
 	var invites []*InviteResolver
-	for _, invite := range db.AllInvites() {
-		invites = append(invites, &InviteResolver{invite})
+
+	err := ifAdmin(ctx)
+	if err == nil {
+		for _, invite := range db.AllInvites() {
+			invites = append(invites, &InviteResolver{invite})
+		}
 	}
 	return &invites
 }
