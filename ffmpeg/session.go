@@ -1,7 +1,6 @@
 package ffmpeg
 
 import (
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,12 +13,14 @@ import (
 // Magic segment index value to denote the inital segment
 var InitialSegmentIdx int = -1
 
+// Many attributes in this struct are only public because they are displayed on a the debug page.
 type TranscodingSession struct {
-	cmd        *exec.Cmd
-	Stream     StreamRepresentation
-	outputDir  string
-	Terminated bool
-	throttled  bool
+	cmd             *exec.Cmd
+	Stream          StreamRepresentation
+	OutputDir       string
+	Terminated      bool
+	Throttled       bool
+	ProgressPercent float32
 }
 
 func (s *TranscodingSession) Start() error {
@@ -42,7 +43,7 @@ func (s *TranscodingSession) Destroy() error {
 	// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
 	s.cmd.Wait()
 
-	err := os.RemoveAll(s.outputDir)
+	err := os.RemoveAll(s.OutputDir)
 	if err != nil {
 		return err
 	}
@@ -53,14 +54,14 @@ func (s *TranscodingSession) Destroy() error {
 func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	res := make(map[int]string)
 
-	initialSegmentPath := filepath.Join(s.outputDir, "init.mp4")
+	initialSegmentPath := filepath.Join(s.OutputDir, "init.mp4")
 	if stat, err := os.Stat(initialSegmentPath); err == nil {
 		if stat.Size() > 0 {
 			res[InitialSegmentIdx] = initialSegmentPath
 		}
 	}
 
-	files, err := ioutil.ReadDir(s.outputDir)
+	files, err := ioutil.ReadDir(s.OutputDir)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 		match := r.FindString(f.Name())
 		if match != "" {
 			segmentFsNumber, _ := strconv.Atoi(match[len("stream0_") : len(match)-len(".m4s")])
-			res[segmentFsNumber] = filepath.Join(s.outputDir, f.Name())
+			res[segmentFsNumber] = filepath.Join(s.OutputDir, f.Name())
 
 			if segmentFsNumber > maxSegmentId {
 				maxSegmentId = segmentFsNumber
@@ -87,16 +88,5 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 	}
 
 	return res, nil
-}
 
-func (s *TranscodingSession) SetThrottled(throttled bool) {
-	if s.throttled != throttled {
-		log.Infof("Toggling throttled state to %t on %s", throttled, s.outputDir)
-		if throttled {
-			s.cmd.Process.Signal(syscall.SIGUSR1)
-		} else {
-			s.cmd.Process.Signal(syscall.SIGUSR2)
-		}
-		s.throttled = throttled
-	}
 }

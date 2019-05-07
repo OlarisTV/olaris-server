@@ -25,6 +25,8 @@ func GetHandler() http.Handler {
 	// internally by ffmpeg to access rclone files.
 	router.HandleFunc("/files/{fileLocator:.*}", serveFile)
 
+	router.HandleFunc("/debug/playbackSessions", servePlaybackSessionDebugPage)
+
 	handler := cors.AllowAll().Handler(router)
 	return handler
 }
@@ -35,7 +37,7 @@ func Cleanup() {
 		s.CleanupIfRequired()
 
 		if s.referenceCount > 0 {
-			log.Warn("Playback session reference count leak: ", s.transcodingSession)
+			log.Warn("Playback session reference count leak: ", s.TranscodingSession)
 		}
 	}
 }

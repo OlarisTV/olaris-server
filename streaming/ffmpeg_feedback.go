@@ -2,7 +2,9 @@ package streaming
 
 import (
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 )
 
 func serveFFmpegFeedback(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +17,16 @@ func serveFFmpegFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 	defer s.Release()
 
+	progressPercent, err := strconv.ParseFloat(r.URL.Query().Get("progress"), 32)
+	if err == nil {
+		s.TranscodingSession.ProgressPercent = float32(progressPercent)
+	}
+
+	log.Info(s.TranscodingSession)
 	if s.shouldThrottle() {
+		s.TranscodingSession.Throttled = true
 		w.Write([]byte("throttle\n"))
+	} else {
+		s.TranscodingSession.Throttled = false
 	}
 }

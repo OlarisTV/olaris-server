@@ -43,7 +43,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 	defer playbackSession.Release()
 
 	for {
-		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
+		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -101,7 +101,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	playbackSession.Release()
 
 	for {
-		availableSegments, err := playbackSession.transcodingSession.AvailableSegments()
+		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
