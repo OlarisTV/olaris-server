@@ -88,7 +88,7 @@ generate:
 
 .PHONY: run
 run: all
-	$(GOCMD) $(CMD_SERVER_PATH)
+	$(GOCMD) run $(CMD_SERVER_PATH)
 
 .PHONY: build-linux
 build-linux:
