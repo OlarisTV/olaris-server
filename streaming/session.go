@@ -30,7 +30,7 @@ type PlaybackSession struct {
 	// Unique identifier, currently only used for ffmpeg feedback
 	playbackSessionID string
 
-	transcodingSession *ffmpeg.TranscodingSession
+	TranscodingSession *ffmpeg.TranscodingSession
 
 	// lastRequestedSegmentIdx is the last segment index requested by the client. Some clients notice that the segments
 	// we serve are actually longer than 5s and therefore skip segment indices, some will just request the next segment
@@ -80,7 +80,7 @@ func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int) (
 		PlaybackSessionKey: playbackSessionKey,
 
 		playbackSessionID:  playbackSessionID,
-		transcodingSession: transcodingSession,
+		TranscodingSession: transcodingSession,
 		// TODO(Leon Handreke): Make this nicer, introduce a "new" state
 		lastRequestedSegmentIdx: segmentIdx - 1,
 		lastServedSegmentIdx:    segmentIdx - 1,
@@ -233,13 +233,13 @@ func (s *PlaybackSession) CleanupIfRequired() {
 		return
 	}
 
-	s.transcodingSession.Destroy()
+	s.TranscodingSession.Destroy()
 }
 
 // shouldThrottle returns whether the transcoding process is far enough ahead of the current
 // playback state for ffmpeg to throttle down to avoid transcoding too much, wasting resources.
 func (s *PlaybackSession) shouldThrottle() bool {
-	segments, _ := s.transcodingSession.AvailableSegments()
+	segments, _ := s.TranscodingSession.AvailableSegments()
 
 	maxSegmentIdx := -1
 	for segmentIdx, _ := range segments {

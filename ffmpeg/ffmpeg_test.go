@@ -18,7 +18,7 @@ func TestTranscodingSession_AvailableSegments(t *testing.T) {
 			seg5 := createEmptyFile(tempDir, "stream0_5.m4s")
 			createEmptyFile(tempDir, "stream1_6.m4s")
 			createEmptyFile(tempDir, "other_file.mpd")
-		s := TranscodingSession{outputDir: tempDir}
+		s := TranscodingSession{OutputDir: tempDir}
 
 			availableSegments, _ := s.AvailableSegments()
 			fmt.Println(availableSegments)

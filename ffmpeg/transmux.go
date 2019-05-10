@@ -63,7 +63,7 @@ func NewTransmuxingSession(
 	return &TranscodingSession{
 		cmd:       cmd,
 		Stream:    stream,
-		outputDir: outputDir,
+		OutputDir: outputDir,
 	}, nil
 }
 
