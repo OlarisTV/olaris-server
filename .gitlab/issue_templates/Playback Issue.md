@@ -18,4 +18,4 @@ isntance: "Mac OS 14.1)
 (Run `mediainfo ~/path/to/my/file.mkv` and paste the output here in quote
 tags.)
 
-/label ~Playback Issue
+/label ~playback-issue
