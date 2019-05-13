@@ -14,7 +14,7 @@ import (
 
 var writeTranscoderLog = flag.Bool(
 	"write_transcoder_log",
-	false,
+	true,
 	"Whether to write transcoder output to logfile")
 
 func reverseMap(m map[string]string) map[string]string {
