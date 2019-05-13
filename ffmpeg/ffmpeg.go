@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"os"
-	"os/user"
 	"path"
 	"strings"
 	"time"
@@ -173,6 +172,7 @@ func CleanTranscodingCache() error {
 }
 
 func getTranscodingSessionRuntimeDir() string {
-	u, _ := user.Current()
-	return path.Join(os.TempDir(), fmt.Sprintf("olaris-%s", u.Uid))
+	//u, _ := user.Current()
+	//return path.Join(os.TempDir(), fmt.Sprintf("olaris-%s", u.Uid))
+	return path.Join(helpers.CacheDir(), "transcoding-sessions")
 }
