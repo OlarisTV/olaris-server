@@ -18,6 +18,7 @@ func NewDb(dbPath string, dbLogMode bool) *gorm.DB {
 	helpers.EnsurePath(dbPath)
 	db, err = gorm.Open("sqlite3", path.Join(dbPath, "metadata.db"))
 	db.LogMode(dbLogMode)
+	db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}
