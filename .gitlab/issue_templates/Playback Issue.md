@@ -18,4 +18,8 @@ isntance: "Mac OS 14.1)
 (Run `mediainfo ~/path/to/my/file.mkv` and paste the output here in quote
 tags.)
 
+### Olaris logs
+
+(Run `~/apps/olaris/olaris-linux-amd64 dumpdebug` this will place a zip-file with all the needed logs in the current directory. Please give us the path to the file by issuing `pwd` and pasting the result here or upload the logs to some public space. )
+
 /label ~playback-issue
