@@ -18,8 +18,9 @@ var dumpdebugCmd = &cobra.Command{
 	Short: "Dump all data for debugging purposes",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		f, err := os.Create(
-			fmt.Sprintf("olaris-dumpdebug-%s.zip", time.Now().Format(time.RFC3339)))
+		filename := fmt.Sprintf("olaris-dumpdebug-%s.zip",
+			time.Now().Format("2006-01-02-15-04-05"))
+		f, err := os.Create(filename)
 		if err != nil {
 			log.Fatalf("Failed to open file: %s", err)
 		}
