@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +20,7 @@ import (
 	"time"
 )
 
-var port string
+var port int
 var dbLog bool
 var verbose bool
 
@@ -41,6 +42,8 @@ var serveCmd = &cobra.Command{
 		// This is also relevant during development because the realize auto-reload
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
+		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
+		streaming.FeedbackUrlPort = port
 
 		appRoute := r.PathPrefix("/app").
 			Handler(http.StripPrefix("/app", react.GetHandler())).
@@ -54,7 +57,7 @@ var serveCmd = &cobra.Command{
 		handler := handlers.LoggingHandler(os.Stdout, r)
 
 		log.Infoln("binding on port", port)
-		srv := &http.Server{Addr: ":" + port, Handler: handler}
+		srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: handler}
 		go func() {
 			if err := srv.ListenAndServe(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Fatal("Error starting server.")
@@ -79,7 +82,7 @@ var serveCmd = &cobra.Command{
 }
 
 func init() {
-	serveCmd.Flags().StringVarP(&port, "port", "p", "8080", "http port")
+	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "http port")
 	serveCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "verbose logging")
 	serveCmd.Flags().BoolVar(&dbLog, "db-log", true, "sets whether the database should log queries")
 	rootCmd.AddCommand(serveCmd)

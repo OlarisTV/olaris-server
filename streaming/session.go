@@ -12,6 +12,10 @@ const playbackSessionTimeout = 20 * time.Minute
 
 const InitSegmentIdx = -1
 
+// TODO(Leon Handreke): Figure out a better way than a package-global variable to
+// convey this info from the top-level command flag to ffmpeg. Or maybe a setter is enough?
+var FeedbackUrlPort = 8080
+
 type PlaybackSessionKey struct {
 	ffmpeg.StreamKey
 
@@ -64,8 +68,9 @@ func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int) (
 
 	playbackSessionID := uuid.New().String()
 	// TODO(Leon Handreke): Find a better way to build URLs
+
 	feedbackURL := fmt.Sprintf(
-		"http://127.0.0.1:8080/s/ffmpeg/%s/feedback", playbackSessionID)
+		"http://127.0.0.1:%d/s/ffmpeg/%s/feedback", FeedbackUrlPort, playbackSessionID)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to build FFmpeg feedback url: %s", err.Error())
 	}
