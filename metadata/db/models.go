@@ -90,13 +90,13 @@ func FindContentByUUID(uuid string) *MediaResult {
 }
 
 // RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
-func RecentlyAddedMovies() (movies []*Movie) {
-	db.Preload("MovieFiles.Streams").Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
+func RecentlyAddedMovies(userID uint) (movies []*Movie) {
+	db.Select("movies.*,play_states.*").Preload("MovieFiles.Streams").Preload("PlayState").Joins("LEFT JOIN play_states ON play_states.owner_id = movies.id AND play_states.owner_type = 'movies'").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
 
 // RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
-func RecentlyAddedEpisodes() (eps []*Episode) {
-	db.Preload("EpisodeFiles.Streams").Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
+func RecentlyAddedEpisodes(userID uint) (eps []*Episode) {
+	db.Select("episodes.*, play_states.*").Preload("EpisodeFiles.Streams").Joins("LEFT JOIN play_states ON play_states.owner_id = episodes.id AND play_states.owner_type = 'episodes'").Preload("PlayState", "user_id = ? OR user_id IS NULL", userID).Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
 	return eps
 }

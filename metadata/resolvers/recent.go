@@ -1,6 +1,8 @@
 package resolvers
 
 import (
+	"context"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"sort"
 )
@@ -42,14 +44,15 @@ func (a ByUpdatedAt) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByUpdatedAt) Less(i, j int) bool { return a[i].UpdatedAtTimeStamp() > a[j].UpdatedAtTimeStamp() }
 
 // RecentlyAdded returns recently added media content.
-func (r *Resolver) RecentlyAdded() *[]*MediaItemResolver {
+func (r *Resolver) RecentlyAdded(ctx context.Context) *[]*MediaItemResolver {
+	userID, _ := auth.UserID(ctx)
 	sortables := []sortable{}
 
-	for _, movie := range db.RecentlyAddedMovies() {
+	for _, movie := range db.RecentlyAddedMovies(userID) {
 		sortables = append(sortables, movie)
 	}
 
-	for _, ep := range db.RecentlyAddedEpisodes() {
+	for _, ep := range db.RecentlyAddedEpisodes(userID) {
 		sortables = append(sortables, ep)
 
 	}
@@ -59,7 +62,8 @@ func (r *Resolver) RecentlyAdded() *[]*MediaItemResolver {
 
 	for _, item := range sortables {
 		if res, ok := item.(*db.Episode); ok {
-			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: newEpisode(res, 0)}})
+			// TODO: Maran: Can we make it so we don't have to use a wrapper around newEpisode to get playstate etc. in?
+			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: newEpisode(res, userID)}})
 		}
 		if res, ok := item.(*db.Movie); ok {
 			l = append(l, &MediaItemResolver{r: &MovieResolver{r: *res}})

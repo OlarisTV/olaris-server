@@ -246,7 +246,7 @@ func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 
 // FindPlaystateForEpisode returns the playstate for the given episode
 func FindPlaystateForEpisode(episodeID uint, userID uint) (ps PlayState) {
-	db.Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodeID, "episodes").First(&ps)
+	db.Where("user_id = ? AND owner_id = ? and owner_type = ?", userID, episodeID, "episodes").First(&ps)
 	return ps
 }
 
