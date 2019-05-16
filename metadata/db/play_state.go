@@ -42,7 +42,7 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 func UpNextEpisodes(userID uint) []*Episode {
 	result := []latestEpResult{}
 	eps := []*Episode{}
-	db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, (episodes.season_num*100)+episodes.episode_num as height from play_states"+
+	db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, max((episodes.season_num*100)+episodes.episode_num) as height from play_states"+
 		" inner join episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
 		" inner join seasons on seasons.id = episodes.season_id"+
 		" inner join series on series.id = seasons.series_id"+
@@ -61,7 +61,7 @@ func UpNextEpisodes(userID uint) []*Episode {
 				" from episodes"+
 				" join series ON series.id = seasons.series_id"+
 				" join seasons on seasons.id = episodes.season_id"+
-				" where season_num >= ? AND episode_num > ?  AND series_id = ?"+
+				" where season_num >= ? AND episode_num > ? AND series_id = ?"+
 				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
 			db.Where("ID = ?", result.EpisodeID).First(&ep)
