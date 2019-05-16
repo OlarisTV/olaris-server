@@ -3,7 +3,7 @@ package cmd
 import (
 	"errors"
 	"github.com/spf13/cobra"
-	"gitlab.com/olaris/olaris-server/metadata/app"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -24,10 +24,10 @@ var userCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new user",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mctx := app.NewDefaultMDContext()
-		defer mctx.Db.Close()
 
+		db.NewDb(helpers.MetadataConfigPath(), false)
 		_, err := db.CreateUser(username, password, admin)
+
 		return err
 	},
 }

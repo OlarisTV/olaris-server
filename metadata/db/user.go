@@ -105,6 +105,7 @@ func CreateUserWithCode(username string, password string, code string) (User, er
 	return user, err
 }
 
+// CreateUser creates a new (admin) user to allow access via the web-interface
 func CreateUser(username string, password string, admin bool) (User, error) {
 	// TODO Maran: Create a way to return all errors at once
 	if len(username) < 3 {
@@ -117,7 +118,6 @@ func CreateUser(username string, password string, admin bool) (User, error) {
 
 	user := User{Username: username, Admin: admin}
 	user.SetPassword(password, helpers.RandAlphaString(24))
-	fmt.Println(user)
 	dbobj := db.Create(&user)
 
 	return user, dbobj.Error
