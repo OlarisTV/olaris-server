@@ -104,8 +104,17 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					return nil, fmt.Errorf("Could not determine filesize for file %s", mediaFileURL)
 				}
 				filesize := fileinfo.Size()
-				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
-				bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
+
+				durationSeconds := int64(container.Format.DurationSeconds)
+				if durationSeconds > 0 {
+					// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
+					bitrate = int((filesize / durationSeconds) * 8)
+				} else {
+					// TODO(Leon Handreke): Figure out if there is any other way to get an
+					//  approximate duration before we fall back to a "default" bitrate.
+					// See https://gitlab.com/olaris/olaris-server/issues/67
+					bitrate = 10000000
+				}
 			}
 			frameRate, err := parseRational(stream.RFrameRate)
 			if err != nil {
