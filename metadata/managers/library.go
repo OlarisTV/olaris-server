@@ -262,7 +262,6 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
 			epFile.Streams = db.CollectStreams(filePath)
 
-			// TODO(Maran) We might be adding double files in case it already exist
 			db.UpdateEpisodeFile(&epFile)
 
 			UpdateSeriesMD(&series)

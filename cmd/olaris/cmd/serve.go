@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
@@ -59,7 +60,8 @@ var serveCmd = &cobra.Command{
 		appURL, _ := appRoute.URL()
 		mainRouter.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 
-		handler := handlers.LoggingHandler(os.Stdout, mainRouter)
+		handler := cors.Default().Handler(mainRouter)
+		handler = handlers.LoggingHandler(os.Stdout, handler)
 
 		log.Infoln("binding on port", port)
 		srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: handler}

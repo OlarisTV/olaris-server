@@ -23,7 +23,4 @@ func RegisterRoutes(menv *app.MetadataContext, r *mux.Router) {
 
 	// TODO(Maran): This should be authenticated too.
 	r.HandleFunc("/images/{provider}/{size}/{id}", imageManager.HTTPHandler)
-
-	// TODO(Maran): Check if Cors is still working
-	//	handler := cors.AllowAll().Handler(r)
 }

@@ -109,8 +109,9 @@ func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime floa
 		ps.Finished = finished
 		ps.Playtime = playtime
 		episode.PlayState = ps
-		log.WithFields(log.Fields{"type": "episode", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
 		db.Save(&episode)
+
+		log.WithFields(log.Fields{"type": "episode", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
 		return &ps
 	}
 
