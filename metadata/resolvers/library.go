@@ -147,6 +147,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		if err != nil {
 			libRes = LibraryResponse{Error: CreateErrResolver(err)}
 		} else {
+			// TODO(Maran): We should have some kind of queue and not do this.
 			go managers.NewLibraryManager(r.env.Watcher).RefreshAll()
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
