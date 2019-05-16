@@ -69,7 +69,8 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}
 
-	basePath := fmt.Sprintf("/s/files/jwt/%s/", token)
+	// TODO(Maran) It would be better to somehow pass routing information along and not hard-code this in place.
+	basePath := fmt.Sprintf("/olaris/s/files/jwt/%s/", token)
 
 	metadataPath := path.Join(basePath, "metadata.json")
 

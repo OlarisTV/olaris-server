@@ -2,14 +2,11 @@ package streaming
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
-var router = mux.NewRouter()
-
-func GetHandler() http.Handler {
+// RegisterRoutes registers streaming routes to an existing router
+func RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/hls-transmuxing-manifest.m3u8", serveHlsTransmuxingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/hls-transcoding-manifest.m3u8", serveHlsTranscodingMasterPlaylist)
 	router.HandleFunc("/files/{fileLocator:.*}/metadata.json", serveMetadata)
@@ -27,10 +24,10 @@ func GetHandler() http.Handler {
 
 	router.HandleFunc("/debug/playbackSessions", servePlaybackSessionDebugPage)
 
-	handler := cors.AllowAll().Handler(router)
-	return handler
+	//handler := cors.AllowAll().Handler(router)
 }
 
+// Cleanup cleans up any streaming artifacts that might be left.
 func Cleanup() {
 	for _, s := range playbackSessions {
 		s.referenceCount--

@@ -70,7 +70,7 @@ func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int) (
 	// TODO(Leon Handreke): Find a better way to build URLs
 
 	feedbackURL := fmt.Sprintf(
-		"http://127.0.0.1:%d/s/ffmpeg/%s/feedback", FeedbackUrlPort, playbackSessionID)
+		"http://127.0.0.1:%d/olaris/s/ffmpeg/%s/feedback", FeedbackUrlPort, playbackSessionID)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to build FFmpeg feedback url: %s", err.Error())
 	}

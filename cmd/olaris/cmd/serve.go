@@ -14,7 +14,7 @@ import (
 	"gitlab.com/olaris/olaris-server/react"
 	"gitlab.com/olaris/olaris-server/streaming"
 	"net/http"
-	"net/http/pprof" // For Profiling
+	_ "net/http/pprof" // For Profiling
 	"os"
 	"os/signal"
 	"time"
@@ -28,14 +28,21 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
 	Run: func(cmd *cobra.Command, args []string) {
-		r := mux.NewRouter()
+		mainRouter := mux.NewRouter()
 
-		r.PathPrefix("/debug/pprof/").HandlerFunc(pprof.Index)
-		r.PathPrefix("/s").Handler(http.StripPrefix("/s", streaming.GetHandler()))
-		defer streaming.Cleanup()
+		r := mainRouter.PathPrefix("/olaris")
+		rr := mainRouter.PathPrefix("/olaris")
+		rrr := mainRouter.PathPrefix("/olaris")
 
 		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
 		defer mctx.Db.Close()
+
+		metaRouter := r.PathPrefix("/m").Subrouter()
+		metadata.RegisterRoutes(mctx, metaRouter)
+
+		streamingRouter := rr.PathPrefix("/s").Subrouter()
+		streaming.RegisterRoutes(streamingRouter)
+		defer streaming.Cleanup()
 
 		// This is just to make sure that no temp files stay behind in case the
 		// garbage collection below didn't work properly for some reason.
@@ -45,16 +52,14 @@ var serveCmd = &cobra.Command{
 		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
 		streaming.FeedbackUrlPort = port
 
-		appRoute := r.PathPrefix("/app").
-			Handler(http.StripPrefix("/app", react.GetHandler())).
+		appRoute := rrr.PathPrefix("/app").
+			Handler(http.StripPrefix("/olaris/app", react.GetHandler())).
 			Name("app")
 
 		appURL, _ := appRoute.URL()
-		r.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
+		mainRouter.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 
-		r.PathPrefix("/m").Handler(http.StripPrefix("/m", metadata.GetHandler(mctx)))
-
-		handler := handlers.LoggingHandler(os.Stdout, r)
+		handler := handlers.LoggingHandler(os.Stdout, mainRouter)
 
 		log.Infoln("binding on port", port)
 		srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: handler}
@@ -72,7 +77,6 @@ var serveCmd = &cobra.Command{
 		<-stopChan
 		log.Println("Shutting down...")
 
-		//	mctx.ExitChan <- 1
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		srv.Shutdown(ctx)

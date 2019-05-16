@@ -4,30 +4,26 @@ package metadata
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/metadata/resolvers"
 
 	"gitlab.com/olaris/olaris-server/metadata/auth"
-	"net/http"
 )
 
-// GetHandler defines the handlers for metadata endpoints such as graphql and REST methods.
-func GetHandler(menv *app.MetadataContext) http.Handler {
+// RegisterRoutes defines the handlers for metadata endpoints such as graphql and REST methods.
+func RegisterRoutes(menv *app.MetadataContext, r *mux.Router) {
 	imageManager := NewImageManager()
 
-	r := mux.NewRouter()
 	r.Handle("/query", auth.MiddleWare(resolvers.NewRelayHandler(menv)))
 
-	r.Handle("/v1/auth", http.HandlerFunc(auth.UserHandler)).Methods("POST")
+	r.HandleFunc("/v1/auth", auth.UserHandler).Methods("POST")
 
-	r.Handle("/v1/user", http.HandlerFunc(auth.CreateUserHandler)).Methods("POST")
-	r.Handle("/v1/user/setup", http.HandlerFunc(auth.ReadyForSetup))
+	r.HandleFunc("/v1/user", auth.CreateUserHandler).Methods("POST")
+	r.HandleFunc("/v1/user/setup", auth.ReadyForSetup)
 
 	// TODO(Maran): This should be authenticated too.
-	r.Handle("/images/{provider}/{size}/{id}", http.HandlerFunc(imageManager.HTTPHandler))
+	r.HandleFunc("/images/{provider}/{size}/{id}", imageManager.HTTPHandler)
 
-	handler := cors.AllowAll().Handler(r)
-
-	return handler
+	// TODO(Maran): Check if Cors is still working
+	//	handler := cors.AllowAll().Handler(r)
 }
