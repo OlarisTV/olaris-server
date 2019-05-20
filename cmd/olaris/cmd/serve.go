@@ -36,7 +36,6 @@ var serveCmd = &cobra.Command{
 		rrr := mainRouter.PathPrefix("/olaris")
 
 		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
-		defer mctx.Db.Close()
 
 		metaRouter := r.PathPrefix("/m").Subrouter()
 		metadata.RegisterRoutes(mctx, metaRouter)
@@ -82,9 +81,11 @@ var serveCmd = &cobra.Command{
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		srv.Shutdown(ctx)
 
+		mctx.Cleanup()
 		streaming.Cleanup()
+		srv.Shutdown(ctx)
+		log.Println("Shut down complete, exiting.")
 	},
 }
 
