@@ -59,6 +59,7 @@ var serveCmd = &cobra.Command{
 
 		appURL, _ := appRoute.URL()
 		mainRouter.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
+		mainRouter.Path("/olaris").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 
 		handler := cors.Default().Handler(mainRouter)
 		handler = handlers.LoggingHandler(os.Stdout, handler)
