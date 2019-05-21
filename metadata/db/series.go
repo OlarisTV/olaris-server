@@ -339,7 +339,9 @@ func UpdateEpisodeFile(file *EpisodeFile) {
 
 // FirstOrCreateSeries returns the first instance or writes a series to the db.
 func FirstOrCreateSeries(series *Series, seriesDef Series) {
-	db.FirstOrCreate(series, seriesDef)
+	tx := db.Begin()
+	tx.FirstOrCreate(series, seriesDef)
+	tx.Commit()
 }
 
 // FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
@@ -349,7 +351,9 @@ func FirstOrCreateEpisode(episode *Episode, episodeDef Episode) {
 
 // FirstOrCreateSeason returns the first instance or writes a episodes to the db.
 func FirstOrCreateSeason(season *Season, seasonDef Season) {
-	db.FirstOrCreate(season, seasonDef)
+	tx := db.Begin()
+	tx.FirstOrCreate(season, seasonDef)
+	tx.Commit()
 }
 
 // ItemsWithMissingMetadata fetches series with missing metadata.

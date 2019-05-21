@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // MinFileSize defines how big a file has to be to be indexed.
@@ -29,10 +30,17 @@ var SupportedExtensions = map[string]bool{
 	".mpeg": true,
 }
 
+type probeJob struct {
+	filePath string
+	library  *db.Library
+}
+
 // LibraryManager manages all active libraries.
 type LibraryManager struct {
 	pool    *tunny.Pool
 	watcher *fsnotify.Watcher
+
+	probeJobChan chan probeJob
 }
 
 type episodePayload struct {
@@ -41,19 +49,35 @@ type episodePayload struct {
 	episode db.Episode
 }
 
+func (man *LibraryManager) probeFileWorker(id int) {
+	for job := range man.probeJobChan {
+		log.Debugf("Worker %d picked up job: %s.", id, job.filePath)
+		man.ProbeFile(job.library, job.filePath)
+		log.Debugf("Worker %d done.", id)
+	}
+}
+
 // NewLibraryManager creates a new LibraryManager with a pool worker that can process episode information.
 func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 	manager := LibraryManager{}
+
 	if watcher != nil {
 		manager.watcher = watcher
 	}
-	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
+
+	manager.probeJobChan = make(chan probeJob)
+
+	for w := 1; w <= 4; w++ {
+		go manager.probeFileWorker(w)
+	}
+
 	agent := agents.NewTmdbAgent()
 	//TODO: We probably want a more global pool.
+	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
 	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
-		log.Debugln("Spawning episode worker.")
 		ep, ok := payload.(episodePayload)
 		if ok {
+			log.Debugln("Spawning episode worker.")
 			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
@@ -186,31 +210,33 @@ func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 
 // Probe goes over the filesystem and parses filenames in the given library.
 func (man *LibraryManager) Probe(library *db.Library) {
-	switch kind := library.Kind; kind {
-	case db.MediaTypeMovie:
-		log.WithFields(library.LogFields()).Println("Probing files for movie information.")
-		man.ProbeMovies(library)
-	case db.MediaTypeSeries:
-		log.Println("Probing files for series information.")
-		man.ProbeSeries(library)
-	}
-}
+	stime := time.Now()
 
-// ProbeSeries goes over the given library and attempts to get series information from filenames.
-func (man *LibraryManager) ProbeSeries(library *db.Library) {
+	library.RefreshStartedAt = stime
+	library.RefreshCompletedAt = time.Time{}
+	db.UpdateLibrary(library)
+
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 		if ValidFile(walkPath) {
 			man.AddWatcher(walkPath)
 			man.AddWatcher(filepath.Dir(walkPath))
-
-			if !db.EpisodeFileExists(walkPath) {
-				man.ProbeFile(library, walkPath)
+			if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
+				man.probeJobChan <- probeJob{library: library, filePath: walkPath}
+			} else {
+				log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
 			}
 		}
 		return nil
 	})
+
+	dur := time.Since(stime)
+	log.Printf("Probing library '%s' took %f seconds", library.FilePath, dur.Seconds())
+	library.RefreshCompletedAt = time.Now()
+	db.UpdateLibrary(library)
+
 	if err != nil {
-		log.Warnln("Error probing series:", err)
+		log.WithFields(log.Fields{"error": err}).Warnln("Error while probing some files.")
+		return
 	}
 }
 
@@ -253,8 +279,18 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 			var season db.Season
 
 			db.FirstOrCreateSeries(&series, db.Series{Name: parsedInfo.Title})
+
+			if series.TmdbID == 0 {
+				log.Debugf("Series '%s' has no metadata yet, looking it up.", series.Name)
+				UpdateSeriesMD(&series)
+			}
+
 			newSeason := db.Season{SeriesID: series.ID, SeasonNumber: parsedInfo.SeasonNum}
 			db.FirstOrCreateSeason(&season, newSeason)
+			if season.TmdbID == 0 {
+				log.Debugf("Season %d for '%s' has no metadata yet, looking it up.", season.SeasonNumber, series.Name)
+				UpdateSeasonMD(&season, &series)
+			}
 
 			ep := db.Episode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, SeasonID: season.ID}
 			db.FirstOrCreateEpisode(&ep, ep)
@@ -264,8 +300,6 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 
 			db.UpdateEpisodeFile(&epFile)
 
-			UpdateSeriesMD(&series)
-			UpdateSeasonMD(&season, &series)
 			UpdateEpisodeMD(&ep, &season, &series)
 		} else {
 			log.WithFields(log.Fields{"title": parsedInfo.Title}).Warnln("Could not identify episode based on parsed filename.")
@@ -365,33 +399,6 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 		return true
 	}
 	return false
-}
-
-// ProbeMovies goes over the given library and attempts to get movie information from filenames.
-func (man *LibraryManager) ProbeMovies(library *db.Library) {
-	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-
-		if err != nil {
-			return err
-		}
-		if ValidFile(walkPath) {
-			man.AddWatcher(walkPath)
-			man.AddWatcher(filepath.Dir(walkPath))
-
-			if !db.MovieFileExists(walkPath) {
-				man.ProbeFile(library, walkPath)
-			} else {
-				log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Error while probing some files.")
-		return
-	}
 }
 
 // CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.

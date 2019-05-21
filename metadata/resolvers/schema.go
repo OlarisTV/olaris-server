@@ -129,6 +129,9 @@ var SchemaTxt = `
 		# Path that this library manages
 		filePath: String!
 
+		# Whether it's currently scanning the library
+		isRefreshing: Boolean!
+
 		movies: [Movie]!
 		episodes: [Episode]!
 	}

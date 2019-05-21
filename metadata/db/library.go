@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 // LogFields defines some standard fields to include in logs.
@@ -14,9 +15,16 @@ func (lib *Library) LogFields() log.Fields {
 // Library is a struct containing information about filesystem folders.
 type Library struct {
 	gorm.Model
-	Kind     MediaType
-	FilePath string `gorm:"unique_index:idx_file_path"`
-	Name     string
+	Kind               MediaType
+	FilePath           string `gorm:"unique_index:idx_file_path"`
+	Name               string
+	RefreshStartedAt   time.Time
+	RefreshCompletedAt time.Time
+}
+
+// UpdateLibrary persists a library object in the database.
+func UpdateLibrary(lib *Library) {
+	db.Save(lib)
 }
 
 // AllLibraries returns all libraries from the database.
