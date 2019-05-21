@@ -61,12 +61,24 @@ func UpNextEpisodes(userID uint) []*Episode {
 				" FROM episodes"+
 				" JOIN series ON series.id = seasons.series_id"+
 				" JOIN seasons ON seasons.id = episodes.season_id"+
-				" WHERE season_num >= ? AND episode_num > ? AND series_id = ?"+
+				" WHERE season_num = ? AND episode_num > ? AND series_id = ?"+
 				" ORDER BY season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
 			if result.EpisodeID != 0 {
 				db.Where("ID = ?", result.EpisodeID).First(&ep)
 				eps = append(eps, &ep)
+			} else {
+				// It appears there a no more episode left in this season, let's try the next.
+				db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id"+
+					" FROM episodes"+
+					" JOIN series ON series.id = seasons.series_id"+
+					" JOIN seasons ON seasons.id = episodes.season_id"+
+					" WHERE season_num > ? AND episode_num > 0 AND series_id = ?"+
+					" ORDER BY season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
+				if result.EpisodeID != 0 {
+					db.Where("ID = ?", result.EpisodeID).First(&ep)
+					eps = append(eps, &ep)
+				}
 			}
 		}
 	}

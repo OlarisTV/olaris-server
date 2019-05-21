@@ -44,6 +44,21 @@ func createSeries1() {
 	series2.Seasons = []*db.Season{&s}
 	db.CreateSeries(&series2)
 }
+func createSeries2() {
+	ps := db.PlayState{Finished: true, Playtime: 13, UserID: 1}
+	ps2 := db.PlayState{Finished: true, Playtime: 14, UserID: 1}
+
+	series := db.Series{Name: "Next Season"}
+	episode := &db.Episode{SeasonNum: 1, EpisodeNum: 1, Name: "NS - Episode 1", PlayState: ps}
+	episode2 := &db.Episode{SeasonNum: 1, EpisodeNum: 2, Name: "NS - Episode 2", PlayState: ps2}
+	episode3 := &db.Episode{SeasonNum: 2, EpisodeNum: 1, Name: "NS - Episode S02E01"}
+	episode4 := &db.Episode{SeasonNum: 2, EpisodeNum: 2, Name: "NS - Episode S02E02"}
+
+	season := db.Season{Name: "Season 1", Episodes: []*db.Episode{episode, episode2}}
+	season2 := db.Season{Name: "Season 2", Episodes: []*db.Episode{episode4, episode3}}
+	series.Seasons = []*db.Season{&season, &season2}
+	db.CreateSeries(&series)
+}
 func TestContinueMovie(t *testing.T) {
 	defer setupTest(t)()
 	createMovieData()
@@ -57,20 +72,25 @@ func TestContinuePlayResume(t *testing.T) {
 	defer setupTest(t)()
 
 	createSeries1()
+	createSeries2()
 	createData()
 
 	episodes := db.UpNextEpisodes(1)
 	//t.Log("EPISODE:", episodes)
-	if len(episodes) != 2 {
-		t.Errorf("exepected %v episodes got %v instead", 2, len(episodes))
+	if len(episodes) != 3 {
+		t.Errorf("exepected %v episodes got %v instead", 3, len(episodes))
 	}
 
 	if episodes[0].Name != "NFY - Episode 3" {
 		t.Errorf("Expected the first Episode to be resumed to be %s got %s instead\n", "NFY - Episode 3", episodes[0].Name)
 	}
 
-	if episodes[1].Name != "AECW - Episode 3" {
-		t.Errorf("Expected the second Episode to be resumed to be Episode 3 got %s instead\n", episodes[1].Name)
+	if episodes[1].Name != "NS - Episode S02E01" {
+		t.Errorf("Expected the second Episode to be resumed to be NS - Episode S02E01 got %s instead\n", episodes[1].Name)
+	}
+
+	if episodes[2].Name != "AECW - Episode 3" {
+		t.Errorf("Expected the second Episode to be resumed to be Episode 3 got %s instead\n", episodes[2].Name)
 	}
 
 	count := db.UnwatchedEpisodesInSeasonCount(1, 1)
