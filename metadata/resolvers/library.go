@@ -26,6 +26,15 @@ type LibraryResolver struct {
 	r Library
 }
 
+// IsRefreshing tells us whether the library is currently doing a scan.
+func (r *LibraryResolver) IsRefreshing() bool {
+	if r.r.RefreshCompletedAt.IsZero() {
+		return true
+	}
+
+	return false
+}
+
 // Name returns library name
 func (r *LibraryResolver) Name() string {
 	return r.r.Name
@@ -147,8 +156,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		if err != nil {
 			libRes = LibraryResponse{Error: CreateErrResolver(err)}
 		} else {
-			// TODO(Maran): We should have some kind of queue and not do this.
-			go managers.NewLibraryManager(r.env.Watcher).RefreshAll()
+			go managers.NewLibraryManager(r.env.Watcher).Probe(&library)
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
