@@ -42,11 +42,11 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 func UpNextEpisodes(userID uint) []*Episode {
 	result := []latestEpResult{}
 	eps := []*Episode{}
-	db.Raw("select episodes.id as episode_id, episodes.episode_num as episode_num, episodes.season_num, seasons.id as season_id, play_states.playtime, series.id as series_id, play_states.finished, max((episodes.season_num*100)+episodes.episode_num) as height from play_states"+
-		" inner join episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
-		" inner join seasons on seasons.id = episodes.season_id"+
-		" inner join series on series.id = seasons.series_id"+
-		" where play_states.user_id = ?"+
+	db.Raw("SELECT episodes.id AS episode_id, episodes.episode_num AS episode_num, episodes.season_num, seasons.id AS season_id, play_states.playtime, series.id AS series_id, play_states.finished, max((episodes.season_num*100)+episodes.episode_num) AS height FROM play_states"+
+		" INNER JOIN episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
+		" INNER JOIN seasons ON seasons.id = episodes.season_id"+
+		" INNER join series ON series.id = seasons.series_id"+
+		" WHERE play_states.user_id = ?"+
 		" GROUP BY series.id"+
 		" ORDER BY height DESC", userID).Scan(&result)
 	// I'm not 100% the order_by height here is being used 'before' the grouping, if not then we might not always pick the latest episode
@@ -57,12 +57,12 @@ func UpNextEpisodes(userID uint) []*Episode {
 			eps = append(eps, &ep)
 		} else {
 			result := latestEpResult{}
-			db.Raw("select episodes.id as episode_id, series.id as series_id"+
-				" from episodes"+
-				" join series ON series.id = seasons.series_id"+
-				" join seasons on seasons.id = episodes.season_id"+
-				" where season_num >= ? AND episode_num > ? AND series_id = ?"+
-				" order by season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
+			db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id"+
+				" FROM episodes"+
+				" JOIN series ON series.id = seasons.series_id"+
+				" JOIN seasons ON seasons.id = episodes.season_id"+
+				" WHERE season_num >= ? AND episode_num > ? AND series_id = ?"+
+				" ORDER BY season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
 			if result.EpisodeID != 0 {
 				db.Where("ID = ?", result.EpisodeID).First(&ep)
@@ -83,6 +83,26 @@ func LatestPlayStates(limit uint, userID uint) []PlayState {
 	return pss
 }
 
+func updatePS(contentType string, contentID uint, userID uint, finished bool, playtime float64) *PlayState {
+	newPs := PlayState{OwnerID: contentID, UserID: userID, OwnerType: contentType}
+	var ps PlayState
+	db.FirstOrInit(&ps, newPs)
+
+	// We set this here so we return a playstate that is reset to the react app
+	ps.Finished = finished
+	ps.Playtime = playtime
+
+	// This seems to imply we marked something as 'unwatched', if that's the case just blow up the playstate all together.
+	if finished == false && playtime == 0 && ps.ID != 0 {
+		log.Debugln("Removing playstate")
+		db.Unscoped().Delete(&ps)
+	} else {
+		log.WithFields(log.Fields{"type": contentType, "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
+		db.Save(&ps)
+	}
+	return &ps
+}
+
 // CreatePlayState creates new playstate for the given user and media content.
 func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime float64) *PlayState {
 	count := 0
@@ -93,28 +113,13 @@ func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime floa
 
 	db.Where("uuid = ?", mediaUUID).Find(&movie).Count(&count)
 	if count > 0 {
-		db.FirstOrInit(&ps, PlayState{OwnerID: movie.ID, UserID: userID, OwnerType: "movies"})
-		ps.Finished = finished
-		ps.Playtime = playtime
-		log.WithFields(log.Fields{"type": "movie", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
-		db.Save(&ps)
-
-		movie.PlayState = ps
-		db.Save(&movie)
-		return &ps
+		return updatePS("movies", movie.ID, userID, finished, playtime)
 	}
 
 	count = 0
 	db.Where("uuid = ?", mediaUUID).Find(&episode).Count(&count)
 	if count > 0 {
-		db.FirstOrInit(&ps, PlayState{OwnerID: episode.ID, UserID: userID, OwnerType: "episodes"})
-		ps.Finished = finished
-		ps.Playtime = playtime
-		episode.PlayState = ps
-		db.Save(&episode)
-
-		log.WithFields(log.Fields{"type": "episode", "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
-		return &ps
+		return updatePS("episodes", episode.ID, userID, finished, playtime)
 	}
 
 	log.WithFields(log.Fields{"mediaUUID": mediaUUID}).Debugln("Could not find media to update.")
