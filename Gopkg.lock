@@ -2,10 +2,28 @@
 
 
 [[projects]]
+  name = "cloud.google.com/go"
+  packages = ["compute/metadata"]
+  revision = "775730d6e48254a2430366162cf6298e5368833c"
+  version = "v0.39.0"
+
+[[projects]]
   name = "github.com/Jeffail/tunny"
   packages = ["."]
   revision = "4921fff29480bad359ad2fb3271fb461c8ffe1fc"
   version = "0.1.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/Unknwon/goconfig"
+  packages = ["."]
+  revision = "3dba17dd7b9ec8509b3621a73a30a4b333eb28da"
+
+[[projects]]
+  name = "github.com/abbot/go-http-auth"
+  packages = ["."]
+  revision = "0ddd408d5d60ea76e320503cc7dd091992dee608"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -30,6 +48,18 @@
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
+
+[[projects]]
+  name = "github.com/golang/protobuf"
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp"
+  ]
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -71,6 +101,12 @@
   revision = "158e7b876106936762df88b11b595cfe2de738c6"
 
 [[projects]]
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
+
+[[projects]]
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
@@ -108,6 +144,44 @@
   packages = ["."]
   revision = "c7c4067b79cc51e6dfdcef5c702e74b1e0fa7c75"
   version = "v1.10.0"
+
+[[projects]]
+  name = "github.com/ncw/rclone"
+  packages = [
+    "backend/drive",
+    "backend/dropbox/dbhash",
+    "backend/local",
+    "backend/onedrive/quickxorhash",
+    "cmd/serve/httplib",
+    "cmd/serve/httplib/serve/data",
+    "fs",
+    "fs/accounting",
+    "fs/asyncreader",
+    "fs/config",
+    "fs/config/configmap",
+    "fs/config/configstruct",
+    "fs/config/obscure",
+    "fs/driveletter",
+    "fs/filter",
+    "fs/fserrors",
+    "fs/fshttp",
+    "fs/fspath",
+    "fs/hash",
+    "fs/list",
+    "fs/rc",
+    "fs/version",
+    "fs/walk",
+    "lib/dircache",
+    "lib/errors",
+    "lib/file",
+    "lib/mmap",
+    "lib/oauthutil",
+    "lib/pacer",
+    "lib/pool",
+    "lib/readers"
+  ]
+  revision = "a0d4fdb2fa34c7f6ac5a86021d16403713499aaf"
+  version = "v1.47.0"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -156,10 +230,28 @@
   revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/shurcooL/httpfs"
+  packages = ["vfsutil"]
+  revision = "74dc9339e414ad069a8d04bba7e7aafd08043a25"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/shurcooL/vfsgen"
+  packages = ["."]
+  revision = "6a9ea43bcacdf716a5c1b38efff722c07adf0069"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
   version = "v1.4.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/skratchdot/open-golang"
+  packages = ["open"]
+  revision = "79abb63cd66e41cb1473e26d11ebdcd68b04c8e5"
 
 [[projects]]
   branch = "master"
@@ -186,10 +278,193 @@
   version = "v1.3.0"
 
 [[projects]]
+  name = "go.opencensus.io"
+  packages = [
+    ".",
+    "internal",
+    "internal/tagencoding",
+    "metric/metricdata",
+    "metric/metricproducer",
+    "plugin/ochttp",
+    "plugin/ochttp/propagation/b3",
+    "resource",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
+    "trace",
+    "trace/internal",
+    "trace/propagation",
+    "trace/tracestate"
+  ]
+  revision = "df6e2001952312404b06f5f6f03fcb4aec1648e5"
+  version = "v0.21.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = [
+    "bcrypt",
+    "blowfish",
+    "internal/subtle",
+    "nacl/secretbox",
+    "poly1305",
+    "salsa20/salsa",
+    "ssh/terminal"
+  ]
+  revision = "22d7a77e9e5f409e934ed268692e56707cd169e5"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = [
+    "context",
+    "context/ctxhttp",
+    "http/httpguts",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/timeseries",
+    "publicsuffix",
+    "trace"
+  ]
+  revision = "018c4d40a106a7ae83689758294fcd8d23850745"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "google",
+    "internal",
+    "jws",
+    "jwt"
+  ]
+  revision = "950ef44c6e079baf075030377d90bf0c7e4b7b7a"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "112230192c580c3556b8cee6403af37a4fc5f28c"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "cpu",
+    "unix",
+    "windows"
+  ]
   revision = "cab07311ab81fc7f180fddf7410b604373b20a00"
+
+[[projects]]
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/language",
+    "internal/language/compact",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef"
+
+[[projects]]
+  name = "google.golang.org/api"
+  packages = [
+    "drive/v2",
+    "drive/v3",
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+    "googleapi/transport",
+    "internal",
+    "option",
+    "transport/http",
+    "transport/http/internal/propagation"
+  ]
+  revision = "721295fe20d585ce7e948146f82188429d14da33"
+  version = "v0.5.0"
+
+[[projects]]
+  name = "google.golang.org/appengine"
+  packages = [
+    ".",
+    "internal",
+    "internal/app_identity",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/modules",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
+  revision = "4c25cacc810c02874000e4f7071286a8e96b2515"
+  version = "v1.6.0"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+  packages = ["googleapis/rpc/status"]
+  revision = "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9"
+
+[[projects]]
+  name = "google.golang.org/grpc"
+  packages = [
+    ".",
+    "balancer",
+    "balancer/base",
+    "balancer/roundrobin",
+    "binarylog/grpc_binarylog_v1",
+    "codes",
+    "connectivity",
+    "credentials",
+    "credentials/internal",
+    "encoding",
+    "encoding/proto",
+    "grpclog",
+    "internal",
+    "internal/backoff",
+    "internal/balancerload",
+    "internal/binarylog",
+    "internal/channelz",
+    "internal/envconfig",
+    "internal/grpcrand",
+    "internal/grpcsync",
+    "internal/syscall",
+    "internal/transport",
+    "keepalive",
+    "metadata",
+    "naming",
+    "peer",
+    "resolver",
+    "resolver/dns",
+    "resolver/passthrough",
+    "stats",
+    "status",
+    "tap"
+  ]
+  revision = "25c4f928eaa6d96443009bd842389fb4fa48664e"
+  version = "v1.20.1"
 
 [[projects]]
   name = "gopkg.in/natefinch/lumberjack.v2"
@@ -200,6 +475,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b51f86bf5c3e8e0b2bb7a21b9ecb09b4dd141889bd03bd0a53d7bbd3b4e7240f"
+  inputs-digest = "e82b4a9e80f906d8c338ab265b70d708c581adc07ea11b94130bcf01b3364b78"
   solver-name = "gps-cdcl"
   solver-version = 1
