@@ -22,17 +22,21 @@ type StreamKey struct {
 	StreamId int64
 }
 
+const TotalDurationInvalid time.Duration = -1
+
 type Stream struct {
 	StreamKey
 
-	TotalDuration time.Duration
+	TimeBase *big.Rat
 
-	TimeBase         *big.Rat
+	// If TotalDuration{,Dts} < 0, the value is invalid/unknown
+	TotalDuration    time.Duration
 	TotalDurationDts DtsTimestamp
 	// codecs string ready for DASH/HLS serving
 	Codecs    string
 	CodecName string
 	Profile   string
+	// If BitRate < 0, the value is invalid/unknown
 	BitRate   int64
 	FrameRate *big.Rat
 
@@ -67,10 +71,17 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 		if err != nil {
 			return nil, err
 		}
-		totalDurationTs := DtsTimestamp(stream.DurationTs)
-		if stream.DurationTs == 0 {
+
+		// Default to invalid
+		totalDurationTs := DtsTimestampInvalid
+		if stream.DurationTs >= 0 {
+			totalDurationTs = DtsTimestamp(stream.DurationTs)
+		} else if container.Format.DurationSeconds > 0 {
 			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase.Denom().Int64()))
 		}
+
+		totalDuration := TotalDurationInvalid
+		if container.Format.Duration()
 
 		if stream.CodecType == "audio" {
 			bitrate, _ := strconv.Atoi(stream.BitRate)
@@ -83,7 +94,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					},
 					Codecs:           stream.GetMime(),
 					BitRate:          int64(bitrate),
-					TotalDuration:    container.Format.Duration(),
+					TotalDuration:    totalDuration
 					TotalDurationDts: totalDurationTs,
 					StreamType:       stream.CodecType,
 					Language:         GetLanguageTag(stream),
