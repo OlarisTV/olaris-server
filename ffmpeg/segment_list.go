@@ -4,6 +4,8 @@ import "time"
 
 type DtsTimestamp int64
 
+const DtsTimestampInvalid DtsTimestamp = -1
+
 // A time interval [StartTimestamp, EndTimestamp) in DTS
 type Interval struct {
 	TimeBase       int64
