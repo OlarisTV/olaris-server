@@ -217,9 +217,10 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	db.UpdateLibrary(library)
 
 	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-		if ValidFile(walkPath) {
+		if IsDir(walkPath) {
 			man.AddWatcher(walkPath)
-			man.AddWatcher(filepath.Dir(walkPath))
+		} else if ValidFile(walkPath) {
+			man.AddWatcher(walkPath)
 			if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
 				man.probeJobChan <- probeJob{library: library, filePath: walkPath}
 			} else {
@@ -242,6 +243,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 
 // AddWatcher adds a fsnotify watcher to the given path.
 func (man *LibraryManager) AddWatcher(filePath string) {
+	log.WithFields(log.Fields{"filepath": filePath}).Debugln("Adding path to fsnotify.")
 	err := man.watcher.Add(filePath)
 	if err != nil {
 		log.Warnln("Could not add filesystem notification watcher:", err)
@@ -327,6 +329,21 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 		UpdateMovieMD(&movie)
 	}
 	return nil
+}
+
+// IsDir checks whether the given path is a directory.
+// TODO: This should probably leave in a helper function
+func IsDir(filePath string) bool {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while statting file.")
+		return false
+	}
+	if fileInfo.IsDir() {
+		return true
+	}
+
+	return false
 }
 
 // ValidFile checks whether the supplied filepath is a file that can be indexed by the metadata server.

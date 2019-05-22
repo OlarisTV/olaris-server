@@ -6,6 +6,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"strings"
+	"time"
 )
 
 func (env *MetadataContext) startWatcher(exitChan chan bool) {
@@ -19,7 +20,13 @@ loop:
 			break loop
 		case event := <-env.Watcher.Events:
 			log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got filesystem notification event.")
-			if managers.ValidFile(event.Name) {
+
+			// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
+			time.Sleep(2 * time.Second)
+
+			if managers.IsDir(event.Name) {
+				env.LibraryManager.AddWatcher(event.Name)
+			} else if managers.ValidFile(event.Name) {
 				if event.Op&fsnotify.Rename == fsnotify.Rename {
 					log.Debugln("File is renamed, forcing removed files scan.")
 					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
@@ -31,7 +38,7 @@ loop:
 					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
 				}
 				if event.Op&fsnotify.Create == fsnotify.Create {
-					log.Debugln("File added was added adding watcher and requestin library rescan.")
+					log.Debugln("File added was added adding watcher and requesting library rescan.")
 					env.Watcher.Add(event.Name)
 					for _, lib := range db.AllLibraries() {
 						if strings.Contains(event.Name, lib.FilePath) {
