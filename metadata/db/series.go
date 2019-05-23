@@ -91,6 +91,7 @@ func (ep *Episode) GetSeries() *Series {
 type EpisodeFile struct {
 	gorm.Model
 	MediaItem
+	Library   Library `gorm:"column:geo_point;ForeignKey:OrderId"`
 	EpisodeID uint
 	Episode   *Episode
 	Streams   []Stream `gorm:"polymorphic:Owner;"`
@@ -282,7 +283,7 @@ func FindEpisodeByUUID(uuid string, userID uint) (episode Episode) {
 
 // FindAllEpisodeFiles retrieves all episodefiles from the db.
 func FindAllEpisodeFiles() (files []EpisodeFile) {
-	db.Find(&files)
+	db.Preload("Library").Find(&files)
 
 	return files
 }

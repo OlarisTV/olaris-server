@@ -12,7 +12,7 @@ type MovieFile struct {
 	gorm.Model
 	MediaItem
 	Movie   Movie
-	Library Library
+	Library Library `gorm:"ForeignKey:LibraryID"`
 	MovieID uint
 	Streams []Stream `gorm:"polymorphic:Owner;"`
 }
@@ -88,7 +88,7 @@ func (movie *Movie) UpdatedAtTimeStamp() int64 {
 
 // FindAllMovieFiles Returns all movies, even once that could not be identified.
 func FindAllMovieFiles() (movies []MovieFile) {
-	db.Find(&movies)
+	db.Preload("Library").Find(&movies)
 
 	return movies
 }

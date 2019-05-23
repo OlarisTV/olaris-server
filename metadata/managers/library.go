@@ -468,22 +468,29 @@ func (man *LibraryManager) CheckRemovedFiles() {
 	log.Infoln("Checking libraries to see if any files got removed since our last scan.")
 	for _, movieFile := range db.FindAllMovieFiles() {
 		log.WithFields(log.Fields{
-			"path": movieFile.FilePath,
+			"path":    movieFile.FilePath,
+			"library": movieFile.Library.Name,
 		}).Debugln("Checking to see if file still exists.")
 
-		if !helpers.FileExists(movieFile.FilePath) {
-			log.Debugln("Missing file, cleaning up MD", movieFile.FileName)
-			movieFile.DeleteSelfAndMD()
+		if movieFile.Library.IsLocal() {
+			if !helpers.FileExists(movieFile.FilePath) {
+				log.Debugln("Missing file, cleaning up MD", movieFile.FileName)
+				movieFile.DeleteSelfAndMD()
+			}
+		} else {
+			// TODO: Write Rclone Code
 		}
 	}
 
 	for _, file := range db.FindAllEpisodeFiles() {
-		log.WithFields(log.Fields{
-			"path": file.FilePath,
-		}).Debugln("Checking to see if file still exists.")
-		if !helpers.FileExists(file.FilePath) {
-			log.Debugln("Missing file, cleaning up MD", file.FileName)
-			file.DeleteSelfAndMD()
+		if file.Library.IsLocal() {
+			log.WithFields(log.Fields{
+				"path": file.FilePath,
+			}).Debugln("Checking to see if file still exists.")
+			if !helpers.FileExists(file.FilePath) {
+				log.Debugln("Missing file, cleaning up MD", file.FileName)
+				file.DeleteSelfAndMD()
+			}
 		}
 	}
 }
