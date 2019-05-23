@@ -13,7 +13,9 @@ func (lib *Library) LogFields() log.Fields {
 }
 
 const (
+	// BackendLocal is used for local libraries
 	BackendLocal = iota
+	// BackendRclone is used for Rclone remotes
 	BackendRclone
 )
 
@@ -29,11 +31,13 @@ type Library struct {
 	RefreshCompletedAt time.Time
 }
 
-func (lib *Library) isLocal() bool {
+// IsLocal returns true when a library is based on a local filesystem
+func (lib *Library) IsLocal() bool {
 	return lib.Backend == BackendLocal
 }
 
-func (lib *Library) isRclone() bool {
+// IsRclone returns true when a library is based on a rclone remote
+func (lib *Library) IsRclone() bool {
 	return lib.Backend == BackendRclone
 }
 
