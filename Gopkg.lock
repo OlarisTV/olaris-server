@@ -38,6 +38,12 @@
   revision = "3af4c746e1c248ee8491a3e0c6f7a9cd831e95f8"
 
 [[projects]]
+  name = "github.com/djherbis/times"
+  packages = ["."]
+  revision = "847c5208d8924cea0acea3376ff62aede93afe39"
+  version = "v1.2.0"
+
+[[projects]]
   name = "github.com/elazarl/go-bindata-assetfs"
   packages = ["."]
   revision = "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43"
@@ -76,8 +82,8 @@
 [[projects]]
   name = "github.com/gorilla/mux"
   packages = ["."]
-  revision = "c5c6c98bc25355028a63748a498942a6398ccd22"
-  version = "v1.7.1"
+  revision = "ed099d42384823742bba0bf9a72b53b55c9e2e38"
+  version = "v1.7.2"
 
 [[projects]]
   branch = "master"
@@ -148,6 +154,8 @@
 [[projects]]
   name = "github.com/ncw/rclone"
   packages = [
+    "backend/crypt",
+    "backend/crypt/pkcs7",
     "backend/drive",
     "backend/dropbox/dbhash",
     "backend/local",
@@ -157,9 +165,11 @@
     "fs",
     "fs/accounting",
     "fs/asyncreader",
+    "fs/chunkedreader",
     "fs/config",
     "fs/config/configmap",
     "fs/config/configstruct",
+    "fs/config/flags",
     "fs/config/obscure",
     "fs/driveletter",
     "fs/filter",
@@ -168,6 +178,10 @@
     "fs/fspath",
     "fs/hash",
     "fs/list",
+    "fs/log",
+    "fs/march",
+    "fs/object",
+    "fs/operations",
     "fs/rc",
     "fs/version",
     "fs/walk",
@@ -178,7 +192,8 @@
     "lib/oauthutil",
     "lib/pacer",
     "lib/pool",
-    "lib/readers"
+    "lib/readers",
+    "vfs"
   ]
   revision = "a0d4fdb2fa34c7f6ac5a86021d16403713499aaf"
   version = "v1.47.0"
@@ -210,6 +225,12 @@
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/rfjakob/eme"
+  packages = ["."]
+  revision = "01668ae55fe0b79a483095689043cce3e80260db"
+  version = "v1.1"
 
 [[projects]]
   name = "github.com/rs/cors"
@@ -244,8 +265,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
-  version = "v1.4.1"
+  revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
+  version = "v1.4.2"
 
 [[projects]]
   branch = "master"
@@ -262,8 +283,8 @@
 [[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
-  version = "v0.0.3"
+  revision = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de"
+  version = "v0.0.4"
 
 [[projects]]
   name = "github.com/spf13/pflag"
@@ -308,8 +329,10 @@
     "blowfish",
     "internal/subtle",
     "nacl/secretbox",
+    "pbkdf2",
     "poly1305",
     "salsa20/salsa",
+    "scrypt",
     "ssh/terminal"
   ]
   revision = "22d7a77e9e5f409e934ed268692e56707cd169e5"
@@ -328,7 +351,7 @@
     "publicsuffix",
     "trace"
   ]
-  revision = "018c4d40a106a7ae83689758294fcd8d23850745"
+  revision = "f3200d17e092c607f615320ecaad13d87ad9a2b3"
 
 [[projects]]
   branch = "master"
@@ -356,7 +379,7 @@
     "unix",
     "windows"
   ]
-  revision = "cab07311ab81fc7f180fddf7410b604373b20a00"
+  revision = "8097e1b27ff5e40620836729a9584e91b094b062"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -425,7 +448,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "bb713bdc0e5239f2b68e560efbe1c701a6fe78f9"
+  revision = "c2c4e71fbf6989c3e46a18d65cb88c288f8a3a55"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -463,8 +486,8 @@
     "status",
     "tap"
   ]
-  revision = "25c4f928eaa6d96443009bd842389fb4fa48664e"
-  version = "v1.20.1"
+  revision = "869adfc8d5a43efc0d05780ad109106f457f51e4"
+  version = "v1.21.0"
 
 [[projects]]
   name = "gopkg.in/natefinch/lumberjack.v2"
@@ -475,6 +498,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e82b4a9e80f906d8c338ab265b70d708c581adc07ea11b94130bcf01b3364b78"
+  inputs-digest = "af5350b56c168002b267a3da74e300c4edbdf5d2cbb3648989466261db7a96d0"
   solver-name = "gps-cdcl"
   solver-version = 1

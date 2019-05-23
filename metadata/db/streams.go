@@ -39,7 +39,7 @@ func UpdateStreams(mediaUUID *string) bool {
 	if count > 0 {
 		log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Found movie, probing file.")
 		db.Exec("DELETE FROM streams WHERE owner_id = ? AND owner_type = 'movie_files'", movieFile.ID)
-		movieFile.Streams = CollectStreams(movieFile.FilePath)
+		movieFile.Streams = CollectStreams("rclone://" + movieFile.FilePath)
 		db.Save(&movieFile)
 		return true
 	}
@@ -57,10 +57,12 @@ func UpdateStreams(mediaUUID *string) bool {
 }
 
 // CollectStreams collects all stream information for the given file.
-func CollectStreams(fs *manager.FileStat) []Stream {
+func CollectStreams(filePath string) []Stream {
+	log.WithFields(log.Fields{"filePath": filePath}).Debugln("Reading stream information from file")
 	var streams []Stream
 
-	s, err := ffmpeg.GetStreams("file://" + fs.Path())
+	s, err := ffmpeg.GetStreams(filePath)
+	//s, err := ffmpeg.GetStreams("file://" + filePath)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
 		return streams

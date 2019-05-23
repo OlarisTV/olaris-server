@@ -6,7 +6,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -94,10 +93,6 @@ func (f ProbeFormat) StartTime() time.Duration {
 	return time.Duration(f.StartTimeSeconds * float64(time.Second))
 }
 
-func (f ProbeFormat) Duration() time.Duration {
-	return time.Duration(f.DurationSeconds * float64(time.Second))
-}
-
 type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
@@ -106,11 +101,6 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
-		// TODO: We need to make this smarter, at one point we for instance will have other options then file://
-		if !helpers.FileExists(strings.Replace(fileURL, "file://", "", -1)) {
-			return nil, fmt.Errorf("file does not exist")
-		}
-
 		cmd := exec.Command(
 			executable.GetFFprobeExecutablePath(),
 			"-show_data",

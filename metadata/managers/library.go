@@ -323,7 +323,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 			db.FirstOrCreateEpisode(&ep, ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
-			epFile.Streams = db.CollectStreams(fileInfo)
+			epFile.Streams = db.CollectStreams(filePath)
 
 			db.UpdateEpisodeFile(&epFile)
 
@@ -348,6 +348,9 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 		}
 
 		movieFile := db.MovieFile{MediaItem: mi, MovieID: movie.ID}
+		if library.Backend == 1 {
+			filePath = ("rclone://" + filePath)
+		}
 		movieFile.Streams = db.CollectStreams(filePath)
 		db.CreateMovieFile(&movieFile)
 
