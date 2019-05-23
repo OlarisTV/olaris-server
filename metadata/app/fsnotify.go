@@ -24,9 +24,14 @@ loop:
 			// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
 			time.Sleep(2 * time.Second)
 
+			fs, err := managers.NewLocalFileStat(event.Name)
+			if err != nil {
+				log.Debugln("Error while trying to watch the file.")
+			}
+
 			if managers.IsDir(event.Name) {
 				env.LibraryManager.AddWatcher(event.Name)
-			} else if managers.ValidFile(event.Name) {
+			} else if managers.ValidFile(fs) {
 				if event.Op&fsnotify.Rename == fsnotify.Rename {
 					log.Debugln("File is renamed, forcing removed files scan.")
 					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
@@ -42,7 +47,9 @@ loop:
 					env.Watcher.Add(event.Name)
 					for _, lib := range db.AllLibraries() {
 						if strings.Contains(event.Name, lib.FilePath) {
-							env.LibraryManager.ProbeFile(&lib, event.Name)
+							fs, _ := managers.NewLocalFileStat(event.Name)
+							// TODO: Error checking
+							env.LibraryManager.ProbeFile(&lib, fs)
 							// We can probably only get the MD for the recently added file here
 							env.LibraryManager.UpdateMD(&lib)
 						}

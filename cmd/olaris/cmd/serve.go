@@ -6,10 +6,6 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	// Backend for Rclone
-	_ "github.com/ncw/rclone/backend/drive"
-	_ "github.com/ncw/rclone/backend/local"
-	"github.com/ncw/rclone/fs"
-	"github.com/ncw/rclone/fs/walk"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -34,20 +30,6 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
 	Run: func(cmd *cobra.Command, args []string) {
-		filesystem, err := fs.NewFs("gdrive:/Media")
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			walk.Walk(filesystem, "", true, -1, func(dirPath string, entries fs.DirEntries, err error) error {
-				log.Println(dirPath)
-				for _, e := range entries {
-					log.Println(e)
-				}
-				log.Println(err)
-				return nil
-			})
-		}
-		os.Exit(0)
 
 		mainRouter := mux.NewRouter()
 

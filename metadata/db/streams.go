@@ -57,10 +57,10 @@ func UpdateStreams(mediaUUID *string) bool {
 }
 
 // CollectStreams collects all stream information for the given file.
-func CollectStreams(filePath string) []Stream {
+func CollectStreams(fs *manager.FileStat) []Stream {
 	var streams []Stream
 
-	s, err := ffmpeg.GetStreams("file://" + filePath)
+	s, err := ffmpeg.GetStreams("file://" + fs.Path())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
 		return streams

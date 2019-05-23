@@ -16,6 +16,7 @@ func (lib *Library) LogFields() log.Fields {
 type Library struct {
 	gorm.Model
 	Kind               MediaType
+	Backend            int
 	FilePath           string `gorm:"unique_index:idx_file_path"`
 	Name               string
 	RefreshStartedAt   time.Time

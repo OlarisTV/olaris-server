@@ -3,6 +3,11 @@ package managers
 import (
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
+	// Backends
+	_ "github.com/ncw/rclone/backend/drive"
+	_ "github.com/ncw/rclone/backend/local"
+	"github.com/ncw/rclone/fs"
+	"github.com/ncw/rclone/fs/walk"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
@@ -31,7 +36,7 @@ var SupportedExtensions = map[string]bool{
 }
 
 type probeJob struct {
-	filePath string
+	fileStat FileStat
 	library  *db.Library
 }
 
@@ -51,8 +56,8 @@ type episodePayload struct {
 
 func (man *LibraryManager) probeFileWorker(id int) {
 	for job := range man.probeJobChan {
-		log.Debugf("Worker %d picked up job: %s.", id, job.filePath)
-		man.ProbeFile(job.library, job.filePath)
+		log.Debugf("Worker %d picked up job: %s.", id, job.fileStat.Name())
+		man.ProbeFile(job.library, job.fileStat)
 		log.Debugf("Worker %d done.", id)
 	}
 }
@@ -215,20 +220,47 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	library.RefreshStartedAt = stime
 	library.RefreshCompletedAt = time.Time{}
 	db.UpdateLibrary(library)
+	var err error
 
-	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-		if IsDir(walkPath) {
-			man.AddWatcher(walkPath)
-		} else if ValidFile(walkPath) {
-			man.AddWatcher(walkPath)
-			if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
-				man.probeJobChan <- probeJob{library: library, filePath: walkPath}
-			} else {
-				log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
+	if library.Backend == 0 {
+		err = filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
+			fs, err := NewLocalFileStat(walkPath)
+			if IsDir(walkPath) {
+				man.AddWatcher(walkPath)
+			} else if ValidFile(fs) {
+				man.AddWatcher(walkPath)
+				if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
+					man.probeJobChan <- probeJob{library: library, fileStat: fs}
+				} else {
+					log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
+				}
 			}
+			return nil
+		})
+	} else if library.Backend == 1 {
+		log.Println("Got Rclone backend")
+		filesystem, err := fs.NewFs("gdrive:/Media")
+		if err != nil {
+			log.Println(err)
+		} else {
+			walk.Walk(filesystem, "", true, -1, func(walkPath string, entries fs.DirEntries, err error) error {
+				log.Println("WALKPATH:", walkPath)
+				for _, e := range entries {
+					log.Println("ENTRY:", e)
+					fs := &RcloneFileStat{dirEntry: e}
+					if ValidFile(fs) {
+						if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
+							man.probeJobChan <- probeJob{library: library, fileStat: fs}
+						} else {
+							log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
+						}
+					}
+				}
+				log.Println(err)
+				return nil
+			})
 		}
-		return nil
-	})
+	}
 
 	dur := time.Since(stime)
 	log.Printf("Probing library '%s' took %f seconds", library.FilePath, dur.Seconds())
@@ -251,17 +283,10 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 }
 
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
-func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error {
+func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) error {
+	filePath := fileInfo.Path()
 	log.WithFields(log.Fields{"filepath": filePath}).Println("Parsing filepath.")
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		// This catches broken symlinks
-		if _, ok := err.(*os.PathError); ok {
-			log.WithFields(log.Fields{"error": err}).Warnln("Got an error while statting file.")
-			return nil
-		}
-		return err
-	}
+
 	basename := fileInfo.Name()
 	name := strings.TrimSuffix(basename, filepath.Ext(basename))
 
@@ -298,7 +323,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 			db.FirstOrCreateEpisode(&ep, ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
-			epFile.Streams = db.CollectStreams(filePath)
+			epFile.Streams = db.CollectStreams(fileInfo)
 
 			db.UpdateEpisodeFile(&epFile)
 
@@ -334,7 +359,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 // IsDir checks whether the given path is a directory.
 // TODO: This should probably leave in a helper function
 func IsDir(filePath string) bool {
-	fileInfo, err := os.Stat(filePath)
+	fileInfo, err := NewLocalFileStat(filePath)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while statting file.")
 		return false
@@ -347,15 +372,10 @@ func IsDir(filePath string) bool {
 }
 
 // ValidFile checks whether the supplied filepath is a file that can be indexed by the metadata server.
-func ValidFile(filePath string) bool {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while getting file information, file won't be indexed.")
-		return false
-	}
-
+func ValidFile(fileInfo FileStat) bool {
+	filePath := fileInfo.Name()
 	if fileInfo.IsDir() {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Debugln("File is a directory, not scanning as file.")
+		log.WithFields(log.Fields{"filepath": filePath}).Debugln("File is a directory, not scanning as file.")
 		return false
 	}
 
