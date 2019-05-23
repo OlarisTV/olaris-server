@@ -27,6 +27,7 @@ loop:
 			fs, err := managers.NewLocalFileStat(event.Name)
 			if err != nil {
 				log.Debugln("Error while trying to watch the file.")
+				return
 			}
 
 			if managers.IsDir(event.Name) {

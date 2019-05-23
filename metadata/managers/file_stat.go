@@ -1,27 +1,37 @@
 package managers
 
 import (
+	log "github.com/sirupsen/logrus"
+	"net/url"
 	"os"
 	// Backends
 	_ "github.com/ncw/rclone/backend/drive"
 	_ "github.com/ncw/rclone/backend/local"
 	"github.com/ncw/rclone/fs"
+	"gitlab.com/olaris/olaris-server/streaming"
 	"path/filepath"
+	"strings"
 )
 
 type FileStat interface {
 	Size() int64
 	Name() string
 	Path() string
+	StreamLink() string
 	IsDir() bool
 }
 
 type RcloneFileStat struct {
-	dirEntry fs.DirEntry
+	dirEntry   fs.DirEntry
+	rcloneName string
 }
 
 func (lfs *RcloneFileStat) Name() string {
 	return filepath.Base(lfs.dirEntry.String())
+}
+
+func NewRcloneFileStat(de fs.DirEntry, name string) *RcloneFileStat {
+	return &RcloneFileStat{dirEntry: de, rcloneName: name}
 }
 
 func (lfs *RcloneFileStat) Path() string {
@@ -29,6 +39,15 @@ func (lfs *RcloneFileStat) Path() string {
 }
 func (lfs *RcloneFileStat) Size() int64 {
 	return lfs.dirEntry.Size()
+}
+func (lfs *RcloneFileStat) StreamLink() string {
+	probePath := filepath.Join("rclone", lfs.rcloneName, lfs.Path())
+	streamLink, err := streaming.GetMediaFileURL(probePath)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warnln("Could not get the MediaFileUrl")
+	}
+	streamLink = strings.Replace(streamLink, lfs.Name(), url.PathEscape(lfs.Name()), -1)
+	return streamLink
 }
 func (lfs *RcloneFileStat) IsDir() bool {
 	if lfs.dirEntry.Size() == -1 {
@@ -62,4 +81,7 @@ func (lfs *LocalFileStat) IsDir() bool {
 }
 func (lfs *LocalFileStat) Path() string {
 	return lfs.path
+}
+func (lfs *LocalFileStat) StreamLink() string {
+	return "file://" + lfs.path
 }

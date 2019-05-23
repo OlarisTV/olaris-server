@@ -94,7 +94,7 @@ func _getFileLocator(fileLocatorStr string, allowDirectFileAccess bool) (fileLoc
 
 }
 
-func getMediaFileURL(fileLocatorStr string) (string, error) {
+func GetMediaFileURL(fileLocatorStr string) (string, error) {
 	l, err := getFileLocator(fileLocatorStr)
 	if err != nil {
 		return "", err
@@ -125,7 +125,7 @@ func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, 
 		return ffmpeg.StreamKey{}, err
 	}
 
-	url, err := getMediaFileURL(fileLocatorStr)
+	url, err := GetMediaFileURL(fileLocatorStr)
 	if err != nil {
 		return ffmpeg.StreamKey{}, err
 	}
@@ -137,7 +137,7 @@ func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, 
 }
 
 func getMediaFileURLOrFail(r *http.Request) (string, Error) {
-	mediaFileURL, err := getMediaFileURL(mux.Vars(r)["fileLocator"])
+	mediaFileURL, err := GetMediaFileURL(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		return "", StatusError{
 			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),

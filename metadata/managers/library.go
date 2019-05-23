@@ -3,6 +3,8 @@ package managers
 import (
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"path/filepath"
 	// Backends
 	_ "github.com/ncw/rclone/backend/drive"
 	_ "github.com/ncw/rclone/backend/local"
@@ -15,7 +17,6 @@ import (
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -212,6 +213,13 @@ func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 	}
 	return nil
 }
+func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, fs FileStat) {
+	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(fs.Path())) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(fs.Path())) {
+		man.probeJobChan <- probeJob{library: library, fileStat: fs}
+	} else {
+		log.WithFields(log.Fields{"path": fs.Path()}).Debugln("File already exists in library, not adding again.")
+	}
+}
 
 // Probe goes over the filesystem and parses filenames in the given library.
 func (man *LibraryManager) Probe(library *db.Library) {
@@ -222,38 +230,30 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	db.UpdateLibrary(library)
 	var err error
 
-	if library.Backend == 0 {
+	if library.Backend == db.BackendLocal {
 		err = filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
 			fs, err := NewLocalFileStat(walkPath)
 			if IsDir(walkPath) {
 				man.AddWatcher(walkPath)
 			} else if ValidFile(fs) {
 				man.AddWatcher(walkPath)
-				if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
-					man.probeJobChan <- probeJob{library: library, fileStat: fs}
-				} else {
-					log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
-				}
+				man.checkAndAddProbeJob(library, fs)
 			}
 			return nil
 		})
-	} else if library.Backend == 1 {
+	} else if library.Backend == db.BackendRclone {
 		log.Println("Got Rclone backend")
-		filesystem, err := fs.NewFs("gdrive:/Media")
+		filesystem, err := fs.NewFs(library.RcloneName + ":/")
 		if err != nil {
 			log.Println(err)
 		} else {
-			walk.Walk(filesystem, "", true, -1, func(walkPath string, entries fs.DirEntries, err error) error {
+			walk.Walk(filesystem, library.FilePath, true, -1, func(walkPath string, entries fs.DirEntries, err error) error {
 				log.Println("WALKPATH:", walkPath)
 				for _, e := range entries {
 					log.Println("ENTRY:", e)
-					fs := &RcloneFileStat{dirEntry: e}
+					fs := NewRcloneFileStat(e, library.RcloneName)
 					if ValidFile(fs) {
-						if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
-							man.probeJobChan <- probeJob{library: library, fileStat: fs}
-						} else {
-							log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
-						}
+						man.checkAndAddProbeJob(library, fs)
 					}
 				}
 				log.Println(err)
@@ -280,6 +280,31 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	if err != nil {
 		log.Warnln("Could not add filesystem notification watcher:", err)
 	}
+}
+
+func collectStreams(fs FileStat) []db.Stream {
+	filePath := fs.Path()
+
+	log.WithFields(log.Fields{"filePath": filePath}).Debugln("Reading stream information from file")
+	var streams []db.Stream
+
+	s, err := ffmpeg.GetStreams(fs.StreamLink())
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
+		return streams
+	}
+
+	streams = append(streams, db.Stream{Stream: s.GetVideoStream()})
+
+	for _, s := range s.AudioStreams {
+		streams = append(streams, db.Stream{Stream: s})
+	}
+
+	for _, s := range s.SubtitleStreams {
+		streams = append(streams, db.Stream{Stream: s})
+	}
+
+	return streams
 }
 
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
@@ -323,7 +348,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 			db.FirstOrCreateEpisode(&ep, ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
-			epFile.Streams = db.CollectStreams(filePath)
+			epFile.Streams = collectStreams(fileInfo)
 
 			db.UpdateEpisodeFile(&epFile)
 
@@ -348,10 +373,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 		}
 
 		movieFile := db.MovieFile{MediaItem: mi, MovieID: movie.ID}
-		if library.Backend == 1 {
-			filePath = ("rclone://" + filePath)
-		}
-		movieFile.Streams = db.CollectStreams(filePath)
+		movieFile.Streams = collectStreams(fileInfo)
 		db.CreateMovieFile(&movieFile)
 
 		UpdateMovieMD(&movie)
@@ -448,6 +470,7 @@ func (man *LibraryManager) CheckRemovedFiles() {
 		log.WithFields(log.Fields{
 			"path": movieFile.FilePath,
 		}).Debugln("Checking to see if file still exists.")
+
 		if !helpers.FileExists(movieFile.FilePath) {
 			log.Debugln("Missing file, cleaning up MD", movieFile.FileName)
 			movieFile.DeleteSelfAndMD()
@@ -470,7 +493,9 @@ func (man *LibraryManager) RefreshAll() {
 	man.CheckRemovedFiles()
 
 	for _, lib := range db.AllLibraries() {
-		man.AddWatcher(lib.FilePath)
+		if lib.IsLocal() {
+			man.AddWatcher(lib.FilePath)
+		}
 
 		log.WithFields(lib.LogFields()).Println("Scanning library for changed files.")
 		man.Probe(&lib)

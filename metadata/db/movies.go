@@ -11,9 +11,11 @@ import (
 type MovieFile struct {
 	gorm.Model
 	MediaItem
-	Movie   Movie
-	MovieID uint
-	Streams []Stream `gorm:"polymorphic:Owner;"`
+	Movie     Movie
+	Library   Library
+	MovieID   uint
+	LibraryID uint
+	Streams   []Stream `gorm:"polymorphic:Owner;"`
 }
 
 // Movie is used to store movie metadata information.

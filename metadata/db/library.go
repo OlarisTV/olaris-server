@@ -12,15 +12,29 @@ func (lib *Library) LogFields() log.Fields {
 	return log.Fields{"name": lib.Name, "path": lib.FilePath}
 }
 
+const (
+	BackendLocal = iota
+	BackendRclone
+)
+
 // Library is a struct containing information about filesystem folders.
 type Library struct {
 	gorm.Model
 	Kind               MediaType
 	Backend            int
+	RcloneName         string
 	FilePath           string `gorm:"unique_index:idx_file_path"`
 	Name               string
 	RefreshStartedAt   time.Time
 	RefreshCompletedAt time.Time
+}
+
+func (lib *Library) isLocal() bool {
+	return lib.Backend == BackendLocal
+}
+
+func (lib *Library) isRclone() bool {
+	return lib.Backend == BackendRclone
 }
 
 // UpdateLibrary persists a library object in the database.
