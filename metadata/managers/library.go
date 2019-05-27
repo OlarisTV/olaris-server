@@ -479,6 +479,9 @@ func (man *LibraryManager) CheckRemovedFiles() {
 			}
 		} else {
 			// TODO: Write Rclone Code
+			// Pseudo
+			// fs:= NewRcloneFileStat(path)
+			// fs.Exists()
 		}
 	}
 
