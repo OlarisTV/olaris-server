@@ -2,7 +2,10 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	"sync"
 )
+
+var mutex = &sync.Mutex{}
 
 // BaseItem holds information that is shared between various mediatypes.
 type BaseItem struct {
@@ -339,9 +342,9 @@ func UpdateEpisodeFile(file *EpisodeFile) {
 
 // FirstOrCreateSeries returns the first instance or writes a series to the db.
 func FirstOrCreateSeries(series *Series, seriesDef Series) {
-	tx := db.Begin()
-	tx.FirstOrCreate(series, seriesDef)
-	tx.Commit()
+	mutex.Lock()
+	db.FirstOrCreate(series, seriesDef)
+	mutex.Unlock()
 }
 
 // FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
