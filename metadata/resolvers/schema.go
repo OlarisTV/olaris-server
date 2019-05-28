@@ -27,6 +27,8 @@ var SchemaTxt = `
 		upNext(): [MediaItem]
 		search(name: String!): [SearchItem]
 		invites(): [Invite]
+		# List of all remotes found in a rclone config file if one exists.
+		remotes(): [String]!
 	}
 
 	type Mutation {
