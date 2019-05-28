@@ -1,4 +1,4 @@
-### 0.1.2 - 28th of Mary 2019
+### 0.1.2 - 28th of May 2019
 
 * Faster library scanning, should be up to four times faster in this
   release.
