@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"time"
 )
 
@@ -11,6 +12,9 @@ import (
 func (lib *Library) LogFields() log.Fields {
 	return log.Fields{"name": lib.Name, "path": lib.FilePath, "backend": lib.Backend}
 }
+
+// BackendType specifies what kind of Library backend is being used.
+type BackendType int
 
 const (
 	// BackendLocal is used for local libraries
@@ -81,9 +85,18 @@ func DeleteLibrary(id int) (Library, error) {
 }
 
 // AddLibrary adds a filesystem folder and starts tracking media inside the folders.
-func AddLibrary(name string, filePath string, kind MediaType) (Library, error) {
-	log.WithFields(log.Fields{"name": name, "path": filePath, "kind": kind}).Infoln("Adding library")
-	lib := Library{Name: name, FilePath: filePath, Kind: kind}
+func AddLibrary(lib *Library) error {
+
+	if lib.Backend == BackendLocal && !helpers.FileExists(lib.FilePath) {
+		return fmt.Errorf("supplied library path does not exist")
+	}
+
+	// TODO: We could consider checking if the path at rclone even exists.
+	if lib.Backend == BackendRclone && lib.RcloneName == "" {
+		return fmt.Errorf("backend is set to rclone but no rclone name has been specified")
+	}
+
+	log.WithFields(log.Fields{"name": lib.Name, "path": lib.FilePath, "kind": lib.Kind}).Infoln("Adding library")
 	dbObj := db.Create(&lib)
-	return lib, dbObj.Error
+	return dbObj.Error
 }

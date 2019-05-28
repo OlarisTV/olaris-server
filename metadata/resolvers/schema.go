@@ -34,7 +34,8 @@ var SchemaTxt = `
 	type Mutation {
 		# Tell the application to index all the supported files in the given directory.
 		# 'kind' can be 0 for movies and 1 for series.
-		createLibrary(name: String!, filePath: String!, kind: Int!): LibraryResponse!
+		# 'backend' can be 0 for local and 1 for Rclone.
+		createLibrary(name: String!, filePath: String!, kind: Int!, backend: Int!, rcloneName: String): LibraryResponse!
 
 		# Delete a library and remove all collected metadata.
 		deleteLibrary(id: Int!): LibraryResponse!

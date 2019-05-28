@@ -2,8 +2,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
@@ -66,9 +64,11 @@ func (r *LibraryResolver) Kind() int32 {
 }
 
 type createLibraryArgs struct {
-	Name     string
-	FilePath string
-	Kind     int32
+	Name       string
+	FilePath   string
+	Kind       int32
+	Backend    int32
+	RcloneName *string
 }
 
 // RefreshAgentMetadata refreshes all metadata from agent
@@ -139,19 +139,24 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 	var library db.Library
 	var err error
 	var libRes LibraryResponse
-	path := filepath.Clean(args.FilePath)
+	args.FilePath = filepath.Clean(args.FilePath)
 
 	err = ifAdmin(ctx)
 	if err != nil {
 		return errResponse(err)
 	}
 
-	if !helpers.FileExists(path) {
-		return errResponse(fmt.Errorf("supplied library path does not exist"))
+	var rcloneName string
+
+	if args.RcloneName != nil {
+		rcloneName = *args.RcloneName
 	}
 
+	lib := &db.Library{Name: args.Name, FilePath: args.FilePath, Kind: db.MediaType(args.Kind), Backend: int(args.Backend), RcloneName: rcloneName}
+
+	err = db.AddLibrary(lib)
+
 	if err == nil {
-		library, err = db.AddLibrary(args.Name, path, db.MediaType(args.Kind))
 		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
 		if err != nil {
 			libRes = LibraryResponse{Error: CreateErrResolver(err)}
@@ -160,7 +165,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
-		libRes = LibraryResponse{Error: CreateErrResolver(err)}
+		return errResponse(err)
 	}
 	return &LibResResolv{libRes}
 }
