@@ -21,9 +21,6 @@ loop:
 		case event := <-env.Watcher.Events:
 			log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got filesystem notification event.")
 
-			// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
-			time.Sleep(2 * time.Second)
-
 			fs, err := managers.NewLocalFileStat(event.Name)
 			if err != nil {
 				log.Debugln("Error while trying to watch the file.")
@@ -32,17 +29,22 @@ loop:
 
 			if managers.IsDir(event.Name) {
 				env.LibraryManager.AddWatcher(event.Name)
+				for _, lib := range db.AllLibraries() {
+					if strings.Contains(event.Name, lib.FilePath) {
+						env.LibraryManager.Probe(&lib)
+						// We can probably only get the MD for the recently added file here
+						env.LibraryManager.UpdateMD(&lib)
+					}
+				}
 			} else if managers.ValidFile(fs) {
+				time.Sleep(2 * time.Second)
+
 				if event.Op&fsnotify.Rename == fsnotify.Rename {
 					log.Debugln("File is renamed, forcing removed files scan.")
 					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+					// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
 				}
 
-				if event.Op&fsnotify.Remove == fsnotify.Remove {
-					log.Debugln("File is removed, forcing removed files scan and removing fsnotify watch.")
-					env.Watcher.Remove(event.Name)
-					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
-				}
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					log.Debugln("File added was added adding watcher and requesting library rescan.")
 					env.Watcher.Add(event.Name)
@@ -56,11 +58,13 @@ loop:
 						}
 					}
 				}
-			} else {
-				log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got an error while trying to open file. Going to assume the file was removed.")
-				log.Debugln("File is removed, forcing removed files scan and removing fsnotify watch.")
-				env.Watcher.Remove(event.Name)
-				env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+
+				if event.Op&fsnotify.Remove == fsnotify.Remove {
+					log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got an error while trying to open file. Going to assume the file was removed.")
+					log.Debugln("File is removed, forcing removed files scan and removing fsnotify watch.")
+					env.Watcher.Remove(event.Name)
+					env.LibraryManager.CheckRemovedFiles() // Make this faster by only scanning the changed file
+				}
 			}
 		case err := <-env.Watcher.Errors:
 			log.Warnln("fsnotify watcher error:", err)

@@ -4,7 +4,6 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
-	"sync"
 )
 
 // Stream holds information about the various streams included in a mediafile. This can be audio/video or even subtitle data.
@@ -15,8 +14,6 @@ type Stream struct {
 	OwnerID   uint
 	OwnerType string
 }
-
-var mutex = &sync.Mutex{}
 
 // UpdateAllStreams updates all streams for all mediaItems
 func UpdateAllStreams() {
