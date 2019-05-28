@@ -1,6 +1,7 @@
 package managers
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/url"
 	"os"
@@ -8,6 +9,7 @@ import (
 	_ "github.com/ncw/rclone/backend/drive"
 	_ "github.com/ncw/rclone/backend/local"
 	"github.com/ncw/rclone/fs"
+	"github.com/ncw/rclone/vfs"
 	"gitlab.com/olaris/olaris-server/streaming"
 	"path/filepath"
 	"strings"
@@ -18,6 +20,7 @@ type FileStat interface {
 	Name() string
 	Path() string
 	StreamLink() string
+	ProbePath() string
 	IsDir() bool
 }
 
@@ -30,6 +33,27 @@ func (lfs *RcloneFileStat) Name() string {
 	return filepath.Base(lfs.dirEntry.String())
 }
 
+func NewRcloneFileStatFromFilePath(filePath string) (*RcloneFileStat, error) {
+	parts := strings.SplitN(filePath, "/", 3)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("could not detect Rclone data from filePath.\n")
+	}
+	rcloneName := parts[1]
+
+	filesystem, err := fs.NewFs(rcloneName + ":/")
+	if err != nil {
+		return nil, err
+	}
+	fs := vfs.New(filesystem, &vfs.Options{ReadOnly: true, CacheMode: vfs.CacheModeFull})
+
+	node, err := fs.Stat(parts[2])
+	if err != nil {
+		return nil, err
+	}
+
+	return NewRcloneFileStat(node.DirEntry(), rcloneName), nil
+}
+
 func NewRcloneFileStat(de fs.DirEntry, name string) *RcloneFileStat {
 	return &RcloneFileStat{dirEntry: de, rcloneName: name}
 }
@@ -40,9 +64,14 @@ func (lfs *RcloneFileStat) Path() string {
 func (lfs *RcloneFileStat) Size() int64 {
 	return lfs.dirEntry.Size()
 }
-func (lfs *RcloneFileStat) StreamLink() string {
+
+func (lfs *RcloneFileStat) ProbePath() string {
 	probePath := filepath.Join("rclone", lfs.rcloneName, lfs.Path())
-	streamLink, err := streaming.GetMediaFileURL(probePath)
+	return probePath
+}
+
+func (lfs *RcloneFileStat) StreamLink() string {
+	streamLink, err := streaming.GetMediaFileURL(lfs.ProbePath())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Warnln("Could not get the MediaFileUrl")
 	}
@@ -81,6 +110,9 @@ func (lfs *LocalFileStat) IsDir() bool {
 }
 func (lfs *LocalFileStat) Path() string {
 	return lfs.path
+}
+func (lfs *LocalFileStat) ProbePath() string {
+	return lfs.Path()
 }
 func (lfs *LocalFileStat) StreamLink() string {
 	return "file://" + lfs.path

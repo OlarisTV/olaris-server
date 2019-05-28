@@ -46,7 +46,7 @@ func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
 	}
 
 	if claims, ok := token.Claims.(*StreamingClaims); ok && token.Valid {
-		log.Debugf("Incoming streaming ticket for '%v' (User %v). Expires at: %v", claims.FilePath, claims.UserID, claims.StandardClaims.ExpiresAt)
+		log.WithFields(log.Fields{"user": claims.UserID, "file": claims.FilePath, "expires": claims.ExpiresAt}).Debugf("Validate streaming ticket")
 		return claims, nil
 	}
 

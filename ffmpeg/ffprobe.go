@@ -98,9 +98,12 @@ type ProbeData struct {
 }
 
 func Probe(fileURL string) (*ProbeContainer, error) {
+	log.WithFields(log.Fields{"fileUrl": fileURL}).Debugln("Probing file")
+
 	cmdOut, inCache := probeCache[fileURL]
 
 	if !inCache {
+		log.WithFields(log.Fields{"fileUrl": fileURL}).Debugln("File not in cache, probing it.")
 		cmd := exec.Command(
 			executable.GetFFprobeExecutablePath(),
 			"-show_data",
@@ -127,6 +130,8 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 		probeCache[fileURL] = cmdOut
 
 		err = cmd.Wait()
+	} else {
+		log.Debugln("Already had results in cache")
 	}
 
 	var v ProbeContainer
@@ -134,6 +139,7 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Debugln("Probe results:", v)
 
 	if len(v.Streams) == 0 {
 		return nil, fmt.Errorf("no streams found, is this an actual media file")

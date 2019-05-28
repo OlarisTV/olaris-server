@@ -46,6 +46,14 @@ func (ud *UUIDable) GetUUID() string {
 	return ud.UUID
 }
 
+// Media is an interface for various methods can be done on both episodes and movies
+type Media interface {
+	GetFilePath() string
+	GetFileName() string
+	GetLibrary() *Library
+	DeleteSelfAndMD()
+}
+
 // MediaItem is an embeddeable struct that holds information about filesystem files (episode or movies).
 type MediaItem struct {
 	UUIDable

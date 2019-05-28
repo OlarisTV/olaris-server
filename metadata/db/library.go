@@ -9,7 +9,7 @@ import (
 
 // LogFields defines some standard fields to include in logs.
 func (lib *Library) LogFields() log.Fields {
-	return log.Fields{"name": lib.Name, "path": lib.FilePath}
+	return log.Fields{"name": lib.Name, "path": lib.FilePath, "backend": lib.Backend}
 }
 
 const (

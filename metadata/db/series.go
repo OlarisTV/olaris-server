@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -110,8 +111,27 @@ func (file *EpisodeFile) IsSingleFile() bool {
 	return false
 }
 
+// GetFileName is a wrapper for the Media interface
+func (file EpisodeFile) GetFileName() string {
+	return file.FileName
+}
+
+// GetFilePath is a wrapper for the Media interface
+func (file EpisodeFile) GetFilePath() string {
+	return file.FilePath
+}
+
+// GetLibrary is a wrapper for the Media interface
+func (file EpisodeFile) GetLibrary() *Library {
+	return &file.Library
+}
+
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
-func (file *EpisodeFile) DeleteSelfAndMD() {
+func (file EpisodeFile) DeleteSelfAndMD() {
+	log.WithFields(log.Fields{
+		"path": file.FilePath,
+	}).Println("Removing file and metadata")
+
 	// Delete all stream information
 	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
 

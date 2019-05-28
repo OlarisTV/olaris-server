@@ -46,8 +46,27 @@ func (file *MovieFile) IsSingleFile() bool {
 	return false
 }
 
+// GetFileName is a wrapper for the Media interface
+func (file MovieFile) GetFileName() string {
+	return file.FileName
+}
+
+// GetFilePath is a wrapper for the Media interface
+func (file MovieFile) GetFilePath() string {
+	return file.FilePath
+}
+
+// GetLibrary is a wrapper for the Media interface
+func (file MovieFile) GetLibrary() *Library {
+	return &file.Library
+}
+
 // DeleteSelfAndMD removes this file and any metadata involved for the movie.
-func (file *MovieFile) DeleteSelfAndMD() {
+func (file MovieFile) DeleteSelfAndMD() {
+	log.WithFields(log.Fields{
+		"path": file.FilePath,
+	}).Println("Removing file and metadata")
+
 	// Delete all stream information since it's only for this file
 	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
 
