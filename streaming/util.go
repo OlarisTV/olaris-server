@@ -104,7 +104,7 @@ func GetMediaFileURL(fileLocatorStr string) (string, error) {
 		return "file://" + l.Path, nil
 	} else if l.Location == "rclone" {
 		// TODO(Leon Handreke): Find a better way to do this
-		return "http://127.0.0.1:8080/olaris/s/files/rclone/" + url.PathEscape(l.Path), nil
+		return fmt.Sprintf("http://127.0.0.1:%d/olaris/s/files/rclone/%s", FeedbackUrlPort, url.PathEscape(l.Path)), nil
 	}
 	return "", fmt.Errorf("Could not build media file URL: Unknown file locator \"%s\"", l.Location)
 }

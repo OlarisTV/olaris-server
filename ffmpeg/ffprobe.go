@@ -127,11 +127,10 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 		if err != nil {
 			return nil, err
 		}
+		// TODO(Maran): I'm a bit afraid what happens if for some reason the output of the probe is a GB of data. Can/should we check size?
 		probeCache[fileURL] = cmdOut
 
 		err = cmd.Wait()
-	} else {
-		log.Debugln("Already had results in cache")
 	}
 
 	var v ProbeContainer
@@ -139,7 +138,6 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugln("Probe results:", v)
 
 	if len(v.Streams) == 0 {
 		return nil, fmt.Errorf("no streams found, is this an actual media file")
