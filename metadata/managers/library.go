@@ -1,23 +1,22 @@
 package managers
 
 import (
+	"fmt"
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"path"
 	"path/filepath"
 	// Backends
 	_ "github.com/ncw/rclone/backend/drive"
 	_ "github.com/ncw/rclone/backend/local"
-	"github.com/ncw/rclone/fs"
-	"github.com/ncw/rclone/fs/walk"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"os"
 	"strings"
 	"time"
 )
@@ -38,8 +37,8 @@ var SupportedExtensions = map[string]bool{
 }
 
 type probeJob struct {
-	fileStat FileStat
-	library  *db.Library
+	node    filesystem.Node
+	library *db.Library
 }
 
 // LibraryManager manages all active libraries.
@@ -58,8 +57,8 @@ type episodePayload struct {
 
 func (man *LibraryManager) probeFileWorker(id int) {
 	for job := range man.probeJobChan {
-		log.Debugf("Worker %d picked up job: %s.", id, job.fileStat.Name())
-		man.ProbeFile(job.library, job.fileStat)
+		log.Debugf("Worker %d picked up job: %s.", id, job.node.Name())
+		man.ProbeFile(job.library, job.node)
 		log.Debugf("Worker %d done.", id)
 	}
 }
@@ -214,11 +213,13 @@ func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 	}
 	return nil
 }
-func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, fs FileStat) {
-	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(fs.ProbePath())) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(fs.ProbePath())) {
-		man.probeJobChan <- probeJob{library: library, fileStat: fs}
+func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, node filesystem.Node) {
+	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.Path())) ||
+		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.Path())) {
+		man.probeJobChan <- probeJob{library: library, node: node}
 	} else {
-		log.WithFields(log.Fields{"path": fs.Path()}).Debugln("File already exists in library, not adding again.")
+		log.WithFields(log.Fields{"path": node.Path()}).
+			Debugln("File already exists in library, not adding again.")
 	}
 }
 
@@ -230,37 +231,36 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	library.RefreshStartedAt = stime
 	library.RefreshCompletedAt = time.Time{}
 	db.UpdateLibrary(library)
-	var err error
 
+	var rootNode filesystem.Node
+	var err error
 	if library.Backend == db.BackendLocal {
-		err = filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-			fs, err := NewLocalFileStat(walkPath)
-			if IsDir(walkPath) {
-				man.AddWatcher(walkPath)
-			} else if ValidFile(fs) {
-				man.AddWatcher(walkPath)
-				man.checkAndAddProbeJob(library, fs)
-			}
-			return nil
-		})
+		rootNode, err = filesystem.GetNode(path.Join("local", library.FilePath))
+		fmt.Println(err)
 	} else if library.Backend == db.BackendRclone {
-		filesystem, err := fs.NewFs(library.RcloneName + ":/")
+		rootNode, err = filesystem.RcloneNodeFromPath(
+			path.Join(library.RcloneName, library.FilePath))
 		if err != nil {
-			log.WithFields(log.Fields{"rcloneName": library.RcloneName}).Errorln("Rclone backend not found in Rclone config file.")
-		} else {
-			walk.Walk(filesystem, library.FilePath, true, -1, func(walkPath string, entries fs.DirEntries, err error) error {
-				for _, e := range entries {
-					fs := NewRcloneFileStat(e, library.RcloneName)
-					if ValidFile(fs) {
-						man.checkAndAddProbeJob(library, fs)
-					}
-				}
-				if err != nil {
-					log.WithFields(log.Fields{"error": err}).Warnln("Received an error while walking the Rclone filesystem")
-				}
-				return nil
-			})
+			log.WithFields(log.Fields{"rcloneName": library.RcloneName, "error": err.Error()}).
+				Errorln("Rclone backend not found in Rclone config file.")
 		}
+	}
+	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).
+				Warnf("Received an error while walking %s", walkPath)
+		} else if ValidFile(n) {
+			man.checkAndAddProbeJob(library, n)
+		}
+		// Watchers are only supported for the local backend
+		if n.BackendType() == filesystem.BackendLocal {
+			man.AddWatcher(walkPath)
+		}
+
+		return nil
+	})
+	if err != nil {
+		// lol
 	}
 
 	dur := time.Since(stime)
@@ -283,13 +283,13 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	}
 }
 
-func collectStreams(fs FileStat) []db.Stream {
-	filePath := fs.Path()
+func collectStreams(n filesystem.Node) []db.Stream {
+	filePath := n.Path()
 
 	log.WithFields(log.Fields{"filePath": filePath}).Debugln("Reading stream information from file")
 	var streams []db.Stream
 
-	s, err := ffmpeg.GetStreams(fs.StreamLink())
+	s, err := ffmpeg.GetStreams(n.FfmpegUrl())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
 		return streams
@@ -309,11 +309,11 @@ func collectStreams(fs FileStat) []db.Stream {
 }
 
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
-func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) error {
-	filePath := fileInfo.Path()
+func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) error {
+	filePath := n.Path()
 	log.WithFields(log.Fields{"filepath": filePath}).Println("Parsing filepath.")
 
-	basename := fileInfo.Name()
+	basename := n.Name()
 	name := strings.TrimSuffix(basename, filepath.Ext(basename))
 
 	switch kind := library.Kind; kind {
@@ -322,8 +322,8 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := db.MediaItem{
 				FileName:  basename,
-				FilePath:  fileInfo.ProbePath(),
-				Size:      fileInfo.Size(),
+				FilePath:  n.Path(),
+				Size:      n.Size(),
 				Title:     parsedInfo.Title,
 				LibraryID: library.ID,
 				Year:      parsedInfo.Year,
@@ -349,7 +349,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 			db.FirstOrCreateEpisode(&ep, ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
-			epFile.Streams = collectStreams(fileInfo)
+			epFile.Streams = collectStreams(n)
 
 			db.UpdateEpisodeFile(&epFile)
 
@@ -366,15 +366,15 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 
 		mi := db.MediaItem{
 			FileName:  basename,
-			FilePath:  fileInfo.ProbePath(),
-			Size:      fileInfo.Size(),
+			FilePath:  n.Path(),
+			Size:      n.Size(),
 			Title:     mvi.Title,
 			Year:      mvi.Year,
 			LibraryID: library.ID,
 		}
 
 		movieFile := db.MovieFile{MediaItem: mi, MovieID: movie.ID}
-		movieFile.Streams = collectStreams(fileInfo)
+		movieFile.Streams = collectStreams(n)
 		db.CreateMovieFile(&movieFile)
 
 		UpdateMovieMD(&movie)
@@ -382,25 +382,10 @@ func (man *LibraryManager) ProbeFile(library *db.Library, fileInfo FileStat) err
 	return nil
 }
 
-// IsDir checks whether the given path is a directory.
-// TODO: This should probably leave in a helper function
-func IsDir(filePath string) bool {
-	fileInfo, err := NewLocalFileStat(filePath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while statting file.")
-		return false
-	}
-	if fileInfo.IsDir() {
-		return true
-	}
-
-	return false
-}
-
 // ValidFile checks whether the supplied filepath is a file that can be indexed by the metadata server.
-func ValidFile(fileInfo FileStat) bool {
-	filePath := fileInfo.Name()
-	if fileInfo.IsDir() {
+func ValidFile(node filesystem.Node) bool {
+	filePath := node.Name()
+	if node.IsDir() {
 		log.WithFields(log.Fields{"filepath": filePath}).Debugln("File is a directory, not scanning as file.")
 		return false
 	}
@@ -411,8 +396,9 @@ func ValidFile(fileInfo FileStat) bool {
 	}
 
 	// Ignore really small files
-	if fileInfo.Size() < MinFileSize {
-		log.WithFields(log.Fields{"size": fileInfo.Size(), "filepath": filePath}).Debugln("File is too small, file won't be indexed.")
+	if node.Size() < MinFileSize {
+		log.WithFields(log.Fields{"size": node.Size(), "filepath": filePath}).
+			Debugln("File is too small, file won't be indexed.")
 		return false
 	}
 
@@ -473,11 +459,14 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 
 	switch m.GetLibrary().Backend {
 	case db.BackendLocal:
-		if !helpers.FileExists(m.GetFilePath()) {
+		_, err := filesystem.LocalNodeFromPath(m.GetFilePath())
+		// TODO(Leon Handreke): Check if the error is actually not found
+		if err != nil {
 			m.DeleteSelfAndMD()
 		}
 	case db.BackendRclone:
-		_, err := NewRcloneFileStatFromFilePath(m.GetFilePath())
+		_, err := filesystem.RcloneNodeFromPath(
+			path.Join(m.GetLibrary().RcloneName, m.GetFilePath()))
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Println("Received error while statting file")
 			// We only delete on the file does not exist error. Any other errors are not enough reason to wipe the content.

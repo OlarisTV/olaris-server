@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"strings"
@@ -21,13 +22,13 @@ loop:
 		case event := <-env.Watcher.Events:
 			log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got filesystem notification event.")
 
-			fs, err := managers.NewLocalFileStat(event.Name)
+			n, err := filesystem.LocalNodeFromPath(event.Name)
 			if err != nil {
 				log.Debugln("Error while trying to watch the file.")
 				return
 			}
 
-			if managers.IsDir(event.Name) {
+			if n.IsDir() {
 				env.LibraryManager.AddWatcher(event.Name)
 				for _, lib := range db.AllLibraries() {
 					if strings.Contains(event.Name, lib.FilePath) {
@@ -36,7 +37,7 @@ loop:
 						env.LibraryManager.UpdateMD(&lib)
 					}
 				}
-			} else if managers.ValidFile(fs) {
+			} else if managers.ValidFile(n) {
 				time.Sleep(2 * time.Second)
 
 				if event.Op&fsnotify.Rename == fsnotify.Rename {
@@ -50,7 +51,7 @@ loop:
 					env.Watcher.Add(event.Name)
 					for _, lib := range db.AllLibraries() {
 						if strings.Contains(event.Name, lib.FilePath) {
-							fs, _ := managers.NewLocalFileStat(event.Name)
+							fs, _ := filesystem.LocalNodeFromPath(event.Name)
 							// TODO: Error checking
 							env.LibraryManager.ProbeFile(&lib, fs)
 							// We can probably only get the MD for the recently added file here

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"gitlab.com/olaris/olaris-server/filesystem"
+
 	// Backend for Rclone
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
@@ -52,7 +54,8 @@ var serveCmd = &cobra.Command{
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
 		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
-		streaming.FeedbackUrlPort = port
+		streaming.FfmpegUrlPort = port
+		filesystem.FfmpegUrlPort = port
 
 		appRoute := rrr.PathPrefix("/app").
 			Handler(http.StripPrefix("/olaris/app", react.GetHandler())).
