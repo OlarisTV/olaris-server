@@ -465,7 +465,7 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 }
 
 // CheckFileAndDeleteIfMissing checks the given media file and if it's no longer present removes it from the database
-func CheckFileAndDeleteIfMissing(m db.Media) {
+func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 	log.WithFields(log.Fields{
 		"path":    m.GetFilePath(),
 		"library": m.GetLibrary().Name,

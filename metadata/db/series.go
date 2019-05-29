@@ -111,17 +111,17 @@ func (file *EpisodeFile) IsSingleFile() bool {
 	return false
 }
 
-// GetFileName is a wrapper for the Media interface
+// GetFileName is a wrapper for the MediaFile interface
 func (file EpisodeFile) GetFileName() string {
 	return file.FileName
 }
 
-// GetFilePath is a wrapper for the Media interface
+// GetFilePath is a wrapper for the MediaFile interface
 func (file EpisodeFile) GetFilePath() string {
 	return file.FilePath
 }
 
-// GetLibrary is a wrapper for the Media interface
+// GetLibrary is a wrapper for the MediaFile interface
 func (file EpisodeFile) GetLibrary() *Library {
 	return &file.Library
 }

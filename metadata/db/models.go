@@ -46,8 +46,8 @@ func (ud *UUIDable) GetUUID() string {
 	return ud.UUID
 }
 
-// Media is an interface for various methods can be done on both episodes and movies
-type Media interface {
+// MediaFile is an interface for various methods can be done on both episodes and movies
+type MediaFile interface {
 	GetFilePath() string
 	GetFileName() string
 	GetLibrary() *Library
