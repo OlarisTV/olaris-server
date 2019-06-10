@@ -60,7 +60,7 @@ var serveCmd = &cobra.Command{
 		mainRouter.Path("/").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 		mainRouter.Path("/olaris").Handler(http.RedirectHandler(appURL.Path, http.StatusMovedPermanently))
 
-		handler := cors.Default().Handler(mainRouter)
+		handler := cors.AllowAll().Handler(mainRouter)
 		handler = handlers.LoggingHandler(os.Stdout, handler)
 
 		log.Infoln("binding on port", port)
