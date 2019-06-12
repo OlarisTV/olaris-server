@@ -83,13 +83,16 @@ func FindContentByUUID(uuid string) *MediaResult {
 	var movie MovieFile
 	var episode EpisodeFile
 
-	db.Where("uuid = ?", uuid).Find(&movie).Count(&count).Preload("library")
+	db.Where("uuid = ?", uuid).Preload("Library").Preload("Streams").Find(&movie).Count(&count)
+
 	if count > 0 {
 		return &MediaResult{Movie: &movie}
 	}
 
 	count = 0
-	db.Where("uuid = ?", uuid).Find(&episode).Count(&count).Preload("library")
+
+	db.Where("uuid = ?", uuid).Preload("Library").Preload("Streams").Find(&episode).Count(&count).Preload("library")
+
 	if count > 0 {
 		return &MediaResult{Episode: &episode}
 	}

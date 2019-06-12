@@ -17,6 +17,7 @@ type CreateSTResponse struct {
 	MetadataPath      string
 	DASHStreamingPath string
 	HLSStreamingPath  string
+	Streams           []*StreamResolver
 }
 
 // CreateSTResponseResolver resolves CreateSTResponse.
@@ -24,18 +25,24 @@ type CreateSTResponseResolver struct {
 	r CreateSTResponse
 }
 
+// MetadataPath has the path to the various metadata codecs
 func (r *CreateSTResponseResolver) MetadataPath() string {
 	return r.r.MetadataPath
 }
 
-// StreamingPath returns URI to HLS manifest.
+// HLSStreamingPath returns URI to HLS manifest.
 func (r *CreateSTResponseResolver) HLSStreamingPath() string {
 	return r.r.HLSStreamingPath
 }
 
-// StreamingPath returns URI to HLS manifest.
+// DASHStreamingPath returns URI to DASH manifest.
 func (r *CreateSTResponseResolver) DASHStreamingPath() string {
 	return r.r.DASHStreamingPath
+}
+
+// Streams returns all known streams for the file in question
+func (r *CreateSTResponseResolver) Streams() []*StreamResolver {
+	return r.r.Streams
 }
 
 // Jwt returns streaming token.
@@ -54,12 +61,14 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	mr := db.FindContentByUUID(args.UUID)
 	var filePath, remote string
 	var backend int
+	var streamables []*StreamResolver
 
 	if mr.Movie != nil {
 		backend = mr.Movie.GetLibrary().Backend
 		remote = mr.Movie.GetLibrary().RcloneName
 		filePath = mr.Movie.FilePath
 	}
+
 	if mr.Episode != nil {
 		backend = mr.Episode.GetLibrary().Backend
 		remote = mr.Episode.GetLibrary().RcloneName
@@ -97,11 +106,22 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	DASHStreamingPath := path.Join(
 		basePath, fmt.Sprintf("/session:%s/dash-manifest.mpd", sessionID))
 
+	var link string
+	for _, stream := range mr.Movie.Streams {
+		// TODO: See if we can add audio here as well
+		if stream.StreamType == "subtitle" {
+			link = path.Join(basePath, fmt.Sprintf("/session:%s/%d/webvtt/0.vtt", sessionID, stream.StreamId))
+			streamables = append(streamables, &StreamResolver{stream, link})
+		}
+
+	}
+
 	return &CreateSTResponseResolver{CreateSTResponse{
 		Error:             nil,
 		Jwt:               token,
 		MetadataPath:      metadataPath,
 		HLSStreamingPath:  HLSStreamingPath,
 		DASHStreamingPath: DASHStreamingPath,
+		Streams:           streamables,
 	}}
 }
