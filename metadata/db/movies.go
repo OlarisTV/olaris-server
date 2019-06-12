@@ -171,7 +171,9 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 
 // FindMoviesInLibrary finds all movies in the given library.
 func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
-	db.Where("library_id = ? AND tmdb_id != 0", libraryID).Find(&movies)
+	//TODO: I don't think movies belong to libraries, movieFiles belong to libraries.
+	db.Where("tmdb_id != 0", libraryID).Find(&movies)
+	// TODO: We should only do this when it's actually resolved and needed.
 	CollectMovieInfo(movies, userID)
 
 	return movies

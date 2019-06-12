@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -97,6 +98,8 @@ type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
 
+var probeMutex = &sync.Mutex{}
+
 func Probe(fileURL string) (*ProbeContainer, error) {
 	log.WithFields(log.Fields{"fileUrl": fileURL}).Debugln("Probing file")
 
@@ -128,7 +131,9 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 			return nil, err
 		}
 		// TODO(Maran): I'm a bit afraid what happens if for some reason the output of the probe is a GB of data. Can/should we check size?
+		probeMutex.Lock()
 		probeCache[fileURL] = cmdOut
+		probeMutex.Unlock()
 
 		err = cmd.Wait()
 	}

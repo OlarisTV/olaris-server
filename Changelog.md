@@ -1,3 +1,19 @@
+### 0.1.2 - 28th of May 2019
+
+* Faster library scanning, should be up to four times faster in this
+  release.
+* Libraries will now show a spinner when they are scanning.
+* Improved watching for file changes, files added to previously empty
+  folders should now also trigger a library rescan.
+
+* Fixed an issue where the next episode was not properly shown in upNext
+  when you finished a season.
+* Fixed an issue where adding libraries too fast would kill the scanning
+  of the first added.
+* Long folder names were being cut-off in the "Add library" screen.
+* Fixed a race condition that could add series multiple times.
+
+
 ### 0.1.1 - 20th of May 2019
 
 * Added a default basepath, this makes it possible to proxy via a third
