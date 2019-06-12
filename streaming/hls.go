@@ -7,12 +7,11 @@ import (
 	"gitlab.com/olaris/olaris-server/hls"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
-	"net/url"
 	"strconv"
 )
 
 func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 		return
@@ -23,7 +22,7 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 		PlayableCodecs: playableCodecs,
 	}
 
-	streams, err := ffmpeg.GetStreams(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(fileLocator)
 	if err != nil {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -76,12 +75,12 @@ func serveHlsMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
 
-	streams, err := ffmpeg.GetStreams(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(fileLocator)
 	if err != nil {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -113,7 +112,7 @@ func serveHlsTransmuxingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	mediaFileURL, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
@@ -164,13 +163,13 @@ func serveHlsTranscodingMasterPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveHlsTranscodingMediaPlaylist(w http.ResponseWriter, r *http.Request) {
-	_, statusErr := getMediaFileURLOrFail(r)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 	}
 
 	streamKey, err := getStreamKey(
-		mux.Vars(r)["fileLocator"],
+		fileLocator,
 		mux.Vars(r)["streamId"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -189,10 +188,9 @@ func buildSubtitlePlaylistItems(representations []ffmpeg.StreamRepresentation, s
 	// Subtitles may be in another file, so we need to list their absolute URI.
 	subtitlePlaylistItems := []hls.SubtitlePlaylistItem{}
 	for _, s := range representations {
-		mediaFileURL, _ := url.Parse(s.Stream.MediaFileURL)
 		// NOTE(Leon Handreke): Because we'd have to propagate the UserID here through
 		// context or something like that and it's not used anyway, just use 0 here.
-		jwt, _ := auth.CreateStreamingJWT(0, mediaFileURL.Path)
+		jwt, _ := auth.CreateStreamingJWT(0, s.Stream.FileLocator.String())
 		subtitlePlaylistItems = append(subtitlePlaylistItems,
 			hls.SubtitlePlaylistItem{
 				StreamRepresentation: s,

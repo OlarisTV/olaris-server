@@ -9,8 +9,6 @@ import (
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
-	"net/url"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -26,22 +24,22 @@ var allowDirectFileAccessFlag = flag.Bool(
 //
 // This function also checks whether the user is allowed to access this file, i.e. whether
 // the passed JWT is valid or whether accessing paths directly is allowed (controlled by a flag)
-func getNode(fileLocatorStr string) (filesystem.Node, error) {
-	return _getNode(fileLocatorStr, false)
+func getFileLocator(urlFileLocatorStr string) (filesystem.FileLocator, error) {
+	return _getFileLocator(urlFileLocatorStr, false)
 
 }
 
-func getStreamingClaims(fileLocatorStr string) (*auth.StreamingClaims, error) {
+func getStreamingClaims(urlFileLocator string) (*auth.StreamingClaims, error) {
 	// Allow both with and without leading slash, but canonical version is without
-	if fileLocatorStr[0] == '/' {
-		fileLocatorStr = fileLocatorStr[1:]
+	if urlFileLocator[0] == '/' {
+		urlFileLocator = urlFileLocator[1:]
 	}
 
-	parts := strings.SplitN(fileLocatorStr, "/", 2)
+	parts := strings.SplitN(urlFileLocator, "/", 2)
 
 	if len(parts) != 2 {
 		return nil,
-			fmt.Errorf("Failed to split file locator \"%s\"", fileLocatorStr)
+			fmt.Errorf("Failed to split urlFileLocator \"%s\"", urlFileLocator)
 	}
 
 	if parts[0] == "jwt" {
@@ -51,81 +49,65 @@ func getStreamingClaims(fileLocatorStr string) (*auth.StreamingClaims, error) {
 		}
 		return claims, nil
 	}
-
 	return nil, fmt.Errorf("No JWT in file locator")
 }
 
-func _getNode(fileLocatorStr string, allowDirectFileAccess bool) (filesystem.Node, error) {
+func _getFileLocator(urlFileLocator string, allowDirectFileAccess bool) (filesystem.FileLocator, error) {
 	// Allow both with and without leading slash, but canonical version is without
-	if fileLocatorStr[0] == '/' {
-		fileLocatorStr = fileLocatorStr[1:]
+	if urlFileLocator[0] == '/' {
+		urlFileLocator = urlFileLocator[1:]
 	}
 
-	parts := strings.SplitN(fileLocatorStr, "/", 2)
+	parts := strings.SplitN(urlFileLocator, "/", 2)
 	if parts[0] == "jwt" {
 		claims, err := auth.ValidateStreamingJWT(parts[1])
 		if err != nil {
-			return nil, fmt.Errorf("Failed to validate JWT: %s", err.Error())
+			return filesystem.FileLocator{},
+				fmt.Errorf("Failed to validate JWT: %s", err.Error())
 		}
 		// Set authenticated to
-		return _getNode(claims.FilePath, true)
+		return _getFileLocator(claims.FilePath, true)
 	}
 
 	if !(allowDirectFileAccess || *allowDirectFileAccessFlag) {
-		return nil, errors.New("Direct file access is not allowed!")
+		return filesystem.FileLocator{},
+			errors.New("Direct file access is not allowed!")
 	}
 
-	return filesystem.GetNode(fileLocatorStr)
-}
-
-func GetMediaFileURL(fileLocatorStr string) (string, error) {
-	l, err := getNode(fileLocatorStr)
+	fileLocator, err := filesystem.ParseFileLocator(urlFileLocator)
 	if err != nil {
-		return "", err
+		return filesystem.FileLocator{}, err
+
 	}
-	return l.FfmpegUrl(), nil
+	return fileLocator, nil
 }
 
-func mediaFileURLExists(mediaFileURLStr string) bool {
-	mediaFileURL, _ := url.Parse(mediaFileURLStr)
-	if mediaFileURL.Scheme == "file" {
-		if fi, err := os.Stat(mediaFileURL.Path); os.IsNotExist(err) || fi.IsDir() {
-			return false
-		}
-	}
-	return true
-}
-
-func getStreamKey(fileLocatorStr string, streamIdStr string) (ffmpeg.StreamKey, error) {
+func getStreamKey(fileLocator filesystem.FileLocator, streamIdStr string) (ffmpeg.StreamKey, error) {
 	streamId, err := strconv.Atoi(streamIdStr)
 	if err != nil {
 		return ffmpeg.StreamKey{}, err
 	}
 
-	url, err := GetMediaFileURL(fileLocatorStr)
-	if err != nil {
-		return ffmpeg.StreamKey{}, err
-	}
-
 	return ffmpeg.StreamKey{
-		StreamId:     int64(streamId),
-		MediaFileURL: url,
+		StreamId:    int64(streamId),
+		FileLocator: fileLocator,
 	}, nil
 }
 
-func getMediaFileURLOrFail(r *http.Request) (string, Error) {
-	mediaFileURL, err := GetMediaFileURL(mux.Vars(r)["fileLocator"])
+func getFileLocatorOrFail(r *http.Request) (filesystem.FileLocator, Error) {
+	fileLocator, err := getFileLocator(mux.Vars(r)["fileLocator"])
 	if err != nil {
-		return "", StatusError{
+		return filesystem.FileLocator{}, StatusError{
 			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),
 			Code: http.StatusInternalServerError,
 		}
 	}
-	if !mediaFileURLExists(mediaFileURL) {
-		return "", StatusError{
-			Err:  fmt.Errorf("Media file \"%s\" doee not exist.", mediaFileURL),
+	_, err = filesystem.GetNodeFromFileLocator(fileLocator)
+	if err != nil {
+		return filesystem.FileLocator{}, StatusError{
+			Err:  fmt.Errorf("Media file \"%s\" does not exist.", fileLocator.String()),
 			Code: http.StatusNotFound,
 		}
 	}
-	return mediaFileURL, nil
+	return fileLocator, nil
 }

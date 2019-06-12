@@ -15,12 +15,12 @@ type StreamingClaims struct {
 }
 
 // CreateStreamingJWT creates a new JWT that will give permission to stream certain media for a certain timespan.
-func CreateStreamingJWT(userID uint, filePath string) (string, error) {
+func CreateStreamingJWT(userID uint, fileLocator string) (string, error) {
 	expiresAt := time.Now().Add(time.Hour * 8).Unix()
 
 	claims := StreamingClaims{
 		userID,
-		filePath,
+		fileLocator,
 		jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"},
 	}
 

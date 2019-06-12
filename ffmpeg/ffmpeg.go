@@ -127,7 +127,7 @@ func StreamRepresentationFromRepresentationId(
 
 	return StreamRepresentation{},
 		fmt.Errorf("No such stream %d/%s found for file %s",
-			s.StreamId, representationId, s.MediaFileURL)
+			s.StreamId, representationId, s.FileLocator)
 }
 
 func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedbackURL string) (*TranscodingSession, error) {

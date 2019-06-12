@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -31,14 +30,11 @@ func (n *LocalNode) IsDir() bool {
 func (n *LocalNode) Path() string {
 	return n.path
 }
-func (n *LocalNode) FfmpegUrl() string {
-	return "file://" + n.path
-}
 func (n *LocalNode) BackendType() BackendType {
 	return BackendLocal
 }
-func (n *LocalNode) FileLocator() string {
-	return path.Join("local", n.path)
+func (n *LocalNode) FileLocator() FileLocator {
+	return FileLocator{Backend: n.BackendType(), Path: n.path}
 }
 func (n *LocalNode) Walk(walkFn WalkFunc) error {
 	return filepath.Walk(n.path, func(walkPath string, info os.FileInfo, err error) error {

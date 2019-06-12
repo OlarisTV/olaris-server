@@ -5,15 +5,9 @@ import (
 	"github.com/ncw/rclone/fs"
 	"github.com/ncw/rclone/vfs"
 	"github.com/pkg/errors"
-	"net/url"
 	"path"
 	"strings"
 )
-
-// TODO(Leon Handreke): Figure out a better way than a package-global variable to
-// convey this info from the top-level command flag to ffmpeg. Or maybe a setter is enough?
-// Also this should go in some util package to build URLs
-var FfmpegUrlPort = 8080
 
 type rclonePath struct {
 	remoteName string
@@ -75,12 +69,6 @@ func (n *RcloneNode) Size() int64 {
 	return n.Node.Size()
 }
 
-func (n *RcloneNode) FfmpegUrl() string {
-	// TODO(Leon Handreke): Issue a streaming ticket here
-	return fmt.Sprintf("http://127.0.0.1:%d/olaris/s/files/%s",
-		FfmpegUrlPort, url.PathEscape(n.FileLocator()))
-}
-
 func (n *RcloneNode) IsDir() bool {
 	return n.Node.IsDir()
 }
@@ -88,12 +76,15 @@ func (n *RcloneNode) IsDir() bool {
 func (n *RcloneNode) BackendType() BackendType {
 	return BackendRclone
 }
-func (n *RcloneNode) FileLocator() string {
+func (n *RcloneNode) FileLocator() FileLocator {
 	// This is a bit of a hack because it seems to be impossible to get the
 	// rclone remote name from vfs.Node
 	for name, v := range vfsCache {
 		if v == n.Node.VFS() {
-			return path.Join("rclone", name, n.Path())
+			return FileLocator{
+				Backend: n.BackendType(),
+				Path:    path.Join("/", name, n.Path()),
+			}
 		}
 	}
 	panic("VFS for given Node not found in cache")

@@ -214,8 +214,8 @@ func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 	return nil
 }
 func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, node filesystem.Node) {
-	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.Path())) ||
-		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.Path())) {
+	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.FileLocator().String())) ||
+		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.FileLocator().String())) {
 		man.probeJobChan <- probeJob{library: library, node: node}
 	} else {
 		log.WithFields(log.Fields{"path": node.Path()}).
@@ -235,7 +235,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	var rootNode filesystem.Node
 	var err error
 	if library.Backend == db.BackendLocal {
-		rootNode, err = filesystem.GetNode(path.Join("local", library.FilePath))
+		rootNode, err = filesystem.LocalNodeFromPath(library.FilePath)
 		fmt.Println(err)
 	} else if library.Backend == db.BackendRclone {
 		rootNode, err = filesystem.RcloneNodeFromPath(
@@ -284,12 +284,12 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 }
 
 func collectStreams(n filesystem.Node) []db.Stream {
-	filePath := n.Path()
 
-	log.WithFields(log.Fields{"filePath": filePath}).Debugln("Reading stream information from file")
+	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
+		Debugln("Reading stream information from file")
 	var streams []db.Stream
 
-	s, err := ffmpeg.GetStreams(n.FfmpegUrl())
+	s, err := ffmpeg.GetStreams(n.FileLocator())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
 		return streams
@@ -310,8 +310,7 @@ func collectStreams(n filesystem.Node) []db.Stream {
 
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
 func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) error {
-	filePath := n.Path()
-	log.WithFields(log.Fields{"filepath": filePath}).Println("Parsing filepath.")
+	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
 
 	basename := n.Name()
 	name := strings.TrimSuffix(basename, filepath.Ext(basename))
@@ -322,7 +321,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) err
 		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := db.MediaItem{
 				FileName:  basename,
-				FilePath:  n.Path(),
+				FilePath:  n.FileLocator().String(),
 				Size:      n.Size(),
 				Title:     parsedInfo.Title,
 				LibraryID: library.ID,
@@ -366,7 +365,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) err
 
 		mi := db.MediaItem{
 			FileName:  basename,
-			FilePath:  n.Path(),
+			FilePath:  n.FileLocator().String(),
 			Size:      n.Size(),
 			Title:     mvi.Title,
 			Year:      mvi.Year,

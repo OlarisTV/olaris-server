@@ -40,7 +40,7 @@ func NewAudioTranscodingSession(
 	}
 
 	args = append(args, []string{
-		"-i", stream.Stream.MediaFileURL,
+		"-i", buildFfmpegUrlFromFileLocator(stream.Stream.FileLocator),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "aac", "-ac", "2", "-ab", strconv.Itoa(encoderParams.audioBitrate),

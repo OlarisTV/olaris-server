@@ -1,16 +1,22 @@
 package streaming
 
 import (
-	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"net/http"
 	"path"
 )
 
 func serveFile(w http.ResponseWriter, r *http.Request) {
-	node, err := getNode(mux.Vars(r)["fileLocator"])
+	fileLocator, statusErr := getFileLocatorOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
+		return
+	}
+
+	node, err := filesystem.GetNodeFromFileLocator(fileLocator)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if node.BackendType() == filesystem.BackendLocal {

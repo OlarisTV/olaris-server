@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io"
-	"net/url"
 	"os"
 	"path"
 	"time"
@@ -140,14 +139,6 @@ func buildIntervals(startTimestamps []DtsTimestamp, totalDuration DtsTimestamp, 
 
 func timestampToDuration(ts DtsTimestamp, timeBase int64) time.Duration {
 	return time.Duration(float64(time.Second) * float64(ts) / float64(timeBase))
-}
-
-func mediaFileURLToFilepath(mediaFileURLStr string) (string, error) {
-	mediaFileURL, _ := url.Parse(mediaFileURLStr)
-	if mediaFileURL.Scheme == "file" {
-		return mediaFileURL.Path, nil
-	}
-	return "", fmt.Errorf("%s is not a local file", mediaFileURLStr)
 }
 
 func getTranscodingLogSink(prefix string) io.WriteCloser {

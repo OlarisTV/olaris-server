@@ -1,11 +1,11 @@
 package ffmpeg
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"math/big"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -19,7 +19,7 @@ const TotalDurationInvalid = float64(-1)
 // will cause mayhem. See https://gitlab.com/olaris/olaris-server/issues/55
 
 type StreamKey struct {
-	MediaFileURL string
+	FileLocator filesystem.FileLocator
 	// StreamId from ffmpeg
 	// StreamId is always 0 for transmuxing
 	StreamId int64
@@ -57,11 +57,17 @@ type Streams struct {
 	SubtitleStreams []Stream
 }
 
-func GetStreams(mediaFileURL string) (*Streams, error) {
+func GetStreams(fileLocator filesystem.FileLocator) (*Streams, error) {
 	streams := Streams{}
-	container, err := Probe(mediaFileURL)
+
+	node, err := filesystem.GetNodeFromFileLocator(fileLocator)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to get filesystem node")
+	}
+
+	container, err := Probe(fileLocator)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to probe with ffmpeg")
 	}
 
 	totalDurationSeconds := TotalDurationInvalid
@@ -93,8 +99,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 			streams.AudioStreams = append(streams.AudioStreams,
 				Stream{
 					StreamKey: StreamKey{
-						MediaFileURL: mediaFileURL,
-						StreamId:     int64(stream.Index),
+						FileLocator: fileLocator,
+						StreamId:    int64(stream.Index),
 					},
 					Codecs:           stream.GetMime(),
 					BitRate:          int64(bitrate),
@@ -114,15 +120,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 			bitrate, _ := strconv.Atoi(stream.BitRate)
 
 			if bitrate == 0 {
-				filepath, err := mediaFileURLToFilepath(mediaFileURL)
-				if err != nil {
-					return nil, fmt.Errorf("Could not determine local path for file %s", mediaFileURL)
-				}
-				fileinfo, err := os.Stat(filepath)
-				if err != nil {
-					return nil, fmt.Errorf("Could not determine filesize for file %s", mediaFileURL)
-				}
-				filesize := fileinfo.Size()
+				filesize := node.Size()
 				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
 				bitrate = int((filesize / int64(totalDurationSeconds)) * 8)
 			}
@@ -133,8 +131,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 
 			streams.VideoStreams = append(streams.VideoStreams, Stream{
 				StreamKey: StreamKey{
-					MediaFileURL: mediaFileURL,
-					StreamId:     int64(stream.Index),
+					FileLocator: fileLocator,
+					StreamId:    int64(stream.Index),
 				},
 				Codecs:           stream.GetMime(),
 				BitRate:          int64(bitrate),
@@ -157,8 +155,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 
 			streams.SubtitleStreams = append(streams.SubtitleStreams, Stream{
 				StreamKey: StreamKey{
-					MediaFileURL: mediaFileURL,
-					StreamId:     int64(stream.Index),
+					FileLocator: fileLocator,
+					StreamId:    int64(stream.Index),
 				},
 				TotalDuration:    time.Duration(totalDurationSeconds * float64(time.Second)),
 				TotalDurationDts: DtsTimestamp(totalDurationSeconds * 1000),
@@ -173,7 +171,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 	}
 
 	externalSubtitles, _ := buildExternalSubtitleStreams(
-		mediaFileURL, time.Duration(totalDurationSeconds*float64(time.Second)))
+		fileLocator, time.Duration(totalDurationSeconds*float64(time.Second)))
 	streams.SubtitleStreams = append(streams.SubtitleStreams, externalSubtitles...)
 
 	return &streams, nil
@@ -183,48 +181,60 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 func (s *Streams) GetVideoStream() Stream {
 	// TODO(Leon Handreke): Figure out something better to do here - does this ever happen?
 	if len(s.VideoStreams) > 1 {
-		log.Infof("File %s does not contain exactly one video stream", s.VideoStreams[0].MediaFileURL)
+		log.Infof(
+			"File %s does not contain exactly one video stream",
+			s.VideoStreams[0].FileLocator)
 	}
 	return s.VideoStreams[0]
 
 }
 
-func buildExternalSubtitleStreams(mediaFileURL string, duration time.Duration) ([]Stream, error) {
+func buildExternalSubtitleStreams(
+	fileLocator filesystem.FileLocator,
+	duration time.Duration) ([]Stream, error) {
+
 	streams := []Stream{}
 
-	mediaFilePath, err := mediaFileURLToFilepath(mediaFileURL)
-	if err == nil {
-		mediaFilePathWithoutExt := strings.TrimSuffix(mediaFilePath, filepath.Ext(mediaFileURL))
-		r := regexp.MustCompile(regexp.QuoteMeta(mediaFilePathWithoutExt) + "\\.?(?P<lang>.*).srt")
+	// TODO(Leon Handreke): We should be able to support other backends, but it will be another
+	// point where the abstraction will be a bit leaky
+	if fileLocator.Backend != filesystem.BackendLocal {
+		return []Stream{}, nil
+	}
 
-		subtitleFiles, _ := filepath.Glob(mediaFilePathWithoutExt + "*.srt")
-		for _, subtitleFile := range subtitleFiles {
-			match := r.FindStringSubmatch(subtitleFile)
-			// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
-			tag := match[1]
-			lang := "unk"
+	mediaFilePath := fileLocator.Path
+	mediaFilePathWithoutExt := strings.TrimSuffix(mediaFilePath, filepath.Ext(mediaFilePath))
+	r := regexp.MustCompile(regexp.QuoteMeta(mediaFilePathWithoutExt) + "\\.?(?P<lang>.*).srt")
 
-			if tag == "" {
-				tag = "External"
-			} else {
-				if humanizedToLangTag[tag] != "" {
-					lang = humanizedToLangTag[tag]
-				}
+	subtitleFiles, _ := filepath.Glob(mediaFilePathWithoutExt + "*.srt")
+	for _, subtitleFile := range subtitleFiles {
+		match := r.FindStringSubmatch(subtitleFile)
+		// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
+		tag := match[1]
+		lang := "unk"
+
+		if tag == "" {
+			tag = "External"
+		} else {
+			if humanizedToLangTag[tag] != "" {
+				lang = humanizedToLangTag[tag]
 			}
-
-			streams = append(streams,
-				Stream{
-					StreamKey: StreamKey{
-						MediaFileURL: subtitleFile,
-						StreamId:     0,
-					},
-					TotalDuration:    duration,
-					StreamType:       "subtitle",
-					Language:         lang,
-					Title:            tag,
-					EnabledByDefault: false,
-				})
 		}
+
+		streams = append(streams,
+			Stream{
+				StreamKey: StreamKey{
+					FileLocator: filesystem.FileLocator{
+						Backend: fileLocator.Backend,
+						Path:    subtitleFile,
+					},
+					StreamId: 0,
+				},
+				TotalDuration:    duration,
+				StreamType:       "subtitle",
+				Language:         lang,
+				Title:            tag,
+				EnabledByDefault: false,
+			})
 	}
 
 	return streams, nil
@@ -232,7 +242,7 @@ func buildExternalSubtitleStreams(mediaFileURL string, duration time.Duration) (
 
 func GetStream(streamKey StreamKey) (Stream, error) {
 	// TODO(Leon Handreke): Error handling
-	c, err := GetStreams(streamKey.MediaFileURL)
+	c, err := GetStreams(streamKey.FileLocator)
 	if err != nil {
 		return Stream{}, err
 	}
@@ -243,5 +253,5 @@ func GetStream(streamKey StreamKey) (Stream, error) {
 			return s, nil
 		}
 	}
-	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey.MediaFileURL)
+	return Stream{}, fmt.Errorf("Could not find stream %s", streamKey.FileLocator)
 }

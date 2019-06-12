@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -15,9 +16,18 @@ const (
 	BackendRclone
 )
 
-type fileLocator struct {
+type FileLocator struct {
 	Backend BackendType
 	Path    string
+}
+
+var backendTypeToString = map[BackendType]string{
+	BackendLocal:  "local",
+	BackendRclone: "rclone",
+}
+
+func (fl FileLocator) String() string {
+	return fmt.Sprintf("%s#%s", backendTypeToString[fl.Backend], fl.Path)
 }
 
 type WalkFunc func(path string, node Node, err error) error
@@ -27,37 +37,31 @@ type Node interface {
 	Size() int64
 	Name() string
 	Path() string
-	FfmpegUrl() string
 	IsDir() bool
 	Walk(walkFunc WalkFunc) error
-	FileLocator() string
+	FileLocator() FileLocator
 }
 
-func splitLocatorString(locatorStr string) (fileLocator, error) {
+func ParseFileLocator(locatorStr string) (FileLocator, error) {
 	if locatorStr[0] == '/' {
 		locatorStr = locatorStr[1:]
 
 	}
-	parts := strings.SplitN(locatorStr, "/", 2)
+	parts := strings.SplitN(locatorStr, "#", 2)
 
 	if len(parts) != 2 {
-		return fileLocator{}, fmt.Errorf("\"%s\" is not a file locator string", locatorStr)
+		return FileLocator{}, fmt.Errorf("\"%s\" is not a file locator string", locatorStr)
 	}
 	if parts[0] == "rclone" {
-		return fileLocator{BackendRclone, "/" + parts[1]}, nil
+		return FileLocator{BackendRclone, "/" + parts[1]}, nil
 	} else if parts[0] == "local" {
-		return fileLocator{BackendLocal, "/" + parts[1]}, nil
+		return FileLocator{BackendLocal, "/" + parts[1]}, nil
 	}
 	// Don't require an explicit local prefix for now
-	return fileLocator{BackendLocal, "/" + locatorStr}, nil
+	return FileLocator{BackendLocal, path.Clean("/" + locatorStr)}, nil
 }
 
-func GetNode(locator string) (Node, error) {
-	l, err := splitLocatorString(locator)
-	if err != nil {
-		return nil, err
-	}
-
+func GetNodeFromFileLocator(l FileLocator) (Node, error) {
 	if l.Backend == BackendLocal {
 		return LocalNodeFromPath(l.Path)
 	} else if l.Backend == BackendRclone {

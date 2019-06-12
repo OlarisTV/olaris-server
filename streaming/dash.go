@@ -7,11 +7,10 @@ import (
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
-	"net/url"
 )
 
 func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 		return
@@ -22,7 +21,7 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 		PlayableCodecs: playableCodecs,
 	}
 
-	streams, err := ffmpeg.GetStreams(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(fileLocator)
 	if err != nil {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -57,11 +56,9 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 	subtitleStreams := []dash.SubtitleStreamRepresentation{}
 	subtitleRepresentations := ffmpeg.GetSubtitleStreamRepresentations(streams.SubtitleStreams)
 	for _, s := range subtitleRepresentations {
-		// TODO(Leon Handreke): Build a JWT here
-		mediaFileURLAsURL, _ := url.Parse(s.Stream.MediaFileURL)
 		// NOTE(Leon Handreke): Because we'd have to propagate the UserID here through
 		// context or something like that and it's not used anyway, just use 0 here.
-		jwt, err := auth.CreateStreamingJWT(0, mediaFileURLAsURL.Path)
+		jwt, err := auth.CreateStreamingJWT(0, fileLocator.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
