@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -98,6 +99,8 @@ type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
 
+var probeMutex = &sync.Mutex{}
+
 func Probe(fileURL string) (*ProbeContainer, error) {
 	cmdOut, inCache := probeCache[fileURL]
 
@@ -130,7 +133,9 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 		if err != nil {
 			return nil, err
 		}
+		probeMutex.Lock()
 		probeCache[fileURL] = cmdOut
+		probeMutex.Unlock()
 
 		err = cmd.Wait()
 	}
