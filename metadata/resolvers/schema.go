@@ -208,6 +208,8 @@ var SchemaTxt = `
 	  resolution: String
 	  # Total duration of the stream in seconds
 	  totalDuration: Float
+	  # Stream/Track ID as found in the original file
+	  streamID: Int
 	}
 
 	# A movie file
