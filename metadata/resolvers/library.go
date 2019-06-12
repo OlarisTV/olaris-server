@@ -46,13 +46,26 @@ func (r *LibraryResolver) ID() int32 {
 }
 
 // Movies returns movies in Library.
-func (r *LibraryResolver) Movies() []*MovieResolver {
-	return r.r.Movies
+func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
+	userID, _ := auth.UserID(ctx)
+	var mr []*MovieResolver
+	for _, movie := range db.FindMoviesInLibrary(r.r.ID, userID) {
+		if movie.Title != "" {
+			mov := MovieResolver{r: movie}
+			mr = append(mr, &mov)
+		}
+	}
+	return mr
 }
 
 // Episodes returns episodes in Library.
-func (r *LibraryResolver) Episodes() []*EpisodeResolver {
-	return r.r.Episodes
+func (r *LibraryResolver) Episodes(ctx context.Context) (eps []*EpisodeResolver) {
+	userID, _ := auth.UserID(ctx)
+	for _, episode := range db.FindEpisodesInLibrary(r.r.ID, userID) {
+		eps = append(eps, &EpisodeResolver{r: newEpisode(&episode, userID)})
+	}
+
+	return eps
 }
 
 // FilePath returns filesystem path for library.
@@ -188,24 +201,10 @@ type LibraryResponse struct {
 
 // Libraries return all libraries.
 func (r *Resolver) Libraries(ctx context.Context) []*LibraryResolver {
-	userID, _ := auth.UserID(ctx)
 	var l []*LibraryResolver
 	libraries := db.AllLibraries()
 	for _, library := range libraries {
 		list := Library{library, nil, nil}
-		var mr []*MovieResolver
-		for _, movie := range db.FindMoviesInLibrary(library.ID, userID) {
-			if movie.Title != "" {
-				mov := MovieResolver{r: movie}
-				mr = append(mr, &mov)
-			}
-		}
-		list.Movies = mr
-
-		for _, episode := range db.FindEpisodesInLibrary(library.ID, userID) {
-			list.Episodes = append(list.Episodes, &EpisodeResolver{r: newEpisode(&episode, userID)})
-		}
-
 		lib := LibraryResolver{r: list}
 		l = append(l, &lib)
 	}

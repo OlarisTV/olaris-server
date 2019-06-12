@@ -241,7 +241,7 @@ func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 // FindEpisodesInLibrary returns all episodes in the given library.
 func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
 	// TODO: Fix this, episodes don't live in libraries, files do.
-	db.Where("library_id =?", libraryID).Find(&episodes)
+	db.Find(&episodes)
 	CollectEpisodeData(episodes, userID)
 
 	return episodes
