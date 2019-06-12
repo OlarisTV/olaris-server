@@ -9,10 +9,16 @@ var updateStreamLock = false
 
 // StreamResolver resolves stream information.
 type StreamResolver struct {
-	r db.Stream
+	r         db.Stream
+	streamURL string
 }
 
 // Do we really need to do all this ugly pointer stuff to let graphql handle empty values?
+
+// StreamURL returns a streamURL
+func (r *StreamResolver) StreamURL() *string {
+	return &r.streamURL
+}
 
 // CodecName returns codecname
 func (r *StreamResolver) CodecName() *string {

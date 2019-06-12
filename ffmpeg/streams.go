@@ -1,6 +1,7 @@
 package ffmpeg
 
 import (
+	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"math/big"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"time"
 )
+
+const TotalDurationInvalid = float64(-1)
 
 // WARNING: These structs are cached in the database, so adding fields or changing types
 // will cause mayhem. See https://gitlab.com/olaris/olaris-server/issues/55
@@ -61,18 +64,30 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 		return nil, err
 	}
 
+	totalDurationSeconds := TotalDurationInvalid
+	if container.Format.DurationSeconds > 0 {
+		totalDurationSeconds = container.Format.DurationSeconds
+	}
+
 	for _, stream := range container.Streams {
 
 		timeBase, err := parseRational(stream.TimeBase)
 		if err != nil {
 			return nil, err
 		}
-		totalDurationTs := DtsTimestamp(stream.DurationTs)
-		if stream.DurationTs == 0 {
+
+		totalDurationTs := DtsTimestampInvalid
+		if stream.DurationTs > 0 {
+			totalDurationTs = DtsTimestamp(stream.DurationTs)
+		} else if totalDurationSeconds != TotalDurationInvalid {
 			totalDurationTs = DtsTimestamp(container.Format.DurationSeconds * float64(timeBase.Denom().Int64()))
 		}
 
 		if stream.CodecType == "audio" {
+			if totalDurationSeconds == TotalDurationInvalid {
+				return nil, errors.New("Failed to probe file duration")
+			}
+
 			bitrate, _ := strconv.Atoi(stream.BitRate)
 
 			streams.AudioStreams = append(streams.AudioStreams,
@@ -83,7 +98,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					},
 					Codecs:           stream.GetMime(),
 					BitRate:          int64(bitrate),
-					TotalDuration:    container.Format.Duration(),
+					TotalDuration:    time.Duration(totalDurationSeconds * float64(time.Second)),
 					TotalDurationDts: totalDurationTs,
 					StreamType:       stream.CodecType,
 					Language:         GetLanguageTag(stream),
@@ -92,6 +107,10 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					TimeBase:         timeBase,
 				})
 		} else if stream.CodecType == "video" {
+			if totalDurationSeconds == TotalDurationInvalid {
+				return nil, errors.New("Failed to probe file duration")
+			}
+
 			bitrate, _ := strconv.Atoi(stream.BitRate)
 
 			if bitrate == 0 {
@@ -105,7 +124,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				}
 				filesize := fileinfo.Size()
 				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
-				bitrate = int((filesize / int64(container.Format.DurationSeconds)) * 8)
+				bitrate = int((filesize / int64(totalDurationSeconds)) * 8)
 			}
 			frameRate, err := parseRational(stream.RFrameRate)
 			if err != nil {
@@ -122,7 +141,7 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				FrameRate:        frameRate,
 				Width:            stream.Width,
 				Height:           stream.Height,
-				TotalDuration:    container.Format.Duration(),
+				TotalDuration:    time.Duration(totalDurationSeconds * float64(time.Second)),
 				TotalDurationDts: totalDurationTs,
 				TimeBase:         timeBase,
 				StreamType:       stream.CodecType,
@@ -130,11 +149,10 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 				Profile:          stream.Profile,
 			})
 		} else if stream.CodecType == "subtitle" {
-			totalDuration := container.Format.Duration()
 			// TODO(Leon Handreke): This usually happens for next-to-the-file .srt files, ffprobe doesn't return
 			// a duration for them. Do something more intelligent (such as actually parsing the file).
-			if totalDuration == 0 {
-				totalDuration = time.Duration(time.Second * 100000)
+			if totalDurationSeconds == TotalDurationInvalid {
+				totalDurationSeconds = float64(time.Second * 100000)
 			}
 
 			streams.SubtitleStreams = append(streams.SubtitleStreams, Stream{
@@ -142,8 +160,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 					MediaFileURL: mediaFileURL,
 					StreamId:     int64(stream.Index),
 				},
-				TotalDuration:    totalDuration,
-				TotalDurationDts: DtsTimestamp(totalDuration.Seconds() * 1000),
+				TotalDuration:    time.Duration(totalDurationSeconds * float64(time.Second)),
+				TotalDurationDts: DtsTimestamp(totalDurationSeconds * 1000),
 				TimeBase:         big.NewRat(1, 1000),
 				StreamType:       "subtitle",
 				Language:         GetLanguageTag(stream),
@@ -154,7 +172,8 @@ func GetStreams(mediaFileURL string) (*Streams, error) {
 		}
 	}
 
-	externalSubtitles, _ := buildExternalSubtitleStreams(mediaFileURL, container.Format.Duration())
+	externalSubtitles, _ := buildExternalSubtitleStreams(
+		mediaFileURL, time.Duration(totalDurationSeconds*float64(time.Second)))
 	streams.SubtitleStreams = append(streams.SubtitleStreams, externalSubtitles...)
 
 	return &streams, nil

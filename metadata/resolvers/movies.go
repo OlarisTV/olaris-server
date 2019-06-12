@@ -156,7 +156,7 @@ func (r *MovieFileResolver) TotalDuration() *float64 {
 // Streams return all streams
 func (r *MovieFileResolver) Streams() (streams []*StreamResolver) {
 	for _, stream := range r.r.Streams {
-		streams = append(streams, &StreamResolver{stream})
+		streams = append(streams, &StreamResolver{r: stream})
 	}
 	return streams
 }
