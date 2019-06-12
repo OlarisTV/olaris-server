@@ -6,6 +6,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/helpers"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // ParsedMovieInfo holds extracted information from the given filename.
@@ -57,6 +58,10 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 			}
 		}
 	}
+	// Remove everything with at least two spaces and everything after, normally this is just garbage.
+	psi.Title = regexp.MustCompile("\\s{2,}.*").ReplaceAllString(psi.Title, "")
+	psi.Title = strings.Trim(psi.Title, " ")
+
 	log.WithFields(log.Fields{"title": psi.Title}).Debugln("Done parsing title.")
 	return &psi
 }
