@@ -295,14 +295,14 @@ func collectStreams(n filesystem.Node) []db.Stream {
 		return streams
 	}
 
-	streams = append(streams, db.Stream{Stream: s.GetVideoStream()})
+	streams = append(streams, DatabaseStreamFromFfmpegStream(s.GetVideoStream()))
 
 	for _, s := range s.AudioStreams {
-		streams = append(streams, db.Stream{Stream: s})
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
 	}
 
 	for _, s := range s.SubtitleStreams {
-		streams = append(streams, db.Stream{Stream: s})
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
 	}
 
 	return streams
@@ -510,4 +510,50 @@ func (man *LibraryManager) RefreshAll() {
 	db.MergeDuplicateMovies()
 
 	log.Println("Finished refreshing libraries.")
+}
+
+func FfmpegStreamFromDatabaseStream(s db.Stream) ffmpeg.Stream {
+	return ffmpeg.Stream{
+		StreamKey: ffmpeg.StreamKey{
+			FileLocator: s.StreamKey.FileLocator,
+			StreamId:    s.StreamKey.StreamId,
+		},
+		TotalDuration:    s.TotalDuration,
+		TimeBase:         s.TimeBase,
+		TotalDurationDts: ffmpeg.DtsTimestamp(s.TotalDurationDts),
+		Codecs:           s.Codecs,
+		CodecName:        s.CodecName,
+		Profile:          s.Profile,
+		BitRate:          s.BitRate,
+		FrameRate:        s.FrameRate,
+		Width:            s.Width,
+		Height:           s.Height,
+		StreamType:       s.StreamType,
+		Language:         s.Language,
+		Title:            s.Title,
+		EnabledByDefault: s.EnabledByDefault,
+	}
+}
+
+func DatabaseStreamFromFfmpegStream(s ffmpeg.Stream) db.Stream {
+	return db.Stream{
+		StreamKey: db.StreamKey{
+			FileLocator: s.StreamKey.FileLocator,
+			StreamId:    s.StreamKey.StreamId,
+		},
+		TotalDuration:    s.TotalDuration,
+		TimeBase:         s.TimeBase,
+		TotalDurationDts: int64(s.TotalDurationDts),
+		Codecs:           s.Codecs,
+		CodecName:        s.CodecName,
+		Profile:          s.Profile,
+		BitRate:          s.BitRate,
+		FrameRate:        s.FrameRate,
+		Width:            s.Width,
+		Height:           s.Height,
+		StreamType:       s.StreamType,
+		Language:         s.Language,
+		Title:            s.Title,
+		EnabledByDefault: s.EnabledByDefault,
+	}
 }

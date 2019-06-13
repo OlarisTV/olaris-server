@@ -3,16 +3,50 @@ package db
 import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"math/big"
+	"time"
 )
 
-// Stream holds information about the various streams included in a mediafile. This can be audio/video or even subtitle data.
+// These are copies of the same structs in the ffmpeg package to a) avoid a dependency of the db
+// package on the ffmpeg package and b) allow the ffmpeg package to be advanced separately
+// from the database.
+type StreamKey struct {
+	FileLocator filesystem.FileLocator
+	// StreamId from ffmpeg
+	// StreamId is always 0 for transmuxing
+	StreamId int64
+}
+
 type Stream struct {
-	ffmpeg.Stream
 	gorm.Model
 	UUIDable
 	OwnerID   uint
 	OwnerType string
+
+	StreamKey
+
+	TotalDuration time.Duration
+
+	TimeBase         *big.Rat
+	TotalDurationDts int64
+	// codecs string ready for DASH/HLS serving
+	Codecs    string
+	CodecName string
+	Profile   string
+	BitRate   int64
+	FrameRate *big.Rat
+
+	Width  int
+	Height int
+
+	// "audio", "video", "subtitle"
+	StreamType string
+	// Only relevant for audio and subtitles. Language code.
+	Language string
+	// User-visible string for this audio or subtitle track
+	Title            string
+	EnabledByDefault bool
 }
 
 // UpdateAllStreams updates all streams for all mediaItems
