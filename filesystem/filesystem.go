@@ -53,9 +53,9 @@ func ParseFileLocator(locatorStr string) (FileLocator, error) {
 		return FileLocator{}, fmt.Errorf("\"%s\" is not a file locator string", locatorStr)
 	}
 	if parts[0] == "rclone" {
-		return FileLocator{BackendRclone, "/" + parts[1]}, nil
+		return FileLocator{BackendRclone, parts[1]}, nil
 	} else if parts[0] == "local" {
-		return FileLocator{BackendLocal, "/" + parts[1]}, nil
+		return FileLocator{BackendLocal, parts[1]}, nil
 	}
 	// Don't require an explicit local prefix for now
 	return FileLocator{BackendLocal, path.Clean("/" + locatorStr)}, nil
