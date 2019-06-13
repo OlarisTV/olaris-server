@@ -24,6 +24,7 @@ func serveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if node.BackendType() == filesystem.BackendRclone {
 		serveRcloneFile(w, r, node)
+		return
 	}
 
 	http.NotFound(w, r)
