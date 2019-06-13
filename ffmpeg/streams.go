@@ -60,11 +60,6 @@ type Streams struct {
 func GetStreams(fileLocator filesystem.FileLocator) (*Streams, error) {
 	streams := Streams{}
 
-	node, err := filesystem.GetNodeFromFileLocator(fileLocator)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get filesystem node")
-	}
-
 	container, err := Probe(fileLocator)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to probe with ffmpeg")
@@ -120,6 +115,11 @@ func GetStreams(fileLocator filesystem.FileLocator) (*Streams, error) {
 			bitrate, _ := strconv.Atoi(stream.BitRate)
 
 			if bitrate == 0 {
+				node, err := filesystem.GetNodeFromFileLocator(fileLocator)
+				if err != nil {
+					return nil, errors.Wrap(err, "Failed to get filesystem node")
+				}
+
 				filesize := node.Size()
 				// TODO(Leon Handreke): Is there a nicer way to do bits/bytes conversion?
 				bitrate = int((filesize / int64(totalDurationSeconds)) * 8)

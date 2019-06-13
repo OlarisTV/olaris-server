@@ -104,12 +104,15 @@ func getFileLocatorOrFail(r *http.Request) (filesystem.FileLocator, Error) {
 			Code: http.StatusInternalServerError,
 		}
 	}
-	_, err = filesystem.GetNodeFromFileLocator(fileLocator)
-	if err != nil {
-		return filesystem.FileLocator{}, StatusError{
-			Err: errors.Wrap(err,
-				fmt.Sprintf("Media file \"%s\" does not exist.", fileLocator)),
-			Code: http.StatusNotFound,
+	// Only check for local files cause it's quick
+	if fileLocator.Backend == filesystem.BackendLocal {
+		_, err = filesystem.GetNodeFromFileLocator(fileLocator)
+		if err != nil {
+			return filesystem.FileLocator{}, StatusError{
+				Err: errors.Wrap(err,
+					fmt.Sprintf("Media file \"%s\" does not exist.", fileLocator)),
+				Code: http.StatusNotFound,
+			}
 		}
 	}
 	return fileLocator, nil
