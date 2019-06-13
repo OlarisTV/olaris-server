@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/helpers"
+	"path"
 	"time"
 )
 
@@ -31,6 +33,7 @@ type Library struct {
 	RcloneName         string
 	FilePath           string `gorm:"unique_index:idx_file_path"`
 	Name               string
+	Healthy            bool `gorm:"default:'1'"`
 	RefreshStartedAt   time.Time
 	RefreshCompletedAt time.Time
 }
@@ -86,14 +89,19 @@ func DeleteLibrary(id int) (Library, error) {
 
 // AddLibrary adds a filesystem folder and starts tracking media inside the folders.
 func AddLibrary(lib *Library) error {
-
 	if lib.Backend == BackendLocal && !helpers.FileExists(lib.FilePath) {
 		return fmt.Errorf("supplied library path does not exist")
 	}
 
-	// TODO: We could consider checking if the path at rclone even exists.
-	if lib.Backend == BackendRclone && lib.RcloneName == "" {
-		return fmt.Errorf("backend is set to rclone but no rclone name has been specified")
+	if lib.Backend == BackendRclone {
+		if lib.RcloneName == "" {
+			return fmt.Errorf("backend is set to rclone but no Rclone name has been specified")
+		}
+
+		_, err := filesystem.RcloneNodeFromPath(path.Join(lib.RcloneName, lib.FilePath))
+		if err != nil {
+			return fmt.Errorf("could not find path on rclone remote or remote threw an error: '%s'", err)
+		}
 	}
 
 	log.WithFields(log.Fields{"name": lib.Name, "path": lib.FilePath, "kind": lib.Kind}).Infoln("Adding library")

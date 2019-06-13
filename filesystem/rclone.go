@@ -5,6 +5,7 @@ import (
 	"github.com/ncw/rclone/fs"
 	"github.com/ncw/rclone/vfs"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"path"
 	"strings"
 )
@@ -17,8 +18,8 @@ type rclonePath struct {
 func splitRclonePath(pathStr string) (rclonePath, error) {
 	if pathStr[0] == '/' {
 		pathStr = pathStr[1:]
-
 	}
+
 	parts := strings.SplitN(pathStr, "/", 2)
 
 	if len(parts) != 2 {
@@ -43,6 +44,7 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 	}
 
 	if _, inCache := vfsCache[l.remoteName]; !inCache {
+		log.WithFields(log.Fields{"remoteName": l.remoteName}).Debugln("Creating Rclone VFS")
 		filesystem, err := fs.NewFs(l.remoteName + ":/")
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
@@ -51,7 +53,9 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		vfsCache[l.remoteName] = vfs.New(filesystem, &vfs.Options{ReadOnly: true,
 			CacheMode: vfs.CacheModeFull})
 	}
-	node, err := vfsCache[l.remoteName].Stat("/" + l.path)
+	p := "/" + l.path
+	log.WithFields(log.Fields{"path": p, "remoteName": l.remoteName}).Debugln("Checking if Rclone path exists")
+	node, err := vfsCache[l.remoteName].Stat(p)
 	if err != nil {
 		return nil, err
 	}

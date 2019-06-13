@@ -133,8 +133,11 @@ var SchemaTxt = `
 		# Path that this library manages
 		filePath: String!
 
-		# Whether it's currently scanning the library
+		# Whether olaris-server is currently scanning the library
 		isRefreshing: Boolean!
+
+		# This attribute will be false whenever a Rclone remote can't be reached
+		healthy: Boolean!
 
 		movies: [Movie]!
 		episodes: [Episode]!

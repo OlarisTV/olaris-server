@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"fmt"
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
@@ -234,17 +233,30 @@ func (man *LibraryManager) Probe(library *db.Library) {
 
 	var rootNode filesystem.Node
 	var err error
+
+	// TODO: Should this be in it's own healthCheck method on the library or something?
 	if library.Backend == db.BackendLocal {
 		rootNode, err = filesystem.LocalNodeFromPath(library.FilePath)
-		fmt.Println(err)
-	} else if library.Backend == db.BackendRclone {
-		rootNode, err = filesystem.RcloneNodeFromPath(
-			path.Join(library.RcloneName, library.FilePath))
 		if err != nil {
-			log.WithFields(log.Fields{"rcloneName": library.RcloneName, "error": err.Error()}).
-				Errorln("Rclone backend not found in Rclone config file.")
+			log.WithFields(log.Fields{"path": library.FilePath, "error": err.Error()}).Errorln("Got an error trying to create local rootnode")
+			library.Healthy = false
+			db.UpdateLibrary(library)
+			return
 		}
+		library.Healthy = true
+		db.UpdateLibrary(library)
+	} else if library.Backend == db.BackendRclone {
+		rootNode, err = filesystem.RcloneNodeFromPath(path.Join(library.RcloneName, library.FilePath))
+		if err != nil {
+			log.WithFields(log.Fields{"rcloneName": library.RcloneName, "error": err.Error()}).Errorln("Something went wrong when trying to connect to the Rclone remote")
+			library.Healthy = false
+			db.UpdateLibrary(library)
+			return
+		}
+		library.Healthy = true
+		db.UpdateLibrary(library)
 	}
+
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).
@@ -259,6 +271,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 
 		return nil
 	})
+
 	if err != nil {
 		// lol
 	}
@@ -458,16 +471,19 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 
 	switch m.GetLibrary().Backend {
 	case db.BackendLocal:
-		_, err := filesystem.LocalNodeFromPath(m.GetFilePath())
+		p, err := filesystem.ParseFileLocator(m.GetFilePath())
+		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on local")
+		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
 			m.DeleteSelfAndMD()
 		}
 	case db.BackendRclone:
-		_, err := filesystem.RcloneNodeFromPath(
-			path.Join(m.GetLibrary().RcloneName, m.GetFilePath()))
+		p, err := filesystem.ParseFileLocator(m.GetFilePath())
+		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
+		_, err = filesystem.RcloneNodeFromPath(p.Path)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Println("Received error while statting file")
+			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
 			// We only delete on the file does not exist error. Any other errors are not enough reason to wipe the content.
 			if err == vfs.ENOENT {
 				m.DeleteSelfAndMD()
@@ -497,7 +513,6 @@ func (man *LibraryManager) RefreshAll() {
 		if lib.IsLocal() {
 			man.AddWatcher(lib.FilePath)
 		}
-
 		man.Probe(&lib)
 
 		log.WithFields(lib.LogFields()).Infoln("Scanning library for unidentified media.")
@@ -512,6 +527,9 @@ func (man *LibraryManager) RefreshAll() {
 	log.Println("Finished refreshing libraries.")
 }
 
+// TODO: Please tell me we can do this in a cleaner way, this makes my eyes bleed :|
+
+// FfmpegStreamFromDatabaseStream creates a ffmpeg stream object based on a database object
 func FfmpegStreamFromDatabaseStream(s db.Stream) ffmpeg.Stream {
 	return ffmpeg.Stream{
 		StreamKey: ffmpeg.StreamKey{
@@ -535,6 +553,7 @@ func FfmpegStreamFromDatabaseStream(s db.Stream) ffmpeg.Stream {
 	}
 }
 
+// DatabaseStreamFromFfmpegStream does the reverse of the above.
 func DatabaseStreamFromFfmpegStream(s ffmpeg.Stream) db.Stream {
 	return db.Stream{
 		StreamKey: db.StreamKey{

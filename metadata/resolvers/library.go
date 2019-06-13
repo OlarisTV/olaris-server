@@ -38,6 +38,11 @@ func (r *LibraryResolver) Name() string {
 	return r.r.Name
 }
 
+// Healthy returns library name
+func (r *LibraryResolver) Healthy() bool {
+	return r.r.Healthy
+}
+
 // ID returns library ID
 func (r *LibraryResolver) ID() int32 {
 	return int32(r.r.ID)
@@ -165,9 +170,9 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		rcloneName = *args.RcloneName
 	}
 
-	lib := &db.Library{Name: args.Name, FilePath: args.FilePath, Kind: db.MediaType(args.Kind), Backend: int(args.Backend), RcloneName: rcloneName}
+	library = db.Library{Name: args.Name, FilePath: args.FilePath, Kind: db.MediaType(args.Kind), Backend: int(args.Backend), RcloneName: rcloneName}
 
-	err = db.AddLibrary(lib)
+	err = db.AddLibrary(&library)
 
 	if err == nil {
 		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
