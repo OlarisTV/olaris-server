@@ -59,16 +59,9 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	userID, _ := auth.UserID(ctx)
 	mr := db.FindContentByUUID(args.UUID)
 
-	var filePath string
+	filePath := mr.GetFilePath()
+
 	var streamables []*StreamResolver
-
-	if mr.Movie != nil {
-		filePath = mr.Movie.FilePath
-	}
-
-	if mr.Episode != nil {
-		filePath = mr.Episode.FilePath
-	}
 
 	if filePath == "" {
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(fmt.Errorf("No file found for UUID %s", args.UUID))}}
@@ -91,7 +84,7 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		basePath, fmt.Sprintf("/session:%s/dash-manifest.mpd", sessionID))
 
 	var link string
-	for _, stream := range mr.Movie.Streams {
+	for _, stream := range mr.GetStreams() {
 		// TODO: See if we can add audio here as well
 		if stream.StreamType == "subtitle" {
 			link = path.Join(basePath, fmt.Sprintf("/session:%s/%d/webvtt/0.vtt", sessionID, stream.StreamId))
