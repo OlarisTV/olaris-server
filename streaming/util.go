@@ -1,10 +1,10 @@
 package streaming
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
@@ -95,17 +95,20 @@ func getStreamKey(fileLocator filesystem.FileLocator, streamIdStr string) (ffmpe
 }
 
 func getFileLocatorOrFail(r *http.Request) (filesystem.FileLocator, Error) {
-	fileLocator, err := getFileLocator(mux.Vars(r)["fileLocator"])
+	fileLocatorStr := mux.Vars(r)["fileLocator"]
+	fileLocator, err := getFileLocator(fileLocatorStr)
 	if err != nil {
 		return filesystem.FileLocator{}, StatusError{
-			Err:  fmt.Errorf("Failed to build media file URL: %s", err.Error()),
+			Err: errors.Wrap(err,
+				fmt.Sprintf("Failed to build file locator from %s", fileLocatorStr)),
 			Code: http.StatusInternalServerError,
 		}
 	}
 	_, err = filesystem.GetNodeFromFileLocator(fileLocator)
 	if err != nil {
 		return filesystem.FileLocator{}, StatusError{
-			Err:  fmt.Errorf("Media file \"%s\" does not exist.", fileLocator.String()),
+			Err: errors.Wrap(err,
+				fmt.Sprintf("Media file \"%s\" does not exist.", fileLocator)),
 			Code: http.StatusNotFound,
 		}
 	}
