@@ -101,6 +101,16 @@ type EpisodeFile struct {
 	Streams   []Stream `gorm:"polymorphic:Owner;"`
 }
 
+// GetFilePath returns the filepath for this file
+func (file EpisodeFile) GetFilePath() string {
+	return file.FilePath
+}
+
+// GetStreams returns all streams for this file
+func (file EpisodeFile) GetStreams() []Stream {
+	return file.Streams
+}
+
 // IsSingleFile returns true if this is the only file for the given episode.
 func (file *EpisodeFile) IsSingleFile() bool {
 	count := 0

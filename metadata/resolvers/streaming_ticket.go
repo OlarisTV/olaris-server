@@ -58,16 +58,9 @@ func (r *CreateSTResponseResolver) Error() *ErrorResolver {
 func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID string }) *CreateSTResponseResolver {
 	userID, _ := auth.UserID(ctx)
 	mr := db.FindContentByUUID(args.UUID)
+
+	filePath := mr.GetFilePath()
 	var streamables []*StreamResolver
-	var fileLocator string
-
-	if mr.Movie != nil {
-		fileLocator = mr.Movie.FilePath
-	}
-
-	if mr.Episode != nil {
-		fileLocator = mr.Episode.FilePath
-	}
 
 	if fileLocator == "" {
 		return &CreateSTResponseResolver{CreateSTResponse{
@@ -92,7 +85,7 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 		basePath, fmt.Sprintf("/session:%s/dash-manifest.mpd", sessionID))
 
 	var link string
-	for _, stream := range mr.Movie.Streams {
+	for _, stream := range mr.GetStreams() {
 		// TODO: See if we can add audio here as well
 		if stream.StreamType == "subtitle" {
 			link = path.Join(basePath, fmt.Sprintf("/session:%s/%d/webvtt/0.vtt", sessionID, stream.StreamId))

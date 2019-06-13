@@ -71,30 +71,24 @@ func (mi *MediaItem) YearAsString() string {
 	return strconv.FormatUint(mi.Year, 10)
 }
 
-// MediaResult is a struct that can either contain a movie or episode file.
-type MediaResult struct {
-	Movie   *MovieFile
-	Episode *EpisodeFile
-}
-
 // FindContentByUUID can retrieve episode or movie data based on a UUID.
-func FindContentByUUID(uuid string) *MediaResult {
+func FindContentByUUID(uuid string) MediaFile {
 	count := 0
 	var movie MovieFile
 	var episode EpisodeFile
 
 	db.Where("uuid = ?", uuid).Preload("Streams").Preload("Library").Find(&movie).Count(&count)
 	if count > 0 {
-		return &MediaResult{Movie: &movie}
+		return movie
 	}
 
 	count = 0
 	db.Where("uuid = ?", uuid).Preload("Streams").Preload("Library").Find(&episode).Count(&count)
 	if count > 0 {
-		return &MediaResult{Episode: &episode}
+		return episode
 	}
 
-	return &MediaResult{}
+	return nil
 }
 
 // RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
