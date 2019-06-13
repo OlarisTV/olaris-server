@@ -51,6 +51,7 @@ type MediaFile interface {
 	GetFilePath() string
 	GetFileName() string
 	GetLibrary() *Library
+	GetStreams() []Stream
 	DeleteSelfAndMD()
 }
 

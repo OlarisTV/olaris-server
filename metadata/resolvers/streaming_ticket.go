@@ -62,13 +62,13 @@ func (r *Resolver) CreateStreamingTicket(ctx context.Context, args *struct{ UUID
 	filePath := mr.GetFilePath()
 	var streamables []*StreamResolver
 
-	if fileLocator == "" {
+	if filePath == "" {
 		return &CreateSTResponseResolver{CreateSTResponse{
 			Error: CreateErrResolver(fmt.Errorf("No file found for UUID %s", args.UUID)),
 		}}
 	}
 
-	token, err := auth.CreateStreamingJWT(userID, fileLocator)
+	token, err := auth.CreateStreamingJWT(userID, filePath)
 	if err != nil {
 		return &CreateSTResponseResolver{CreateSTResponse{Error: CreateErrResolver(err)}}
 	}

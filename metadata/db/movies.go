@@ -7,12 +7,6 @@ import (
 	"strconv"
 )
 
-// MediaFile is an interface to allow access to both Episode and Movies-files
-type MediaFile interface {
-	GetStreams() []Stream
-	GetFilePath() string
-}
-
 // MovieFile is used to store fileinformation about a movie.
 type MovieFile struct {
 	gorm.Model
@@ -21,16 +15,6 @@ type MovieFile struct {
 	Library Library `gorm:"ForeignKey:LibraryID"`
 	MovieID uint
 	Streams []Stream `gorm:"polymorphic:Owner;"`
-}
-
-// GetFilePath returns the filepath for this file
-func (file MovieFile) GetFilePath() string {
-	return file.FilePath
-}
-
-// GetStreams returns all streams for this file
-func (file MovieFile) GetStreams() []Stream {
-	return file.Streams
 }
 
 // Movie is used to store movie metadata information.
@@ -75,6 +59,11 @@ func (file MovieFile) GetFilePath() string {
 // GetLibrary is a wrapper for the MediaFile interface
 func (file MovieFile) GetLibrary() *Library {
 	return &file.Library
+}
+
+// GetStreams returns all streams for this file
+func (file MovieFile) GetStreams() []Stream {
+	return file.Streams
 }
 
 // DeleteSelfAndMD removes this file and any metadata involved for the movie.
