@@ -3,6 +3,7 @@ package ffmpeg
 import (
 	"fmt"
 	"gitlab.com/olaris/olaris-server/filesystem"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/url"
 )
 
@@ -17,10 +18,9 @@ var FfmpegUrlPort = 8080
 func buildFfmpegUrlFromFileLocator(fileLocator filesystem.FileLocator) string {
 	switch fileLocator.Backend {
 	case filesystem.BackendRclone:
-		// TODO(Leon Handreke): Create a JWT here
-		//jwt, _ := auth.CreateStreamingJWT(0, n.FileLocator().String())
-		return fmt.Sprintf("http://127.0.0.1:%d/olaris/s/files/%s",
-			FfmpegUrlPort, url.PathEscape(fileLocator.String()))
+		jwt, _ := auth.CreateStreamingJWT(0, fileLocator.String())
+		return fmt.Sprintf("http://127.0.0.1:%d/olaris/s/files/jwt/%s",
+			FfmpegUrlPort, url.PathEscape(jwt))
 	case filesystem.BackendLocal:
 		return "file://" + fileLocator.Path
 	}
