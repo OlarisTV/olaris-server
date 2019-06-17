@@ -43,6 +43,16 @@ func (r *LibraryResolver) Healthy() bool {
 	return r.r.Healthy
 }
 
+// Backend returns library's backend type
+func (r *LibraryResolver) Backend() int32 {
+	return int32(r.r.Backend)
+}
+
+// RcloneName returns library Rclonename
+func (r *LibraryResolver) RcloneName() string {
+	return r.r.RcloneName
+}
+
 // ID returns library ID
 func (r *LibraryResolver) ID() int32 {
 	return int32(r.r.ID)

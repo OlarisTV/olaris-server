@@ -136,6 +136,12 @@ var SchemaTxt = `
 		# Whether olaris-server is currently scanning the library
 		isRefreshing: Boolean!
 
+		# Backend for the library (0 - Local filesystem, 1 - Rclone)
+		backend: Int!
+
+		# If Backend is Rclone it will return the name of the remote
+		rcloneName: String!
+
 		# This attribute will be false whenever a Rclone remote can't be reached
 		healthy: Boolean!
 
