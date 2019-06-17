@@ -11,8 +11,9 @@ func (r *Resolver) Remotes() (remotes []*string) {
 
 	sort.Strings(rems)
 
-	for _, r := range rems {
-		remotes = append(remotes, &r)
+	for i := range rems {
+		remotes = append(remotes, &rems[i])
 	}
+
 	return remotes
 }
