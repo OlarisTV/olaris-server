@@ -7,7 +7,7 @@ import (
 )
 
 type uuidArgs struct {
-	Uuid *string
+	UUID *string
 }
 
 // Movies returns all movies.
@@ -15,8 +15,8 @@ func (r *Resolver) Movies(ctx context.Context, args *uuidArgs) []*MovieResolver 
 	userID, _ := auth.UserID(ctx)
 	var l []*MovieResolver
 	var movies []db.Movie
-	if args.Uuid != nil {
-		movies = db.FindMovieByUUID(args.Uuid, userID)
+	if args.UUID != nil {
+		movies = db.FindMovieByUUID(args.UUID, userID)
 	} else {
 		movies = db.FindAllMovies(userID)
 	}
@@ -94,6 +94,12 @@ func (r *MovieResolver) PlayState() *PlayStateResolver {
 // MovieFileResolver resolves the movie information
 type MovieFileResolver struct {
 	r db.MovieFile
+}
+
+// Library returns library
+func (r *MovieFileResolver) Library() *LibraryResolver {
+	lib := db.FindLibrary(int(r.r.LibraryID))
+	return &LibraryResolver{r: Library{Library: lib}}
 }
 
 // LibraryID returns library id

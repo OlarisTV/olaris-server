@@ -49,8 +49,8 @@ func (r *LibraryResolver) Backend() int32 {
 }
 
 // RcloneName returns library Rclonename
-func (r *LibraryResolver) RcloneName() string {
-	return r.r.RcloneName
+func (r *LibraryResolver) RcloneName() *string {
+	return &r.r.RcloneName
 }
 
 // ID returns library ID

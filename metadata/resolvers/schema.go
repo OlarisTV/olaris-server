@@ -140,7 +140,7 @@ var SchemaTxt = `
 		backend: Int!
 
 		# If Backend is Rclone it will return the name of the remote
-		rcloneName: String!
+		rcloneName: String
 
 		# This attribute will be false whenever a Rclone remote can't be reached
 		healthy: Boolean!
@@ -200,6 +200,8 @@ var SchemaTxt = `
 		totalDuration: Float
 		# FileSize in bytes
 		fileSize: Int!
+		# Get the library for the given file
+		library: Library!
 	}
 
 	type Stream {
@@ -263,6 +265,8 @@ var SchemaTxt = `
 		totalDuration: Float
 		# FileSize in bytes
 		fileSize: Int!
+		# Get the library for the given file
+		library: Library!
 	}
 
 	# Invite that can be used to allow other users access to your server.
