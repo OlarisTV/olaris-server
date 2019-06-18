@@ -6,19 +6,39 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-type uuidArgs struct {
-	UUID *string
+type queryArgs struct {
+	UUID   *string
+	Offset *int32
+	Limit  *int32
+}
+
+func createQd(args *queryArgs) *db.QueryDetails {
+	qd := db.QueryDetails{}
+
+	if args.Limit == nil {
+		qd.Limit = 50
+	} else {
+		qd.Limit = int(*args.Limit)
+	}
+
+	if args.Offset == nil {
+		qd.Offset = 0
+	} else {
+		qd.Offset = int(*args.Offset)
+	}
+	return &qd
 }
 
 // Movies returns all movies.
-func (r *Resolver) Movies(ctx context.Context, args *uuidArgs) []*MovieResolver {
+func (r *Resolver) Movies(ctx context.Context, args *queryArgs) []*MovieResolver {
 	userID, _ := auth.UserID(ctx)
 	var l []*MovieResolver
 	var movies []db.Movie
+	qd := createQd(args)
 	if args.UUID != nil {
 		movies = db.FindMovieByUUID(args.UUID, userID)
 	} else {
-		movies = db.FindAllMovies(userID)
+		movies = db.FindAllMovies(qd)
 	}
 	for _, movie := range movies {
 		mov := MovieResolver{r: movie}

@@ -63,15 +63,17 @@ func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolv
 }
 
 // Series return series.
-func (r *Resolver) Series(ctx context.Context, args *mustUUIDArgs) []*SeriesResolver {
+func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolver {
 	userID, _ := auth.UserID(ctx)
 	var resolvers []*SeriesResolver
 	var series []db.Series
 
+	qd := createQd(args)
+
 	if args.UUID != nil {
 		series = db.FindSeriesByUUID(*args.UUID)
 	} else {
-		series = db.FindAllSeries()
+		series = db.FindAllSeries(qd)
 	}
 
 	for _, serie := range series {
