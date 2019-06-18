@@ -191,8 +191,8 @@ func FindSeriesForMDRefresh() (series []Series) {
 }
 
 // FindAllSeries retrieves all identified series from the db.
-func FindAllSeries() (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Find(&series)
+func FindAllSeries(qd *QueryDetails) (series []Series) {
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Offset(qd.Offset).Limit(qd.Limit).Find(&series)
 	return series
 }
 

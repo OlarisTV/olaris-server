@@ -108,6 +108,13 @@ func FindAllMovieFiles() (movies []MovieFile) {
 	return movies
 }
 
+// QueryDetails specify arguments for media queries
+type QueryDetails struct {
+	UserID uint
+	Offset int
+	Limit  int
+}
+
 // CollectMovieInfo ensures that all relevant information for a movie is loaded
 // this can include stream information (audio/video/subtitle tracks) and personalized playstate information.
 func CollectMovieInfo(movies []Movie, userID uint) {
@@ -134,9 +141,9 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 }
 
 // FindAllMovies finds all identified movies including all associated information like streams and files.
-func FindAllMovies(userID uint) (movies []Movie) {
-	db.Where("tmdb_id != 0").Find(&movies)
-	CollectMovieInfo(movies, userID)
+func FindAllMovies(qd *QueryDetails) (movies []Movie) {
+	db.Where("tmdb_id != 0").Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
+	CollectMovieInfo(movies, qd.UserID)
 
 	return movies
 }
