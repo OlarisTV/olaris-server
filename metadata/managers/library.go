@@ -270,7 +270,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 		}
 
 		return nil
-	})
+	}, true)
 
 	if err != nil {
 		// lol
