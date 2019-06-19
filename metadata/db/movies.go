@@ -240,6 +240,10 @@ type mergeResult struct {
 	Counter uint
 }
 
+type winner struct {
+	ID uint
+}
+
 // MergeDuplicateMovies should merge duplicate movies into a singular movie with movie files associated.
 func MergeDuplicateMovies() int {
 	log.Debugln("Checking for duplicate movies that can be merged.")
@@ -259,9 +263,18 @@ func MergeDuplicateMovies() int {
 	for _, res := range merging {
 		log.WithFields(log.Fields{"tmdb_id": res.TmdbID}).Debugln("Merging movies based on tmdb_id.")
 
-		// We might want to ensure this always works, I'm not sure how deterministic the order of SQLite is.
-		db.Exec("UPDATE movie_files SET movie_id=(SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1) WHERE movie_id = ?", res.TmdbID, res.ID)
-		db.Exec("DELETE FROM movies WHERE id = ?", res.ID)
+		var win winner
+		var survivorID uint
+		var loserIDs []uint
+
+		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1", res.TmdbID).Scan(&win)
+		survivorID = win.ID
+		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID}).Debugln("Found MovieID for movie we will keep")
+		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? AND id != ?", res.TmdbID, survivorID).Pluck("id", &loserIDs)
+		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID, "losingMovieIDs": loserIDs}).Debugln("Found IDs we will delete")
+
+		db.Exec("UPDATE movie_files SET movie_id=? WHERE movie_id IN (?)", survivorID, loserIDs)
+		db.Exec("DELETE FROM movies WHERE id IN (?)", loserIDs)
 	}
 	return 0
 }
