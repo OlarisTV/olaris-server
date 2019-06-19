@@ -257,7 +257,8 @@ func (man *LibraryManager) Probe(library *db.Library) {
 		db.UpdateLibrary(library)
 	}
 
-	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
+	// We don't need to handle the error here because we already handle it in walkFn
+	_ := rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).
 				Warnf("Received an error while walking %s", walkPath)
@@ -271,10 +272,6 @@ func (man *LibraryManager) Probe(library *db.Library) {
 
 		return nil
 	}, true)
-
-	if err != nil {
-		// lol
-	}
 
 	dur := time.Since(stime)
 	log.Printf("Probing library '%s' took %f seconds", library.FilePath, dur.Seconds())
