@@ -40,7 +40,7 @@ type Marcher interface {
 	// DstOnly is called for a DirEntry found only in the destination
 	DstOnly(dst fs.DirEntry) (recurse bool)
 	// Match is called for a DirEntry found both in the source and destination
-	Match(dst, src fs.DirEntry) (recurse bool)
+	Match(ctx context.Context, dst, src fs.DirEntry) (recurse bool)
 }
 
 // init sets up a march over opt.Fsrc, and opt.Fdst calling back callback for each match
@@ -58,7 +58,7 @@ func (m *March) init() {
 	//                  | Yes | No  | No                 |
 	//                  | No  | Yes | Yes                |
 	//                  | Yes | Yes | Yes                |
-	if m.Fdst.Features().CaseInsensitive {
+	if m.Fdst.Features().CaseInsensitive || fs.Config.IgnoreCaseSync {
 		m.transforms = append(m.transforms, strings.ToLower)
 	}
 }
@@ -70,7 +70,7 @@ type listDirFn func(dir string) (entries fs.DirEntries, err error)
 func (m *March) makeListDir(f fs.Fs, includeAll bool) listDirFn {
 	if (!fs.Config.UseListR || f.Features().ListR == nil) && !filter.Active.HaveFilesFrom() {
 		return func(dir string) (entries fs.DirEntries, err error) {
-			return list.DirSorted(f, includeAll, dir)
+			return list.DirSorted(m.Ctx, f, includeAll, dir)
 		}
 	}
 	var (
@@ -83,7 +83,7 @@ func (m *March) makeListDir(f fs.Fs, includeAll bool) listDirFn {
 		mu.Lock()
 		defer mu.Unlock()
 		if !started {
-			dirs, dirsErr = walk.NewDirTree(f, m.Dir, includeAll, fs.Config.MaxDepth)
+			dirs, dirsErr = walk.NewDirTree(m.Ctx, f, m.Dir, includeAll, fs.Config.MaxDepth)
 			started = true
 		}
 		if dirsErr != nil {
@@ -213,7 +213,7 @@ func (es matchEntries) Less(i, j int) bool {
 	ei, ej := &es[i], &es[j]
 	if ei.name == ej.name {
 		if ei.leaf == ej.leaf {
-			return ei.entry.Remote() < ej.entry.Remote()
+			return fs.CompareDirEntries(ei.entry, ej.entry) < 0
 		}
 		return ei.leaf < ej.leaf
 	}
@@ -267,6 +267,7 @@ type matchTransformFn func(name string) string
 func matchListings(srcListEntries, dstListEntries fs.DirEntries, transforms []matchTransformFn) (srcOnly fs.DirEntries, dstOnly fs.DirEntries, matches []matchPair) {
 	srcList := newMatchEntries(srcListEntries, transforms)
 	dstList := newMatchEntries(dstListEntries, transforms)
+
 	for iSrc, iDst := 0, 0; ; iSrc, iDst = iSrc+1, iDst+1 {
 		var src, dst fs.DirEntry
 		var srcName, dstName string
@@ -282,34 +283,40 @@ func matchListings(srcListEntries, dstListEntries fs.DirEntries, transforms []ma
 			break
 		}
 		if src != nil && iSrc > 0 {
-			prev := srcList[iSrc-1].name
-			if srcName == prev {
+			prev := srcList[iSrc-1].entry
+			prevName := srcList[iSrc-1].name
+			if srcName == prevName && fs.DirEntryType(prev) == fs.DirEntryType(src) {
 				fs.Logf(src, "Duplicate %s found in source - ignoring", fs.DirEntryType(src))
 				iDst-- // ignore the src and retry the dst
 				continue
-			} else if srcName < prev {
+			} else if srcName < prevName {
 				// this should never happen since we sort the listings
 				panic("Out of order listing in source")
 			}
 		}
 		if dst != nil && iDst > 0 {
-			prev := dstList[iDst-1].name
-			if dstName == prev {
+			prev := dstList[iDst-1].entry
+			prevName := dstList[iDst-1].name
+			if dstName == prevName && fs.DirEntryType(dst) == fs.DirEntryType(prev) {
 				fs.Logf(dst, "Duplicate %s found in destination - ignoring", fs.DirEntryType(dst))
 				iSrc-- // ignore the dst and retry the src
 				continue
-			} else if dstName < prev {
+			} else if dstName < prevName {
 				// this should never happen since we sort the listings
 				panic("Out of order listing in destination")
 			}
 		}
 		if src != nil && dst != nil {
-			if srcName < dstName {
-				dst = nil
-				iDst-- // retry the dst
-			} else if srcName > dstName {
+			// we can't use CompareDirEntries because srcName, dstName could
+			// be different then src.Remote() or dst.Remote()
+			srcType := fs.DirEntryType(src)
+			dstType := fs.DirEntryType(dst)
+			if srcName > dstName || (srcName == dstName && srcType > dstType) {
 				src = nil
-				iSrc-- // retry the src
+				iSrc--
+			} else if srcName < dstName || (srcName == dstName && srcType < dstType) {
+				dst = nil
+				iDst--
 			}
 		}
 		// Debugf(nil, "src = %v, dst = %v", src, dst)
@@ -376,7 +383,7 @@ func (m *March) processJob(job listDirJob) (jobs []listDirJob) {
 		for _, src := range srcList {
 			if srcObj, ok := src.(fs.Object); ok {
 				leaf := path.Base(srcObj.Remote())
-				dstObj, err := m.Fdst.NewObject(path.Join(job.dstRemote, leaf))
+				dstObj, err := m.Fdst.NewObject(m.Ctx, path.Join(job.dstRemote, leaf))
 				if err == nil {
 					dstList = append(dstList, dstObj)
 				}
@@ -417,7 +424,7 @@ func (m *March) processJob(job listDirJob) (jobs []listDirJob) {
 		if m.aborting() {
 			return nil
 		}
-		recurse := m.Callback.Match(match.dst, match.src)
+		recurse := m.Callback.Match(m.Ctx, match.dst, match.src)
 		if recurse && job.srcDepth > 0 && job.dstDepth > 0 {
 			jobs = append(jobs, listDirJob{
 				srcRemote: match.src.Remote(),

@@ -250,3 +250,17 @@ Contributors
   * xopez <28950736+xopez@users.noreply.github.com>
   * Ben Boeckel <mathstuf@gmail.com>
   * Manu <manu@snapdragon.cc>
+  * Kyle E. Mitchell <kyle@kemitchell.com>
+  * Gary Kim <gary@garykim.dev>
+  * Jon <jonathn@github.com>
+  * Jeff Quinn <jeffrey.quinn@bluevoyant.com>
+  * Peter Berbec <peter@berbec.com>
+  * didil <1284255+didil@users.noreply.github.com>
+  * id01 <gaviniboom@gmail.com>
+  * Robert Marko <robimarko@gmail.com>
+  * Philip Harvey <32467456+pharveybattelle@users.noreply.github.com>
+  * JorisE <JorisE@users.noreply.github.com>
+  * garry415 <garry.415@gmail.com>
+  * forgems <forgems@gmail.com>
+  * Florian Apolloner <florian@apolloner.eu>
+  * Aleksandar Jankovic <office@ajankovic.com>

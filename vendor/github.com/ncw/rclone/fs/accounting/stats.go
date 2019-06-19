@@ -2,6 +2,7 @@ package accounting
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -90,7 +91,7 @@ type StatsInfo struct {
 	inProgress        *inProgress
 }
 
-// NewStats cretates an initialised StatsInfo
+// NewStats creates an initialised StatsInfo
 func NewStats() *StatsInfo {
 	return &StatsInfo{
 		checking:     newStringSet(fs.Config.Checkers, "checking"),
@@ -101,7 +102,7 @@ func NewStats() *StatsInfo {
 }
 
 // RemoteStats returns stats for rc
-func (s *StatsInfo) RemoteStats(in rc.Params) (out rc.Params, err error) {
+func (s *StatsInfo) RemoteStats(ctx context.Context, in rc.Params) (out rc.Params, err error) {
 	out = make(rc.Params)
 	s.mu.RLock()
 	dt := time.Now().Sub(s.start)
@@ -216,6 +217,7 @@ func (s *StatsInfo) String() string {
 		currentSize  = s.bytes
 		buf          = &bytes.Buffer{}
 		xfrchkString = ""
+		dateString   = ""
 	)
 
 	if !fs.Config.StatsOneLine {
@@ -231,9 +233,14 @@ func (s *StatsInfo) String() string {
 		if len(xfrchk) > 0 {
 			xfrchkString = fmt.Sprintf(" (%s)", strings.Join(xfrchk, ", "))
 		}
+		if fs.Config.StatsOneLineDate {
+			t := time.Now()
+			dateString = t.Format(fs.Config.StatsOneLineDateFormat) // Including the separator so people can customize it
+		}
 	}
 
-	_, _ = fmt.Fprintf(buf, "%10s / %s, %s, %s, ETA %s%s",
+	_, _ = fmt.Fprintf(buf, "%s%10s / %s, %s, %s, ETA %s%s",
+		dateString,
 		fs.SizeSuffix(s.bytes),
 		fs.SizeSuffix(totalSize).Unit("Bytes"),
 		percent(s.bytes, totalSize),

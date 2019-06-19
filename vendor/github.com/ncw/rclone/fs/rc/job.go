@@ -3,18 +3,13 @@
 package rc
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/ncw/rclone/fs"
 	"github.com/pkg/errors"
-)
-
-const (
-	// expire the job when it is finished and older than this
-	expireDuration = 60 * time.Second
-	// inteval to run the expire cache
-	expireInterval = 10 * time.Second
 )
 
 // Job describes a asynchronous task started via the rc package
@@ -28,6 +23,7 @@ type Job struct {
 	Success   bool      `json:"success"`
 	Duration  float64   `json:"duration"`
 	Output    Params    `json:"output"`
+	Stop      func()    `json:"-"`
 }
 
 // Jobs describes a collection of running tasks
@@ -47,7 +43,7 @@ var (
 func newJobs() *Jobs {
 	return &Jobs{
 		jobs:           map[int64]*Job{},
-		expireInterval: expireInterval,
+		expireInterval: fs.Config.RcJobExpireInterval,
 	}
 }
 
@@ -68,7 +64,7 @@ func (jobs *Jobs) Expire() {
 	now := time.Now()
 	for ID, job := range jobs.jobs {
 		job.mu.Lock()
-		if job.Finished && now.Sub(job.EndTime) > expireDuration {
+		if job.Finished && now.Sub(job.EndTime) > fs.Config.RcJobExpireDuration {
 			delete(jobs.jobs, ID)
 		}
 		job.mu.Unlock()
@@ -121,22 +117,29 @@ func (job *Job) finish(out Params, err error) {
 }
 
 // run the job until completion writing the return status
-func (job *Job) run(fn Func, in Params) {
+func (job *Job) run(ctx context.Context, fn Func, in Params) {
 	defer func() {
 		if r := recover(); r != nil {
 			job.finish(nil, errors.Errorf("panic received: %v", r))
 		}
 	}()
-	job.finish(fn(in))
+	job.finish(fn(ctx, in))
 }
 
 // NewJob start a new Job off
 func (jobs *Jobs) NewJob(fn Func, in Params) *Job {
+	ctx, cancel := context.WithCancel(context.Background())
+	stop := func() {
+		cancel()
+		// Wait for cancel to propagate before returning.
+		<-ctx.Done()
+	}
 	job := &Job{
 		ID:        atomic.AddInt64(&jobID, 1),
 		StartTime: time.Now(),
+		Stop:      stop,
 	}
-	go job.run(fn, in)
+	go job.run(ctx, fn, in)
 	jobs.mu.Lock()
 	jobs.jobs[job.ID] = job
 	jobs.mu.Unlock()
@@ -170,12 +173,13 @@ Results
 - startTime - time the job started (eg "2018-10-26T18:50:20.528336039+01:00")
 - success - boolean - true for success false otherwise
 - output - output of the job as would have been returned if called synchronously
+- progress - output of the progress related to the underlying job
 `,
 	})
 }
 
 // Returns the status of a job
-func rcJobStatus(in Params) (out Params, err error) {
+func rcJobStatus(ctx context.Context, in Params) (out Params, err error) {
 	jobID, err := in.GetInt64("jobid")
 	if err != nil {
 		return nil, err
@@ -207,9 +211,37 @@ Results
 	})
 }
 
-// Returns the status of a job
-func rcJobList(in Params) (out Params, err error) {
+// Returns list of job ids.
+func rcJobList(ctx context.Context, in Params) (out Params, err error) {
 	out = make(Params)
 	out["jobids"] = running.IDs()
+	return out, nil
+}
+
+func init() {
+	Add(Call{
+		Path:  "job/stop",
+		Fn:    rcJobStop,
+		Title: "Stop the running job",
+		Help: `Parameters
+- jobid - id of the job (integer)
+`,
+	})
+}
+
+// Stops the running job.
+func rcJobStop(ctx context.Context, in Params) (out Params, err error) {
+	jobID, err := in.GetInt64("jobid")
+	if err != nil {
+		return nil, err
+	}
+	job := running.Get(jobID)
+	if job == nil {
+		return nil, errors.New("job not found")
+	}
+	job.mu.Lock()
+	defer job.mu.Unlock()
+	out = make(Params)
+	job.Stop()
 	return out, nil
 }

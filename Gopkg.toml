@@ -70,4 +70,4 @@ required = ["github.com/elazarl/go-bindata-assetfs"]
 
 [[constraint]]
   name = "github.com/ncw/rclone"
-  version = "1.47.0"
+  revision = "ba72e62b41cbfd6f36ec089a1f58c26d31a57734"

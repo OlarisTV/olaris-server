@@ -154,7 +154,7 @@ type TokenSource struct {
 }
 
 // If token has expired then first try re-reading it from the config
-// file in case a concurrently runnng rclone has updated it already
+// file in case a concurrently running rclone has updated it already
 func (ts *TokenSource) reReadToken() bool {
 	tokenString, err := config.FileGetFresh(ts.name, config.ConfigToken)
 	if err != nil {
@@ -589,4 +589,16 @@ func (s *authServer) Start() {
 	}
 	err = s.server.Serve(s.listener)
 	fs.Debugf(nil, "Closed auth server with error: %v", err)
+}
+
+func (s *authServer) Stop() {
+	fs.Debugf(nil, "Closing auth server")
+	if s.code != nil {
+		close(s.code)
+		s.code = nil
+	}
+	_ = s.listener.Close()
+
+	// close the server
+	_ = s.server.Close()
 }
