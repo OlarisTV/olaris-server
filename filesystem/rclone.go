@@ -94,7 +94,7 @@ func (n *RcloneNode) FileLocator() FileLocator {
 	panic("VFS for given Node not found in cache")
 }
 
-func (n *RcloneNode) Walk(walkFn WalkFunc) error {
+func (n *RcloneNode) Walk(walkFn WalkFunc, followFileSymlinks bool) error {
 	if n.Node.IsDir() {
 		return walk(n.Node.(*vfs.Dir), walkFn)
 	} else {

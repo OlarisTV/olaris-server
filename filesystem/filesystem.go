@@ -38,7 +38,7 @@ type Node interface {
 	Name() string
 	Path() string
 	IsDir() bool
-	Walk(walkFunc WalkFunc) error
+	Walk(walkFunc WalkFunc, followFileSymlinks bool) error
 	FileLocator() FileLocator
 }
 

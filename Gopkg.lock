@@ -590,6 +590,14 @@
   version = "v1.21.0"
 
 [[projects]]
+  digest = "1:2e09b9da3300593183c4ea5cb30486ff8eb2c49cf0a193b2cb4eb6b7f3e57a4e"
+  name = "gopkg.in/gormigrate.v1"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1e83010fdc477522e2669af346e5f17327aade68"
+  version = "v1.5.0"
+
+[[projects]]
   digest = "1:c805e517269b0ba4c21ded5836019ed7d16953d4026cb7d00041d039c7906be9"
   name = "gopkg.in/natefinch/lumberjack.v2"
   packages = ["."]
@@ -628,6 +636,7 @@
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
+    "gopkg.in/gormigrate.v1",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

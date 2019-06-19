@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -22,21 +23,7 @@ func (n *LocalNode) Name() string {
 	return n.fileInfo.Name()
 }
 func (n *LocalNode) Size() int64 {
-	// It appears that when you walk a filepath for nodes it stats the symlink and not the file it links to
-	// We do this hack here to ensure we return the size of the actual file, not the symlink.
-	if n.fileInfo.Mode()&os.ModeSymlink != 0 {
-		p, err := filepath.EvalSymlinks(n.path)
-		if err != nil {
-			return 0
-		}
-
-		fi, err := os.Stat(p)
-		if err != nil {
-			return 0
-		}
-
-		return fi.Size()
-	}
+	fmt.Printf("%+v\n", n.fileInfo)
 
 	return n.fileInfo.Size()
 }
@@ -52,8 +39,19 @@ func (n *LocalNode) BackendType() BackendType {
 func (n *LocalNode) FileLocator() FileLocator {
 	return FileLocator{Backend: n.BackendType(), Path: n.path}
 }
-func (n *LocalNode) Walk(walkFn WalkFunc) error {
+func (n *LocalNode) Walk(walkFn WalkFunc, followFileSymlinks bool) error {
 	return filepath.Walk(n.path, func(walkPath string, info os.FileInfo, err error) error {
+		// NOTE(Leon Handreke): This behaviour breaks with what filepath.Walk usually does
+		// and is a bit weird in general. We should figure out a good strategy here and how
+		// to properly abstract it out
+		if followFileSymlinks && info.Mode()&os.ModeSymlink != 0 {
+			statInfo, err := os.Stat(walkPath)
+			if err == nil {
+				if !statInfo.IsDir() {
+					return walkFn(walkPath, &LocalNode{statInfo, walkPath}, err)
+				}
+			}
+		}
 		return walkFn(walkPath, &LocalNode{info, walkPath}, err)
 	})
 }
