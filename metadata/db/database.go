@@ -72,11 +72,17 @@ func migrateSchema(db *gorm.DB) error {
 			// the new rclone library types.
 			ID: "2019-06-19-new-filepaths",
 			Migrate: func(tx *gorm.DB) error {
-				err := db.Delete(&MovieFile{}).Error
-				if err != nil {
-					return err
+				var modelsToDrop := []interface{}{
+					&MovieFile{}, &Movie{}, &EpisodeFile{}, &Episode{}, &Season{},
 				}
-				return db.Delete(&EpisodeFile{}).Error
+
+				for _, v := range modelsToDrop {
+					err := db.Delete(v).Error
+					if err != nil {
+						return err
+					}
+				}
+				return nil
 			},
 			Rollback: nil,
 		},
