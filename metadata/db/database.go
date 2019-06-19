@@ -4,6 +4,8 @@ package db
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/gormigrate.v1"
 	"path"
 	// Import sqlite dialect
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -13,18 +15,79 @@ import (
 var db *gorm.DB
 
 // NewDb initializes a new database instance.
-func NewDb(dbPath string, dbLogMode bool) *gorm.DB {
+func NewDb(dbDir string, dbLogMode bool) *gorm.DB {
 	var err error
-	helpers.EnsurePath(dbPath)
-	db, err = gorm.Open("sqlite3", path.Join(dbPath, "metadata.db?_journal_mode=WAL&_busy_timeout=1000"))
+
+	helpers.EnsurePath(dbDir)
+	dbPath := path.Join(dbDir, "metadata.db")
+
+	db, err = gorm.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=1000")
 	db.LogMode(dbLogMode)
 	//db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}
 
-	// Migrate the db-schema
-	db.AutoMigrate(&Movie{}, &MovieFile{}, &Library{}, &Series{}, &Season{}, &Episode{}, &EpisodeFile{}, &User{}, &Invite{}, &PlayState{}, &Stream{})
+	// NOTE(Leon Handreke): We do this here because some databases were initialized and
+	// used before we introduced gormigrate. This code can be removed once we are
+	// sure that no users with v0.1.x databases remain.
+	migrationsTableExists := 0
+	db.Table("sqlite_master").
+		Where("type = 'table'").
+		Where("name = 'migrations'").
+		Count(&migrationsTableExists)
+	usersTableExists := 0
+	db.Table("sqlite_master").
+		Where("type = 'table'").
+		Where("name = 'users'").
+		Count(&usersTableExists)
+	if migrationsTableExists == 0 && usersTableExists == 1 {
+		db.Exec("CREATE TABLE migrations (id VARCHAR(255) PRIMARY KEY)")
+		db.Exec("INSERT INTO migrations (id) VALUES ('SCHEMA_INIT')")
+	}
+
+	err = migrateSchema(db)
+	if err != nil {
+		log.Fatalf("Failed to migrate database: %s", err)
+	}
 
 	return db
+}
+
+var allModels = []interface{}{
+	&Movie{}, &MovieFile{}, &Library{}, &Series{}, &Season{}, &Episode{},
+	&EpisodeFile{}, &User{}, &Invite{}, &PlayState{}, &Stream{},
+}
+
+func initSchema(tx *gorm.DB) error {
+	return db.AutoMigrate(allModels...).Error
+}
+
+func migrateSchema(db *gorm.DB) error {
+	// Migrate the db-schema
+	m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
+		// you migrations here
+		{
+			// All our filepaths in the DB were migrated to "file locators" to support
+			// the new rclone library types.
+			ID: "2019-06-19-new-filepaths",
+			Migrate: func(tx *gorm.DB) error {
+				err := db.Delete(&MovieFile{}).Error
+				if err != nil {
+					return err
+				}
+				return db.Delete(&EpisodeFile{}).Error
+			},
+			Rollback: nil,
+		},
+	})
+
+	m.InitSchema(initSchema)
+	err := m.Migrate()
+	if err != nil {
+		return err
+	}
+
+	// By default, just do the auto migrations automatically.
+	return db.AutoMigrate(allModels...).Error
 }
