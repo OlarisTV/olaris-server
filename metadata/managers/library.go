@@ -69,7 +69,7 @@ func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
 
 	manager.probeJobChan = make(chan probeJob)
 
-	for w := 1; w <= 4; w++ {
+	for w := 1; w <= 6; w++ {
 		go manager.probeFileWorker(w)
 	}
 
