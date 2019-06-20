@@ -27,12 +27,15 @@ var SchemaTxt = `
 		upNext(): [MediaItem]
 		search(name: String!): [SearchItem]
 		invites(): [Invite]
+		# List of all remotes found in a rclone config file if one exists.
+		remotes(): [String]!
 	}
 
 	type Mutation {
 		# Tell the application to index all the supported files in the given directory.
 		# 'kind' can be 0 for movies and 1 for series.
-		createLibrary(name: String!, filePath: String!, kind: Int!): LibraryResponse!
+		# 'backend' can be 0 for local and 1 for Rclone.
+		createLibrary(name: String!, filePath: String!, kind: Int!, backend: Int!, rcloneName: String): LibraryResponse!
 
 		# Delete a library and remove all collected metadata.
 		deleteLibrary(id: Int!): LibraryResponse!
@@ -130,8 +133,17 @@ var SchemaTxt = `
 		# Path that this library manages
 		filePath: String!
 
-		# Whether it's currently scanning the library
+		# Whether olaris-server is currently scanning the library
 		isRefreshing: Boolean!
+
+		# Backend for the library (0 - Local filesystem, 1 - Rclone)
+		backend: Int!
+
+		# If Backend is Rclone it will return the name of the remote
+		rcloneName: String
+
+		# This attribute will be false whenever a Rclone remote can't be reached
+		healthy: Boolean!
 
 		movies: [Movie]!
 		episodes: [Episode]!
@@ -188,6 +200,8 @@ var SchemaTxt = `
 		totalDuration: Float
 		# FileSize in bytes
 		fileSize: Int!
+		# Get the library for the given file
+		library: Library!
 	}
 
 	type Stream {
@@ -251,6 +265,8 @@ var SchemaTxt = `
 		totalDuration: Float
 		# FileSize in bytes
 		fileSize: Int!
+		# Get the library for the given file
+		library: Library!
 	}
 
 	# Invite that can be used to allow other users access to your server.

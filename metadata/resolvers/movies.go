@@ -116,6 +116,12 @@ type MovieFileResolver struct {
 	r db.MovieFile
 }
 
+// Library returns library
+func (r *MovieFileResolver) Library() *LibraryResolver {
+	lib := db.FindLibrary(int(r.r.LibraryID))
+	return &LibraryResolver{r: Library{Library: lib}}
+}
+
 // LibraryID returns library id
 func (r *MovieFileResolver) LibraryID() int32 {
 	// TODO: Will this be a problem if we ever run out of the 32int space?

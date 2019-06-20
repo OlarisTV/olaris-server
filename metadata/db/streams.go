@@ -3,16 +3,50 @@ package db
 import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"math/big"
+	"time"
 )
 
-// Stream holds information about the various streams included in a mediafile. This can be audio/video or even subtitle data.
+// These are copies of the same structs in the ffmpeg package to a) avoid a dependency of the db
+// package on the ffmpeg package and b) allow the ffmpeg package to be advanced separately
+// from the database.
+type StreamKey struct {
+	FileLocator filesystem.FileLocator
+	// StreamId from ffmpeg
+	// StreamId is always 0 for transmuxing
+	StreamId int64
+}
+
 type Stream struct {
-	ffmpeg.Stream
 	gorm.Model
 	UUIDable
 	OwnerID   uint
 	OwnerType string
+
+	StreamKey
+
+	TotalDuration time.Duration
+
+	TimeBase         *big.Rat
+	TotalDurationDts int64
+	// codecs string ready for DASH/HLS serving
+	Codecs    string
+	CodecName string
+	Profile   string
+	BitRate   int64
+	FrameRate *big.Rat
+
+	Width  int
+	Height int
+
+	// "audio", "video", "subtitle"
+	StreamType string
+	// Only relevant for audio and subtitles. Language code.
+	Language string
+	// User-visible string for this audio or subtitle track
+	Title            string
+	EnabledByDefault bool
 }
 
 // UpdateAllStreams updates all streams for all mediaItems
@@ -36,7 +70,7 @@ func UpdateStreams(mediaUUID *string) bool {
 	if count > 0 {
 		log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Found movie, probing file.")
 		db.Exec("DELETE FROM streams WHERE owner_id = ? AND owner_type = 'movie_files'", movieFile.ID)
-		movieFile.Streams = CollectStreams(movieFile.FilePath)
+		//movieFile.Streams = CollectStreams("rclone://" + movieFile.FilePath)
 		db.Save(&movieFile)
 		return true
 	}
@@ -46,38 +80,14 @@ func UpdateStreams(mediaUUID *string) bool {
 	if count > 0 {
 		log.WithFields(log.Fields{"UUID": *mediaUUID}).Infoln("Found series probing file.")
 		db.Exec("DELETE FROM streams WHERE owner_id = ? AND owner_type = 'episode_files'", episodeFile.ID)
-		episodeFile.Streams = CollectStreams(episodeFile.FilePath)
+		//episodeFile.Streams = CollectStreams(episodeFile.FilePath)
 		db.Save(&episodeFile)
 		return true
 	}
 	return false
 }
 
-// CollectStreams collects all stream information for the given file.
-func CollectStreams(filePath string) []Stream {
-	var streams []Stream
-
-	s, err := ffmpeg.GetStreams("file://" + filePath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
-		return streams
-	}
-
-	streams = append(streams, Stream{Stream: s.GetVideoStream()})
-
-	for _, s := range s.AudioStreams {
-		streams = append(streams, Stream{Stream: s})
-	}
-
-	for _, s := range s.SubtitleStreams {
-		streams = append(streams, Stream{Stream: s})
-	}
-
-	return streams
-}
-
 // CreateStream persists a stream object in the database.
 func CreateStream(stream *Stream) {
-
 	db.Create(&stream)
 }

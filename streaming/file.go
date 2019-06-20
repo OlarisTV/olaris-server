@@ -1,24 +1,30 @@
 package streaming
 
 import (
-	"github.com/gorilla/mux"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"net/http"
 	"path"
 )
 
 func serveFile(w http.ResponseWriter, r *http.Request) {
-	fileLocator, err := getFileLocator(mux.Vars(r)["fileLocator"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-
-	if fileLocator.Location == "local" {
-		http.ServeFile(w, r, path.Clean(fileLocator.Path))
+	fileLocator, statusErr := getFileLocatorOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
 		return
 	}
 
-	if fileLocator.Location == "rclone" {
-		serveRcloneFile(w, r, fileLocator.Path)
+	node, err := filesystem.GetNodeFromFileLocator(fileLocator)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if node.BackendType() == filesystem.BackendLocal {
+		http.ServeFile(w, r, path.Clean(node.Path()))
+		return
+	} else if node.BackendType() == filesystem.BackendRclone {
+		serveRcloneFile(w, r, node)
+		return
 	}
 
 	http.NotFound(w, r)

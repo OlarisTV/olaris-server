@@ -46,6 +46,15 @@ func (ud *UUIDable) GetUUID() string {
 	return ud.UUID
 }
 
+// MediaFile is an interface for various methods can be done on both episodes and movies
+type MediaFile interface {
+	GetFilePath() string
+	GetFileName() string
+	GetLibrary() *Library
+	GetStreams() []Stream
+	DeleteSelfAndMD()
+}
+
 // MediaItem is an embeddeable struct that holds information about filesystem files (episode or movies).
 type MediaItem struct {
 	UUIDable
@@ -69,13 +78,13 @@ func FindContentByUUID(uuid string) MediaFile {
 	var movie MovieFile
 	var episode EpisodeFile
 
-	db.Where("uuid = ?", uuid).Preload("Streams").Find(&movie).Count(&count)
+	db.Where("uuid = ?", uuid).Preload("Streams").Preload("Library").Find(&movie).Count(&count)
 	if count > 0 {
 		return movie
 	}
 
 	count = 0
-	db.Where("uuid = ?", uuid).Preload("Streams").Find(&episode).Count(&count)
+	db.Where("uuid = ?", uuid).Preload("Streams").Preload("Library").Find(&episode).Count(&count)
 	if count > 0 {
 		return episode
 	}

@@ -1,7 +1,6 @@
 package db_test
 
 import (
-	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"io/ioutil"
 	"os"
@@ -12,7 +11,7 @@ var movie db.Movie
 
 func createMovieData() {
 	mi := db.MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
-	stream := db.Stream{Stream: ffmpeg.Stream{CodecName: "test"}}
+	stream := db.Stream{CodecName: "test"}
 	mf := db.MovieFile{MediaItem: mi, Streams: []db.Stream{stream}}
 
 	ps := db.PlayState{Finished: false, Playtime: 33, UserID: 1}

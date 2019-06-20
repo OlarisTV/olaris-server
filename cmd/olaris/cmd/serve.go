@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	// Backend for Rclone
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -29,6 +30,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		mainRouter := mux.NewRouter()
 
 		r := mainRouter.PathPrefix("/olaris")
@@ -50,7 +52,8 @@ var serveCmd = &cobra.Command{
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
 		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
-		streaming.FeedbackUrlPort = port
+		streaming.FfmpegUrlPort = port
+		ffmpeg.FfmpegUrlPort = port
 
 		appRoute := rrr.PathPrefix("/app").
 			Handler(http.StripPrefix("/olaris/app", react.GetHandler())).

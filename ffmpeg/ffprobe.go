@@ -6,7 +6,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
-	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -21,7 +21,7 @@ import (
 var extraDataRegex = regexp.MustCompile(`0{8}: \d{2}(.{2})\s(.{4})`)
 
 // TODO(Leon Handreke): Really hacky way to just cache stdout in memory
-var probeCache = map[string][]byte{}
+var probeCache = map[filesystem.FileLocator][]byte{}
 
 type ProbeContainer struct {
 	Streams []ProbeStream `json:"streams"`
@@ -101,20 +101,20 @@ type ProbeData struct {
 
 var probeMutex = &sync.Mutex{}
 
-func Probe(fileURL string) (*ProbeContainer, error) {
-	cmdOut, inCache := probeCache[fileURL]
+func Probe(fileLocator filesystem.FileLocator) (*ProbeContainer, error) {
+	log.WithFields(log.Fields{"fileLocator": fileLocator}).Debugln("Probing file")
+
+	cmdOut, inCache := probeCache[fileLocator]
 
 	if !inCache {
-		// TODO: We need to make this smarter, at one point we for instance will have other options then file://
-		if !helpers.FileExists(strings.Replace(fileURL, "file://", "", -1)) {
-			return nil, fmt.Errorf("file does not exist")
-		}
-
+		log.WithFields(log.Fields{"fileLocator": fileLocator}).
+			Debugln("File not in cache, probing it.")
+		ffmpegUrl := buildFfmpegUrlFromFileLocator(fileLocator)
 		cmd := exec.Command(
 			executable.GetFFprobeExecutablePath(),
 			"-show_data",
 			"-show_format",
-			"-show_streams", fileURL, "-print_format", "json", "-v", "quiet")
+			"-show_streams", ffmpegUrl, "-print_format", "json", "-v", "quiet")
 		cmd.Stderr = os.Stderr
 
 		log.Infof("Starting %s with args %s", cmd.Path, cmd.Args)
@@ -133,8 +133,9 @@ func Probe(fileURL string) (*ProbeContainer, error) {
 		if err != nil {
 			return nil, err
 		}
+		// TODO(Maran): I'm a bit afraid what happens if for some reason the output of the probe is a GB of data. Can/should we check size?
 		probeMutex.Lock()
-		probeCache[fileURL] = cmdOut
+		probeCache[fileLocator] = cmdOut
 		probeMutex.Unlock()
 
 		err = cmd.Wait()

@@ -324,6 +324,12 @@ func (r *EpisodeFileResolver) FileSize() int32 {
 	return int32(r.r.Size)
 }
 
+// Library returns library
+func (r *EpisodeFileResolver) Library() *LibraryResolver {
+	lib := db.FindLibrary(int(r.r.LibraryID))
+	return &LibraryResolver{r: Library{Library: lib}}
+}
+
 // TotalDuration returns the total duration in seconds based on the first encountered videostream.
 func (r *EpisodeFileResolver) TotalDuration() *float64 {
 	for _, stream := range r.r.Streams {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -94,14 +95,10 @@ func (ep *Episode) GetSeries() *Series {
 type EpisodeFile struct {
 	gorm.Model
 	MediaItem
+	Library   Library `gorm:"column:geo_point;ForeignKey:OrderId"`
 	EpisodeID uint
 	Episode   *Episode
 	Streams   []Stream `gorm:"polymorphic:Owner;"`
-}
-
-// GetFilePath returns the filepath for this file
-func (file EpisodeFile) GetFilePath() string {
-	return file.FilePath
 }
 
 // GetStreams returns all streams for this file
@@ -119,8 +116,27 @@ func (file *EpisodeFile) IsSingleFile() bool {
 	return false
 }
 
+// GetFileName is a wrapper for the MediaFile interface
+func (file EpisodeFile) GetFileName() string {
+	return file.FileName
+}
+
+// GetFilePath is a wrapper for the MediaFile interface
+func (file EpisodeFile) GetFilePath() string {
+	return file.FilePath
+}
+
+// GetLibrary is a wrapper for the MediaFile interface
+func (file EpisodeFile) GetLibrary() *Library {
+	return &file.Library
+}
+
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
-func (file *EpisodeFile) DeleteSelfAndMD() {
+func (file EpisodeFile) DeleteSelfAndMD() {
+	log.WithFields(log.Fields{
+		"path": file.FilePath,
+	}).Println("Removing file and metadata")
+
 	// Delete all stream information
 	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
 
@@ -295,7 +311,7 @@ func FindEpisodeByUUID(uuid string, userID uint) (episode Episode) {
 
 // FindAllEpisodeFiles retrieves all episodefiles from the db.
 func FindAllEpisodeFiles() (files []EpisodeFile) {
-	db.Find(&files)
+	db.Preload("Library").Find(&files)
 
 	return files
 }

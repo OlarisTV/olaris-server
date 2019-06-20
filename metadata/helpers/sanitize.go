@@ -13,6 +13,7 @@ func Sanitize(filename string) string {
 	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 
 	filename = strings.Replace(filename, ".", " ", -1)
+	filename = strings.Replace(filename, "_", " ", -1)
 	filename = strings.Replace(filename, "’", "'", -1)
 	filename = strings.Trim(filename, " ")
 	filename = strings.Trim(filename, " -")

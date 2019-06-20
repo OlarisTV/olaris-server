@@ -13,21 +13,22 @@ var videoMIMEType = "video/mp4"
 
 func serveInit(w http.ResponseWriter, r *http.Request) {
 	sessionID := mux.Vars(r)["sessionID"]
-	fileLocator := mux.Vars(r)["fileLocator"]
 	streamID := mux.Vars(r)["streamId"]
 	representationId := mux.Vars(r)["representationId"]
+
+	fileLocator, statusErr := getFileLocatorOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
+		return
+	}
 
 	streamKey, err := getStreamKey(fileLocator, streamID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if !mediaFileURLExists(streamKey.MediaFileURL) {
-		http.NotFound(w, r)
-		return
-	}
 
-	claims, err := getStreamingClaims(fileLocator)
+	claims, err := getStreamingClaims(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -65,7 +66,6 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	sessionID := mux.Vars(r)["sessionID"]
 	representationId := mux.Vars(r)["representationId"]
-	fileLocator := mux.Vars(r)["fileLocator"]
 	streamID := mux.Vars(r)["streamId"]
 
 	segmentIdx, err := strconv.Atoi(mux.Vars(r)["segmentId"])
@@ -73,18 +73,19 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
 	}
 
-	streamKey, err := getStreamKey(fileLocator, streamID)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
+	if statusErr != nil {
+		http.Error(w, statusErr.Error(), statusErr.Status())
+		return
+	}
 
+	streamKey, err := getStreamKey(fileLocator, streamID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if !mediaFileURLExists(streamKey.MediaFileURL) {
-		http.NotFound(w, r)
-		return
-	}
 
-	claims, err := getStreamingClaims(fileLocator)
+	claims, err := getStreamingClaims(mux.Vars(r)["fileLocator"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

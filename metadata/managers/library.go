@@ -3,14 +3,19 @@ package managers
 import (
 	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
+	"github.com/ncw/rclone/vfs"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"path"
+	"path/filepath"
+	// Backends
+	_ "github.com/ncw/rclone/backend/drive"
+	_ "github.com/ncw/rclone/backend/local"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -31,8 +36,8 @@ var SupportedExtensions = map[string]bool{
 }
 
 type probeJob struct {
-	filePath string
-	library  *db.Library
+	node    filesystem.Node
+	library *db.Library
 }
 
 // LibraryManager manages all active libraries.
@@ -51,8 +56,8 @@ type episodePayload struct {
 
 func (man *LibraryManager) probeFileWorker(id int) {
 	for job := range man.probeJobChan {
-		log.Debugf("Worker %d picked up job: %s.", id, job.filePath)
-		man.ProbeFile(job.library, job.filePath)
+		log.Debugf("Worker %d picked up job: %s.", id, job.node.Name())
+		man.ProbeFile(job.library, job.node)
 		log.Debugf("Worker %d done.", id)
 	}
 }
@@ -207,28 +212,66 @@ func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
 	}
 	return nil
 }
+func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, node filesystem.Node) {
+	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.FileLocator().String())) ||
+		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.FileLocator().String())) {
+		man.probeJobChan <- probeJob{library: library, node: node}
+	} else {
+		log.WithFields(log.Fields{"path": node.Path()}).
+			Debugln("File already exists in library, not adding again.")
+	}
+}
 
 // Probe goes over the filesystem and parses filenames in the given library.
 func (man *LibraryManager) Probe(library *db.Library) {
+	log.WithFields(library.LogFields()).Println("Scanning library for changed files.")
 	stime := time.Now()
 
 	library.RefreshStartedAt = stime
 	library.RefreshCompletedAt = time.Time{}
 	db.UpdateLibrary(library)
 
-	err := filepath.Walk(library.FilePath, func(walkPath string, info os.FileInfo, err error) error {
-		if IsDir(walkPath) {
-			man.AddWatcher(walkPath)
-		} else if ValidFile(walkPath) {
-			man.AddWatcher(walkPath)
-			if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(walkPath)) || (library.Kind == db.MediaTypeMovie && !db.MovieFileExists(walkPath)) {
-				man.probeJobChan <- probeJob{library: library, filePath: walkPath}
-			} else {
-				log.WithFields(log.Fields{"path": walkPath}).Debugln("File already exists in library, not adding again.")
-			}
+	var rootNode filesystem.Node
+	var err error
+
+	// TODO: Should this be in it's own healthCheck method on the library or something?
+	if library.Backend == db.BackendLocal {
+		rootNode, err = filesystem.LocalNodeFromPath(library.FilePath)
+		if err != nil {
+			log.WithFields(log.Fields{"path": library.FilePath, "error": err.Error()}).Errorln("Got an error trying to create local rootnode")
+			library.Healthy = false
+			db.UpdateLibrary(library)
+			return
 		}
+		library.Healthy = true
+		db.UpdateLibrary(library)
+	} else if library.Backend == db.BackendRclone {
+		rootNode, err = filesystem.RcloneNodeFromPath(path.Join(library.RcloneName, library.FilePath))
+		if err != nil {
+			log.WithFields(log.Fields{"rcloneName": library.RcloneName, "error": err.Error()}).Errorln("Something went wrong when trying to connect to the Rclone remote")
+			library.Healthy = false
+			db.UpdateLibrary(library)
+			return
+		}
+		library.Healthy = true
+		db.UpdateLibrary(library)
+	}
+
+	// We don't need to handle the error here because we already handle it in walkFn
+	_ = rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).
+				Warnf("Received an error while walking %s", walkPath)
+		} else if ValidFile(n) {
+			man.checkAndAddProbeJob(library, n)
+		}
+		// Watchers are only supported for the local backend
+		if n.BackendType() == filesystem.BackendLocal {
+			man.AddWatcher(walkPath)
+		}
+
 		return nil
-	})
+	}, true)
 
 	dur := time.Since(stime)
 	log.Printf("Probing library '%s' took %f seconds", library.FilePath, dur.Seconds())
@@ -250,19 +293,36 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	}
 }
 
-// ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
-func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error {
-	log.WithFields(log.Fields{"filepath": filePath}).Println("Parsing filepath.")
-	fileInfo, err := os.Stat(filePath)
+func collectStreams(n filesystem.Node) []db.Stream {
+
+	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
+		Debugln("Reading stream information from file")
+	var streams []db.Stream
+
+	s, err := ffmpeg.GetStreams(n.FileLocator())
 	if err != nil {
-		// This catches broken symlinks
-		if _, ok := err.(*os.PathError); ok {
-			log.WithFields(log.Fields{"error": err}).Warnln("Got an error while statting file.")
-			return nil
-		}
-		return err
+		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
+		return streams
 	}
-	basename := fileInfo.Name()
+
+	streams = append(streams, DatabaseStreamFromFfmpegStream(s.GetVideoStream()))
+
+	for _, s := range s.AudioStreams {
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
+	}
+
+	for _, s := range s.SubtitleStreams {
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
+	}
+
+	return streams
+}
+
+// ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
+func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) error {
+	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
+
+	basename := n.Name()
 	name := strings.TrimSuffix(basename, filepath.Ext(basename))
 
 	switch kind := library.Kind; kind {
@@ -271,8 +331,8 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 		if parsedInfo.SeasonNum != 0 && parsedInfo.EpisodeNum != 0 {
 			mi := db.MediaItem{
 				FileName:  basename,
-				FilePath:  filePath,
-				Size:      fileInfo.Size(),
+				FilePath:  n.FileLocator().String(),
+				Size:      n.Size(),
 				Title:     parsedInfo.Title,
 				LibraryID: library.ID,
 				Year:      parsedInfo.Year,
@@ -298,7 +358,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 			db.FirstOrCreateEpisode(&ep, ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
-			epFile.Streams = db.CollectStreams(filePath)
+			epFile.Streams = collectStreams(n)
 
 			db.UpdateEpisodeFile(&epFile)
 
@@ -315,15 +375,15 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 
 		mi := db.MediaItem{
 			FileName:  basename,
-			FilePath:  filePath,
-			Size:      fileInfo.Size(),
+			FilePath:  n.FileLocator().String(),
+			Size:      n.Size(),
 			Title:     mvi.Title,
 			Year:      mvi.Year,
 			LibraryID: library.ID,
 		}
 
 		movieFile := db.MovieFile{MediaItem: mi, MovieID: movie.ID}
-		movieFile.Streams = db.CollectStreams(filePath)
+		movieFile.Streams = collectStreams(n)
 		db.CreateMovieFile(&movieFile)
 
 		UpdateMovieMD(&movie)
@@ -331,31 +391,11 @@ func (man *LibraryManager) ProbeFile(library *db.Library, filePath string) error
 	return nil
 }
 
-// IsDir checks whether the given path is a directory.
-// TODO: This should probably leave in a helper function
-func IsDir(filePath string) bool {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while statting file.")
-		return false
-	}
-	if fileInfo.IsDir() {
-		return true
-	}
-
-	return false
-}
-
 // ValidFile checks whether the supplied filepath is a file that can be indexed by the metadata server.
-func ValidFile(filePath string) bool {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Warnln("Got an error while getting file information, file won't be indexed.")
-		return false
-	}
-
-	if fileInfo.IsDir() {
-		log.WithFields(log.Fields{"error": err, "filepath": filePath}).Debugln("File is a directory, not scanning as file.")
+func ValidFile(node filesystem.Node) bool {
+	filePath := node.Name()
+	if node.IsDir() {
+		log.WithFields(log.Fields{"filepath": filePath}).Debugln("File is a directory, not scanning as file.")
 		return false
 	}
 
@@ -365,8 +405,9 @@ func ValidFile(filePath string) bool {
 	}
 
 	// Ignore really small files
-	if fileInfo.Size() < MinFileSize {
-		log.WithFields(log.Fields{"size": fileInfo.Size(), "filepath": filePath}).Debugln("File is too small, file won't be indexed.")
+	if node.Size() < MinFileSize {
+		log.WithFields(log.Fields{"size": node.Size(), "filepath": filePath}).
+			Debugln("File is too small, file won't be indexed.")
 		return false
 	}
 
@@ -418,27 +459,46 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 	return false
 }
 
+// CheckFileAndDeleteIfMissing checks the given media file and if it's no longer present removes it from the database
+func CheckFileAndDeleteIfMissing(m db.MediaFile) {
+	log.WithFields(log.Fields{
+		"path":    m.GetFilePath(),
+		"library": m.GetLibrary().Name,
+	}).Debugln("Checking to see if file still exists.")
+
+	switch m.GetLibrary().Backend {
+	case db.BackendLocal:
+		p, err := filesystem.ParseFileLocator(m.GetFilePath())
+		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on local")
+		_, err = filesystem.LocalNodeFromPath(p.Path)
+		// TODO(Leon Handreke): Check if the error is actually not found
+		if err != nil {
+			m.DeleteSelfAndMD()
+		}
+	case db.BackendRclone:
+		p, err := filesystem.ParseFileLocator(m.GetFilePath())
+		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
+		_, err = filesystem.RcloneNodeFromPath(p.Path)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
+			// We only delete on the file does not exist error. Any other errors are not enough reason to wipe the content.
+			if err == vfs.ENOENT {
+				m.DeleteSelfAndMD()
+			}
+		}
+	}
+}
+
 // CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.
 func (man *LibraryManager) CheckRemovedFiles() {
 	log.Infoln("Checking libraries to see if any files got removed since our last scan.")
+
 	for _, movieFile := range db.FindAllMovieFiles() {
-		log.WithFields(log.Fields{
-			"path": movieFile.FilePath,
-		}).Debugln("Checking to see if file still exists.")
-		if !helpers.FileExists(movieFile.FilePath) {
-			log.Debugln("Missing file, cleaning up MD", movieFile.FileName)
-			movieFile.DeleteSelfAndMD()
-		}
+		CheckFileAndDeleteIfMissing(movieFile)
 	}
 
 	for _, file := range db.FindAllEpisodeFiles() {
-		log.WithFields(log.Fields{
-			"path": file.FilePath,
-		}).Debugln("Checking to see if file still exists.")
-		if !helpers.FileExists(file.FilePath) {
-			log.Debugln("Missing file, cleaning up MD", file.FileName)
-			file.DeleteSelfAndMD()
-		}
+		CheckFileAndDeleteIfMissing(file)
 	}
 }
 
@@ -447,9 +507,9 @@ func (man *LibraryManager) RefreshAll() {
 	man.CheckRemovedFiles()
 
 	for _, lib := range db.AllLibraries() {
-		man.AddWatcher(lib.FilePath)
-
-		log.WithFields(lib.LogFields()).Println("Scanning library for changed files.")
+		if lib.IsLocal() {
+			man.AddWatcher(lib.FilePath)
+		}
 		man.Probe(&lib)
 
 		log.WithFields(lib.LogFields()).Infoln("Scanning library for unidentified media.")
@@ -462,4 +522,54 @@ func (man *LibraryManager) RefreshAll() {
 	db.MergeDuplicateMovies()
 
 	log.Println("Finished refreshing libraries.")
+}
+
+// TODO: Please tell me we can do this in a cleaner way, this makes my eyes bleed :|
+
+// FfmpegStreamFromDatabaseStream creates a ffmpeg stream object based on a database object
+func FfmpegStreamFromDatabaseStream(s db.Stream) ffmpeg.Stream {
+	return ffmpeg.Stream{
+		StreamKey: ffmpeg.StreamKey{
+			FileLocator: s.StreamKey.FileLocator,
+			StreamId:    s.StreamKey.StreamId,
+		},
+		TotalDuration:    s.TotalDuration,
+		TimeBase:         s.TimeBase,
+		TotalDurationDts: ffmpeg.DtsTimestamp(s.TotalDurationDts),
+		Codecs:           s.Codecs,
+		CodecName:        s.CodecName,
+		Profile:          s.Profile,
+		BitRate:          s.BitRate,
+		FrameRate:        s.FrameRate,
+		Width:            s.Width,
+		Height:           s.Height,
+		StreamType:       s.StreamType,
+		Language:         s.Language,
+		Title:            s.Title,
+		EnabledByDefault: s.EnabledByDefault,
+	}
+}
+
+// DatabaseStreamFromFfmpegStream does the reverse of the above.
+func DatabaseStreamFromFfmpegStream(s ffmpeg.Stream) db.Stream {
+	return db.Stream{
+		StreamKey: db.StreamKey{
+			FileLocator: s.StreamKey.FileLocator,
+			StreamId:    s.StreamKey.StreamId,
+		},
+		TotalDuration:    s.TotalDuration,
+		TimeBase:         s.TimeBase,
+		TotalDurationDts: int64(s.TotalDurationDts),
+		Codecs:           s.Codecs,
+		CodecName:        s.CodecName,
+		Profile:          s.Profile,
+		BitRate:          s.BitRate,
+		FrameRate:        s.FrameRate,
+		Width:            s.Width,
+		Height:           s.Height,
+		StreamType:       s.StreamType,
+		Language:         s.Language,
+		Title:            s.Title,
+		EnabledByDefault: s.EnabledByDefault,
+	}
 }

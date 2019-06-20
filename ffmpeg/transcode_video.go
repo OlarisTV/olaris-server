@@ -77,7 +77,7 @@ func NewVideoTranscodingSession(
 	}
 
 	args = append(args, []string{
-		"-i", stream.Stream.MediaFileURL,
+		"-i", buildFfmpegUrlFromFileLocator(stream.Stream.FileLocator),
 		"-copyts",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),

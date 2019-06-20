@@ -19,13 +19,13 @@ type metadataResponse struct {
 // a) would have to pass all information that we use here (e.g.
 // which stream is transmuxed) and b) we would need to implement this logic across all clients.
 func serveMetadata(w http.ResponseWriter, r *http.Request) {
-	mediaFileURL, statusErr := getMediaFileURLOrFail(r)
+	fileLocator, statusErr := getFileLocatorOrFail(r)
 	if statusErr != nil {
 		http.Error(w, statusErr.Error(), statusErr.Status())
 		return
 	}
 
-	streams, err := ffmpeg.GetStreams(mediaFileURL)
+	streams, err := ffmpeg.GetStreams(fileLocator)
 	if err != nil {
 		http.Error(w, "Failed to get streams: "+err.Error(), http.StatusInternalServerError)
 		return

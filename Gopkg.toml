@@ -67,3 +67,7 @@ required = ["github.com/elazarl/go-bindata-assetfs"]
 [[constraint]]
   branch = "master"
   name = "github.com/jinzhu/gorm"
+
+[[constraint]]
+  name = "github.com/ncw/rclone"
+  revision = "ba72e62b41cbfd6f36ec089a1f58c26d31a57734"

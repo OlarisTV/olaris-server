@@ -15,12 +15,12 @@ type StreamingClaims struct {
 }
 
 // CreateStreamingJWT creates a new JWT that will give permission to stream certain media for a certain timespan.
-func CreateStreamingJWT(userID uint, filePath string) (string, error) {
+func CreateStreamingJWT(userID uint, fileLocator string) (string, error) {
 	expiresAt := time.Now().Add(time.Hour * 8).Unix()
 
 	claims := StreamingClaims{
 		userID,
-		filePath,
+		fileLocator,
 		jwt.StandardClaims{ExpiresAt: expiresAt, Issuer: "bss"},
 	}
 
@@ -46,7 +46,7 @@ func ValidateStreamingJWT(tokenStr string) (*StreamingClaims, error) {
 	}
 
 	if claims, ok := token.Claims.(*StreamingClaims); ok && token.Valid {
-		log.Debugf("Incoming streaming ticket for '%v' (User %v). Expires at: %v", claims.FilePath, claims.UserID, claims.StandardClaims.ExpiresAt)
+		log.WithFields(log.Fields{"user": claims.UserID, "file": claims.FilePath, "expires": claims.ExpiresAt}).Debugf("Validate streaming ticket")
 		return claims, nil
 	}
 

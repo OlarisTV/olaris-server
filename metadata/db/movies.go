@@ -7,29 +7,14 @@ import (
 	"strconv"
 )
 
-// MediaFile is an interface to allow access to both Episode and Movies-files
-type MediaFile interface {
-	GetStreams() []Stream
-	GetFilePath() string
-}
-
 // MovieFile is used to store fileinformation about a movie.
 type MovieFile struct {
 	gorm.Model
 	MediaItem
 	Movie   Movie
+	Library Library `gorm:"ForeignKey:LibraryID"`
 	MovieID uint
 	Streams []Stream `gorm:"polymorphic:Owner;"`
-}
-
-// GetFilePath returns the filepath for this file
-func (file MovieFile) GetFilePath() string {
-	return file.FilePath
-}
-
-// GetStreams returns all streams for this file
-func (file MovieFile) GetStreams() []Stream {
-	return file.Streams
 }
 
 // Movie is used to store movie metadata information.
@@ -61,8 +46,32 @@ func (file *MovieFile) IsSingleFile() bool {
 	return false
 }
 
+// GetFileName is a wrapper for the MediaFile interface
+func (file MovieFile) GetFileName() string {
+	return file.FileName
+}
+
+// GetFilePath is a wrapper for the MediaFile interface
+func (file MovieFile) GetFilePath() string {
+	return file.FilePath
+}
+
+// GetLibrary is a wrapper for the MediaFile interface
+func (file MovieFile) GetLibrary() *Library {
+	return &file.Library
+}
+
+// GetStreams returns all streams for this file
+func (file MovieFile) GetStreams() []Stream {
+	return file.Streams
+}
+
 // DeleteSelfAndMD removes this file and any metadata involved for the movie.
-func (file *MovieFile) DeleteSelfAndMD() {
+func (file MovieFile) DeleteSelfAndMD() {
+	log.WithFields(log.Fields{
+		"path": file.FilePath,
+	}).Println("Removing file and metadata")
+
 	// Delete all stream information since it's only for this file
 	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'movies'", &file.ID)
 
@@ -103,7 +112,7 @@ func (movie *Movie) UpdatedAtTimeStamp() int64 {
 
 // FindAllMovieFiles Returns all movies, even once that could not be identified.
 func FindAllMovieFiles() (movies []MovieFile) {
-	db.Find(&movies)
+	db.Preload("Library").Find(&movies)
 
 	return movies
 }
@@ -231,6 +240,10 @@ type mergeResult struct {
 	Counter uint
 }
 
+type winner struct {
+	ID uint
+}
+
 // MergeDuplicateMovies should merge duplicate movies into a singular movie with movie files associated.
 func MergeDuplicateMovies() int {
 	log.Debugln("Checking for duplicate movies that can be merged.")
@@ -250,9 +263,18 @@ func MergeDuplicateMovies() int {
 	for _, res := range merging {
 		log.WithFields(log.Fields{"tmdb_id": res.TmdbID}).Debugln("Merging movies based on tmdb_id.")
 
-		// We might want to ensure this always works, I'm not sure how deterministic the order of SQLite is.
-		db.Exec("UPDATE movie_files SET movie_id=(SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1) WHERE movie_id = ?", res.TmdbID, res.ID)
-		db.Exec("DELETE FROM movies WHERE id = ?", res.ID)
+		var win winner
+		var survivorID uint
+		var loserIDs []uint
+
+		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1", res.TmdbID).Scan(&win)
+		survivorID = win.ID
+		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID}).Debugln("Found MovieID for movie we will keep")
+		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? AND id != ?", res.TmdbID, survivorID).Pluck("id", &loserIDs)
+		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID, "losingMovieIDs": loserIDs}).Debugln("Found IDs we will delete")
+
+		db.Exec("UPDATE movie_files SET movie_id=? WHERE movie_id IN (?)", survivorID, loserIDs)
+		db.Exec("DELETE FROM movies WHERE id IN (?)", loserIDs)
 	}
 	return 0
 }
