@@ -52,7 +52,7 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		}
 
 		vfsCache[l.remoteName] = vfs.New(filesystem, &vfs.Options{ReadOnly: true,
-			CacheMode: vfs.CacheModeFull})
+			CacheMode: vfs.CacheModeMinimal})
 	}
 	p := "/" + l.path
 	log.WithFields(log.Fields{"path": p, "remoteName": l.remoteName}).Debugln("Checking if Rclone path exists")
