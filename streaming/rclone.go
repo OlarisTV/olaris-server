@@ -2,8 +2,6 @@ package streaming
 
 import (
 	"fmt"
-	_ "github.com/ncw/rclone/backend/drive"
-	_ "github.com/ncw/rclone/backend/local"
 	"github.com/ncw/rclone/vfs"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"net/http"
