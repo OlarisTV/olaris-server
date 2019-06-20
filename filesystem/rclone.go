@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	_ "github.com/ncw/rclone/backend/all"
 	"github.com/ncw/rclone/fs"
 	"github.com/ncw/rclone/vfs"
 	"github.com/pkg/errors"

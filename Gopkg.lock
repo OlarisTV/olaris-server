@@ -8,6 +8,18 @@
   version = "v0.39.0"
 
 [[projects]]
+  name = "github.com/Azure/azure-pipeline-go"
+  packages = ["pipeline"]
+  revision = "55fedc85a614dcd0e942a66f302ae3efb83d563c"
+  version = "v0.1.9"
+
+[[projects]]
+  name = "github.com/Azure/azure-storage-blob-go"
+  packages = ["azblob"]
+  revision = "678206e7e6e55abf0265a6440135e92005176ebf"
+  version = "v0.6.0"
+
+[[projects]]
   name = "github.com/Jeffail/tunny"
   packages = ["."]
   revision = "4921fff29480bad359ad2fb3271fb461c8ffe1fc"
@@ -26,6 +38,56 @@
   version = "v0.4.0"
 
 [[projects]]
+  name = "github.com/aws/aws-sdk-go"
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/awsutil",
+    "aws/client",
+    "aws/client/metadata",
+    "aws/corehandlers",
+    "aws/credentials",
+    "aws/credentials/ec2rolecreds",
+    "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
+    "aws/credentials/stscreds",
+    "aws/csm",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/endpoints",
+    "aws/request",
+    "aws/session",
+    "aws/signer/v4",
+    "internal/ini",
+    "internal/s3err",
+    "internal/sdkio",
+    "internal/sdkrand",
+    "internal/sdkuri",
+    "internal/shareddefaults",
+    "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
+    "private/protocol/json/jsonutil",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/restxml",
+    "private/protocol/xml/xmlutil",
+    "service/s3",
+    "service/s3/s3iface",
+    "service/s3/s3manager",
+    "service/sts"
+  ]
+  revision = "4106f185073f937cf269760ce26961b21cd4bebb"
+  version = "v1.20.4"
+
+[[projects]]
+  name = "github.com/coreos/bbolt"
+  packages = ["."]
+  revision = "a0458a2b35708eef59eb5f620ceb3cd1c01a824d"
+  version = "v1.3.3"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
@@ -42,6 +104,26 @@
   packages = ["."]
   revision = "847c5208d8924cea0acea3376ff62aede93afe39"
   version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/dropbox/dropbox-sdk-go-unofficial"
+  packages = [
+    "dropbox",
+    "dropbox/async",
+    "dropbox/auth",
+    "dropbox/common",
+    "dropbox/file_properties",
+    "dropbox/files",
+    "dropbox/seen_state",
+    "dropbox/sharing",
+    "dropbox/team",
+    "dropbox/team_common",
+    "dropbox/team_policies",
+    "dropbox/users",
+    "dropbox/users_common"
+  ]
+  revision = "af4558f5e44cef90c2d963e50e76e7dfa46d0c48"
+  version = "v5.4.0"
 
 [[projects]]
   name = "github.com/elazarl/go-bindata-assetfs"
@@ -66,6 +148,12 @@
   ]
   revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
   version = "v1.3.1"
+
+[[projects]]
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -140,10 +228,39 @@
   revision = "04140366298a54a039076d798123ffa108fff46c"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jlaffaye/ftp"
+  packages = ["."]
+  revision = "9284a88df536a8e9d80846c718efeeda5e56b898"
+
+[[projects]]
+  name = "github.com/jmespath/go-jmespath"
+  packages = ["."]
+  revision = "c2b33e84"
+
+[[projects]]
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
   revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
   version = "v1.0.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/koofr/go-httpclient"
+  packages = ["."]
+  revision = "03786175608a2f5e76523fc489cad8bee2f20fbc"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/koofr/go-koofrclient"
+  packages = ["."]
+  revision = "7f327592caff2f24d64635e29bf560db6a2e4db5"
+
+[[projects]]
+  name = "github.com/kr/fs"
+  packages = ["."]
+  revision = "1455def202f6e05b95cc7bfc7e8ae67ae5141eba"
+  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/mattn/go-sqlite3"
@@ -158,14 +275,53 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/ncw/go-acd"
+  packages = ["."]
+  revision = "887eb06ab6a255fbf5744b5812788e884078620a"
+
+[[projects]]
   name = "github.com/ncw/rclone"
   packages = [
+    "backend/alias",
+    "backend/all",
+    "backend/amazonclouddrive",
+    "backend/azureblob",
+    "backend/b2",
+    "backend/b2/api",
+    "backend/box",
+    "backend/box/api",
+    "backend/cache",
     "backend/crypt",
     "backend/crypt/pkcs7",
     "backend/drive",
+    "backend/dropbox",
     "backend/dropbox/dbhash",
+    "backend/ftp",
+    "backend/googlecloudstorage",
+    "backend/http",
+    "backend/hubic",
+    "backend/jottacloud",
+    "backend/jottacloud/api",
+    "backend/koofr",
     "backend/local",
+    "backend/mega",
+    "backend/onedrive",
+    "backend/onedrive/api",
     "backend/onedrive/quickxorhash",
+    "backend/opendrive",
+    "backend/pcloud",
+    "backend/pcloud/api",
+    "backend/qingstor",
+    "backend/s3",
+    "backend/sftp",
+    "backend/swift",
+    "backend/union",
+    "backend/webdav",
+    "backend/webdav/api",
+    "backend/webdav/odrvcookie",
+    "backend/yandex",
+    "backend/yandex/api",
     "cmd/serve/httplib",
     "cmd/serve/httplib/serve/data",
     "fs",
@@ -192,7 +348,9 @@
     "fs/rc",
     "fs/version",
     "fs/walk",
+    "lib/atexit",
     "lib/dircache",
+    "lib/env",
     "lib/errors",
     "lib/file",
     "lib/mmap",
@@ -200,9 +358,16 @@
     "lib/pacer",
     "lib/pool",
     "lib/readers",
+    "lib/rest",
     "vfs"
   ]
   revision = "ba72e62b41cbfd6f36ec089a1f58c26d31a57734"
+
+[[projects]]
+  name = "github.com/ncw/swift"
+  packages = ["."]
+  revision = "24e3012fc8a71f004a6455bce2088031d50bf2b6"
+  version = "v1.0.47"
 
 [[projects]]
   name = "github.com/opentracing/opentracing-go"
@@ -215,16 +380,40 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/peak6/envflag"
   packages = ["."]
   revision = "39b5f0b7ebaa59e1258b2a3cefccceac3f49afa5"
 
 [[projects]]
+  name = "github.com/pengsrc/go-shared"
+  packages = [
+    "buffer",
+    "check",
+    "convert",
+    "log",
+    "reopen"
+  ]
+  revision = "807ee759d82c84982a89fb3dc875ef884942f1e5"
+  version = "v0.2.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
+
+[[projects]]
+  name = "github.com/pkg/sftp"
+  packages = ["."]
+  revision = "a713b07e6d90e1831d7fefcb69f1310edb3783ae"
+  version = "v1.10.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -305,6 +494,36 @@
   version = "v1.3.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/t3rm1n4l/go-mega"
+  packages = ["."]
+  revision = "55e675378686d47d431f7df147ac45623732ff3a"
+
+[[projects]]
+  name = "github.com/xanzy/ssh-agent"
+  packages = ["."]
+  revision = "6a3e2ff9e7c564f36873c2e36413f634534f1c44"
+  version = "v0.2.1"
+
+[[projects]]
+  name = "github.com/yunify/qingstor-sdk-go"
+  packages = [
+    ".",
+    "config",
+    "logger",
+    "request",
+    "request/builder",
+    "request/data",
+    "request/errors",
+    "request/signer",
+    "request/unpacker",
+    "service",
+    "utils"
+  ]
+  revision = "60a6f6383677f560fbcc9ac5ce6b47a44a8d2b65"
+  version = "v2.3.0"
+
+[[projects]]
   name = "go.opencensus.io"
   packages = [
     ".",
@@ -333,12 +552,18 @@
   packages = [
     "bcrypt",
     "blowfish",
+    "curve25519",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "internal/chacha20",
     "internal/subtle",
     "nacl/secretbox",
     "pbkdf2",
     "poly1305",
     "salsa20/salsa",
     "scrypt",
+    "ssh",
+    "ssh/agent",
     "ssh/terminal"
   ]
   revision = "22d7a77e9e5f409e934ed268692e56707cd169e5"
@@ -349,13 +574,16 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
     "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/timeseries",
     "publicsuffix",
-    "trace"
+    "trace",
+    "websocket"
   ]
   revision = "f3200d17e092c607f615320ecaad13d87ad9a2b3"
 
@@ -427,6 +655,7 @@
     "googleapi/transport",
     "internal",
     "option",
+    "storage/v1",
     "transport/http",
     "transport/http/internal/propagation"
   ]
@@ -507,9 +736,15 @@
   revision = "a96e63847dc3c67d17befa69c303767e2f84e54f"
   version = "v2.1"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "750c502d2720ebd86077a3f249ab6b6fd4635b7afe19e4fa7e382cbd966bb4ba"
+  inputs-digest = "e222353633d4b78a6024c9af36737305870dc5a032c00b8c0e59d197195698a3"
   solver-name = "gps-cdcl"
   solver-version = 1
