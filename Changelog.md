@@ -1,3 +1,12 @@
+### 0.2.0 - 21th of June 2019
+
+* Multiple library backend support
+* Rclone backend support
+* Pagination support with auto-loading in the React app
+* Increased filename to content name compatitiblity
+* Fixed race condition in ffprobe
+* Better movie merging logic
+
 ### 0.1.2 - 28th of May 2019
 
 * Faster library scanning, should be up to four times faster in this

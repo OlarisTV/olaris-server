@@ -6,8 +6,8 @@ var GitCommit string
 
 const (
 	VersionMajor = 0
-	VersionMinor = 1
-	VersionPatch = 2
+	VersionMinor = 2
+	VersionPatch = 0
 )
 
 func Version() string {
