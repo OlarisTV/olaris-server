@@ -50,9 +50,12 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}
+		// Ensuring the latest default options modified for our usecase is probaly safer
+		opts := vfs.DefaultOpt
+		opts.CacheMode = vfs.CacheModeMinimal
+		opts.ChunkSize = 32 * fs.MebiByte
 
-		vfsCache[l.remoteName] = vfs.New(filesystem, &vfs.Options{ReadOnly: true,
-			CacheMode: vfs.CacheModeMinimal})
+		vfsCache[l.remoteName] = vfs.New(filesystem, &opts)
 	}
 	p := "/" + l.path
 	log.WithFields(log.Fields{"path": p, "remoteName": l.remoteName}).Debugln("Checking if Rclone path exists")
