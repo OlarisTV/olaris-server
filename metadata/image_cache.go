@@ -21,7 +21,7 @@ type ImageManager struct {
 
 // NewImageManager creates a new instance of a image caching server for themoviedb.
 func NewImageManager() *ImageManager {
-	cachePath := path.Join(helpers.MetadataConfigPath(), "cache", "images")
+	cachePath := path.Join(helpers.CacheDir(), "images")
 	helpers.EnsurePath(cachePath)
 	return &ImageManager{cachePath: cachePath}
 }
