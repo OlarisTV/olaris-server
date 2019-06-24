@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -10,6 +11,11 @@ import (
 	"path/filepath"
 	"runtime"
 )
+
+var configDir = flag.String(
+	"config_dir",
+	"",
+	"Default configuration directory for config files.")
 
 // GetHome returns the given users home folder
 func GetHome() string {
@@ -55,7 +61,12 @@ func FileExists(pathName string) bool {
 
 // BaseConfigPath returns the root for our config folders.
 func BaseConfigPath() string {
-	return path.Join(GetHome(), ".config", "olaris")
+	if *configDir == "" {
+		return path.Join(GetHome(), ".config", "olaris")
+	}
+	log.WithFields(log.Fields{"configDir*": configDir}).Warnln("Using non-default config folder")
+
+	return *configDir
 }
 
 // MetadataConfigPath returns the config path for the md server
