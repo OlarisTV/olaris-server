@@ -9,11 +9,16 @@ import (
 var SchemaTxt = `
 	schema {
 		query: Query
+		subscription: Subscription
 		mutation: Mutation
 	}
 
 	union MediaItem = Movie | Episode
 	union SearchItem = Movie | Series
+
+	type Subscription {
+		movieAdded(): MovieAddedEvent!
+	}
 
 	# The query type, represents all of the entry points into our object graph
 	type Query {
@@ -267,6 +272,10 @@ var SchemaTxt = `
 		fileSize: Int!
 		# Get the library for the given file
 		library: Library!
+	}
+
+	type MovieAddedEvent {
+		movie: Movie!
 	}
 
 	# Invite that can be used to allow other users access to your server.

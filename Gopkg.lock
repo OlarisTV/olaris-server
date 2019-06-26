@@ -174,6 +174,12 @@
   version = "v1.7.2"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/graph-gophers/graphql-go"
   packages = [
@@ -193,6 +199,15 @@
     "trace"
   ]
   revision = "158e7b876106936762df88b11b595cfe2de738c6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/graph-gophers/graphql-transport-ws"
+  packages = [
+    "graphqlws",
+    "graphqlws/internal/connection"
+  ]
+  revision = "40c0484322990a129cac2f2d2763c3315230280c"
 
 [[projects]]
   name = "github.com/hashicorp/golang-lru"
@@ -745,6 +760,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e222353633d4b78a6024c9af36737305870dc5a032c00b8c0e59d197195698a3"
+  inputs-digest = "d3df2c0a65de6a05ad8a25cabff53ed7fc1a26852ebb2833b8ef6da6e739d8ab"
   solver-name = "gps-cdcl"
   solver-version = 1

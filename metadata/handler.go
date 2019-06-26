@@ -4,6 +4,7 @@ package metadata
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/graph-gophers/graphql-transport-ws/graphqlws"
 	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/metadata/resolvers"
 
@@ -14,7 +15,8 @@ import (
 func RegisterRoutes(menv *app.MetadataContext, r *mux.Router) {
 	imageManager := NewImageManager()
 
-	r.Handle("/query", auth.MiddleWare(resolvers.NewRelayHandler(menv)))
+	schema, handler := resolvers.NewRelayHandler(menv)
+	r.Handle("/query", auth.MiddleWare(graphqlws.NewHandlerFunc(schema, handler)))
 
 	r.HandleFunc("/v1/auth", auth.UserHandler).Methods("POST")
 

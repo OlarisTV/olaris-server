@@ -7,16 +7,16 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// Noti is a test
-type Noti interface {
-	LetMeKnow() string
+// NotificationDispatcher is an interface that can implement the various notifications the libraryManager can give off
+type NotificationDispatcher interface {
+	MovieAdded(*db.Movie)
 }
 
 // WorkerPool is a container for the various workers that a library needs
 type WorkerPool struct {
 	tmdbPool  *tunny.Pool
 	probePool *tunny.Pool
-	Handler   Noti
+	Handler   NotificationDispatcher
 }
 
 // NewDefaultWorkerPool needs a description
@@ -36,9 +36,6 @@ func NewDefaultWorkerPool() *WorkerPool {
 			} else {
 				db.UpdateEpisode(&ep.episode)
 			}
-			if p.Handler != nil {
-				log.Println(p.Handler.LetMeKnow())
-			}
 		}
 		ok = false
 		movie, ok := payload.(db.Movie)
@@ -49,6 +46,10 @@ func NewDefaultWorkerPool() *WorkerPool {
 			} else {
 				db.UpdateMovie(&movie)
 				db.MergeDuplicateMovies()
+				if p.Handler != nil {
+					log.Warnln("GIVING AN UPDATE TO THE NOTIFIER")
+					p.Handler.MovieAdded(&movie)
+				}
 			}
 		}
 
