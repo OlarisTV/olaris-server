@@ -279,6 +279,6 @@ var SchemaTxt = `
 
 // InitSchema inits the graphql schema.
 func InitSchema(env *app.MetadataContext) *graphql.Schema {
-	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{env: env})
+	Schema := graphql.MustParseSchema(SchemaTxt, NewResolver(env))
 	return Schema
 }

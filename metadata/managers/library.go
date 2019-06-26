@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"github.com/Jeffail/tunny"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
 	log "github.com/sirupsen/logrus"
@@ -33,16 +32,8 @@ var SupportedExtensions = map[string]bool{
 }
 
 type probeJob struct {
-	node    filesystem.Node
-	library *db.Library
-}
-
-// LibraryManager manages all active libraries.
-type LibraryManager struct {
-	pool    *tunny.Pool
-	watcher *fsnotify.Watcher
-
-	probeJobChan chan probeJob
+	node filesystem.Node
+	man  *LibraryManager
 }
 
 type episodePayload struct {
@@ -51,58 +42,38 @@ type episodePayload struct {
 	episode db.Episode
 }
 
-func (man *LibraryManager) probeFileWorker(id int) {
-	for job := range man.probeJobChan {
-		log.Debugf("Worker %d picked up job: %s.", id, job.node.Name())
-		man.ProbeFile(job.library, job.node)
-		log.Debugf("Worker %d done.", id)
-	}
+// LibraryManager manages all active libraries.
+type LibraryManager struct {
+	Watcher *fsnotify.Watcher
+	Pool    *WorkerPool
+	Library *db.Library
 }
 
 // NewLibraryManager creates a new LibraryManager with a pool worker that can process episode information.
-func NewLibraryManager(watcher *fsnotify.Watcher) *LibraryManager {
-	manager := LibraryManager{}
+func NewLibraryManager(lib *db.Library, w *WorkerPool, exitChan chan bool) *LibraryManager {
+	var err error
+	manager := LibraryManager{Pool: w, Library: lib}
 
-	if watcher != nil {
-		manager.watcher = watcher
+	manager.Watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		log.Errorln("Could not start fsnotify")
+	} else {
 	}
-
-	manager.probeJobChan = make(chan probeJob)
-
-	for w := 1; w <= 6; w++ {
-		go manager.probeFileWorker(w)
-	}
-
-	agent := agents.NewTmdbAgent()
-	//TODO: We probably want a more global pool.
-	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
-	manager.pool = tunny.NewFunc(4, func(payload interface{}) interface{} {
-		ep, ok := payload.(episodePayload)
-		if ok {
-			log.Debugln("Spawning episode worker.")
-			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
-			} else {
-				db.UpdateEpisode(&ep.episode)
-			}
-		}
-		log.Debugln("Episode worker finished.")
-		return nil
-	})
+	go manager.startWatcher(exitChan)
+	log.WithFields(log.Fields{"libraryID": lib.ID}).Println("Created new LibraryManager")
 
 	return &manager
 }
 
 // UpdateMD looks for missing metadata information and attempts to retrieve it.
-func (man *LibraryManager) UpdateMD(library *db.Library) {
-	switch kind := library.Kind; kind {
+func (man *LibraryManager) UpdateMD() {
+	switch kind := man.Library.Kind; kind {
 	case db.MediaTypeMovie:
-		log.WithFields(library.LogFields()).Println("Updating metadata for movies.")
-		man.IdentifyUnidentMovies(library)
+		log.WithFields(man.Library.LogFields()).Println("Updating metadata for movies.")
+		man.IdentifyUnidentMovies()
 	case db.MediaTypeSeries:
-		log.WithFields(library.LogFields()).Println("Updating metadata for TV.")
-		man.IdentifyUnidentSeries(library)
+		log.WithFields(man.Library.LogFields()).Println("Updating metadata for TV.")
+		man.IdentifyUnidentSeries()
 	}
 }
 
@@ -113,7 +84,7 @@ func (man *LibraryManager) UpdateEpisodesMD() error {
 		go func(episode *db.Episode) {
 			season := db.FindSeason(episode.SeasonID)
 			series := db.FindSerie(season.SeriesID)
-			man.pool.Process(episodePayload{season: season, series: series, episode: *episode})
+			man.Pool.tmdbPool.Process(episodePayload{season: season, series: series, episode: *episode})
 		}(&episodes[i])
 	}
 	return nil
@@ -139,7 +110,7 @@ func UpdateSeriesMD(series *db.Series) error {
 }
 
 // IdentifyUnidentSeries loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) IdentifyUnidentSeries(library *db.Library) error {
+func (man *LibraryManager) IdentifyUnidentSeries() error {
 	for _, series := range db.FindAllUnidentifiedSeries() {
 		UpdateSeriesMD(&series)
 	}
@@ -187,6 +158,7 @@ func RefreshAllSeriesMD() error {
 
 // UpdateEpisodeMD updates the database record with the latest data from the agent
 func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
+
 	agent := agents.NewTmdbAgent()
 	agents.UpdateEpisodeMD(agent, ep, season, series)
 	db.UpdateEpisode(ep)
@@ -202,56 +174,58 @@ func UpdateSeasonMD(season *db.Season, series *db.Series) error {
 }
 
 // IdentifyUnidentMovies loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) IdentifyUnidentMovies(library *db.Library) error {
-	for _, movie := range db.FindAllUnidentifiedMovies() {
+func (man *LibraryManager) IdentifyUnidentMovies() error {
+	for _, movie := range db.FindAllUnidentifiedMoviesInLibrary(man.Library.ID) {
 		log.WithFields(log.Fields{"title": movie.Title}).Println("Attempting to fetch metadata for unidentified movie.")
-		UpdateMovieMD(&movie)
+		go man.Pool.tmdbPool.Process(movie)
 	}
 	return nil
 }
-func (man *LibraryManager) checkAndAddProbeJob(library *db.Library, node filesystem.Node) {
+func (man *LibraryManager) checkAndAddProbeJob(node filesystem.Node) {
+	library := man.Library
 	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.FileLocator().String())) ||
 		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.FileLocator().String())) {
-		man.probeJobChan <- probeJob{library: library, node: node}
+		go man.Pool.probePool.Process(probeJob{man: man, node: node})
 	} else {
 		log.WithFields(log.Fields{"path": node.Path()}).
 			Debugln("File already exists in library, not adding again.")
 	}
 }
 
-// Probe goes over the filesystem and parses filenames in the given library.
-func (man *LibraryManager) Probe(library *db.Library) {
-	log.WithFields(library.LogFields()).Println("Scanning library for changed files.")
+// Refresh goes over the filesystem and parses filenames in the given library.
+func (man *LibraryManager) Refresh() {
+	log.WithFields(man.Library.LogFields()).Println("Scanning library for changed files.")
 	stime := time.Now()
 
-	library.RefreshStartedAt = stime
-	library.RefreshCompletedAt = time.Time{}
-	db.UpdateLibrary(library)
+	// TODO: Move this into db package
+	man.Library.RefreshStartedAt = stime
+	man.Library.RefreshCompletedAt = time.Time{}
+	db.UpdateLibrary(man.Library)
 
 	var rootNode filesystem.Node
 	var err error
 
 	// TODO: Should this be in it's own healthCheck method on the library or something?
-	if library.Backend == db.BackendLocal {
-		rootNode, err = filesystem.LocalNodeFromPath(library.FilePath)
+	if man.Library.Backend == db.BackendLocal {
+		rootNode, err = filesystem.LocalNodeFromPath(man.Library.FilePath)
 		if err != nil {
-			log.WithFields(log.Fields{"path": library.FilePath, "error": err.Error()}).Errorln("Got an error trying to create local rootnode")
-			library.Healthy = false
-			db.UpdateLibrary(library)
+			log.WithFields(log.Fields{"path": man.Library.FilePath, "error": err.Error()}).Errorln("Got an error trying to create local rootnode")
+			man.Library.Healthy = false
+			db.UpdateLibrary(man.Library)
 			return
 		}
-		library.Healthy = true
-		db.UpdateLibrary(library)
-	} else if library.Backend == db.BackendRclone {
-		rootNode, err = filesystem.RcloneNodeFromPath(path.Join(library.RcloneName, library.FilePath))
+		man.Library.Healthy = true
+		db.UpdateLibrary(man.Library)
+	} else if man.Library.Backend == db.BackendRclone {
+		rootNode, err = filesystem.RcloneNodeFromPath(path.Join(man.Library.RcloneName, man.Library.FilePath))
 		if err != nil {
-			log.WithFields(log.Fields{"rcloneName": library.RcloneName, "error": err.Error()}).Errorln("Something went wrong when trying to connect to the Rclone remote")
-			library.Healthy = false
-			db.UpdateLibrary(library)
+			log.WithFields(log.Fields{"rcloneName": man.Library.RcloneName, "error": err.Error()}).Errorln("Something went wrong when trying to connect to the Rclone remote")
+			man.Library.Healthy = false
+			db.UpdateLibrary(man.Library)
 			return
 		}
-		library.Healthy = true
-		db.UpdateLibrary(library)
+		man.Library.Healthy = true
+		db.UpdateLibrary(man.Library)
 	}
 
 	// We don't need to handle the error here because we already handle it in walkFn
@@ -260,7 +234,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 			log.WithFields(log.Fields{"error": err}).
 				Warnf("Received an error while walking %s", walkPath)
 		} else if ValidFile(n) {
-			man.checkAndAddProbeJob(library, n)
+			man.checkAndAddProbeJob(n)
 		}
 		// Watchers are only supported for the local backend
 		if n.BackendType() == filesystem.BackendLocal {
@@ -271,9 +245,9 @@ func (man *LibraryManager) Probe(library *db.Library) {
 	}, true)
 
 	dur := time.Since(stime)
-	log.Printf("Probing library '%s' took %f seconds", library.FilePath, dur.Seconds())
-	library.RefreshCompletedAt = time.Now()
-	db.UpdateLibrary(library)
+	log.Printf("Probing library '%s' took %f seconds", man.Library.FilePath, dur.Seconds())
+	man.Library.RefreshCompletedAt = time.Now()
+	db.UpdateLibrary(man.Library)
 
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Warnln("Error while probing some files.")
@@ -284,7 +258,7 @@ func (man *LibraryManager) Probe(library *db.Library) {
 // AddWatcher adds a fsnotify watcher to the given path.
 func (man *LibraryManager) AddWatcher(filePath string) {
 	log.WithFields(log.Fields{"filepath": filePath}).Debugln("Adding path to fsnotify.")
-	err := man.watcher.Add(filePath)
+	err := man.Watcher.Add(filePath)
 	if err != nil {
 		log.Warnln("Could not add filesystem notification watcher:", err)
 	}
@@ -316,7 +290,8 @@ func collectStreams(n filesystem.Node) []db.Stream {
 }
 
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
-func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) error {
+func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
+	library := man.Library
 	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
 
 	basename := n.Name()
@@ -359,7 +334,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) err
 
 			db.UpdateEpisodeFile(&epFile)
 
-			UpdateEpisodeMD(&ep, &season, &series)
+			go man.Pool.tmdbPool.Process(episodePayload{season: season, series: series, episode: ep})
 		} else {
 			log.WithFields(log.Fields{"title": parsedInfo.Title}).Warnln("Could not identify episode based on parsed filename.")
 		}
@@ -383,7 +358,7 @@ func (man *LibraryManager) ProbeFile(library *db.Library, n filesystem.Node) err
 		movieFile.Streams = collectStreams(n)
 		db.CreateMovieFile(&movieFile)
 
-		UpdateMovieMD(&movie)
+		go man.Pool.tmdbPool.Process(movie)
 	}
 	return nil
 }
@@ -466,7 +441,7 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 	switch m.GetLibrary().Backend {
 	case db.BackendLocal:
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
-		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on local")
+		//		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on local")
 		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
@@ -474,7 +449,7 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		}
 	case db.BackendRclone:
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
-		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
+		//		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
 		_, err = filesystem.RcloneNodeFromPath(p.Path)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
@@ -488,13 +463,13 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 
 // CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.
 func (man *LibraryManager) CheckRemovedFiles() {
-	log.Infoln("Checking libraries to see if any files got removed since our last scan.")
+	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Infoln("Checking for removed files.")
 
-	for _, movieFile := range db.FindAllMovieFiles() {
+	for _, movieFile := range db.FindMovieFilesInLibrary(man.Library.ID) {
 		CheckFileAndDeleteIfMissing(movieFile)
 	}
 
-	for _, file := range db.FindAllEpisodeFiles() {
+	for _, file := range db.FindEpisodeFilesInLibrary(man.Library.ID) {
 		CheckFileAndDeleteIfMissing(file)
 	}
 }
@@ -503,22 +478,14 @@ func (man *LibraryManager) CheckRemovedFiles() {
 func (man *LibraryManager) RefreshAll() {
 	man.CheckRemovedFiles()
 
-	for _, lib := range db.AllLibraries() {
-		if lib.IsLocal() {
-			man.AddWatcher(lib.FilePath)
-		}
-		man.Probe(&lib)
-
-		log.WithFields(lib.LogFields()).Infoln("Scanning library for unidentified media.")
-		man.UpdateMD(&lib)
-
+	if man.Library.IsLocal() {
+		man.AddWatcher(man.Library.FilePath)
 	}
 
-	RefreshAgentMetadataWithMissingArt()
+	man.Refresh()
+	man.UpdateMD()
 
 	db.MergeDuplicateMovies()
-
-	log.Println("Finished refreshing libraries.")
 }
 
 // TODO: Please tell me we can do this in a cleaner way, this makes my eyes bleed :|

@@ -85,8 +85,11 @@ var serveCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
+		log.Println("Shutting down...2")
 		mctx.Cleanup()
+		log.Println("Shutting down...3")
 		streaming.Cleanup()
+		log.Println("Shutting down...4")
 		srv.Shutdown(ctx)
 		log.Println("Shut down complete, exiting.")
 	},

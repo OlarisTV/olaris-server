@@ -74,7 +74,7 @@ func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
 // Episodes returns episodes in Library.
 func (r *LibraryResolver) Episodes(ctx context.Context) (eps []*EpisodeResolver) {
 	userID, _ := auth.UserID(ctx)
-	for _, episode := range db.FindEpisodesInLibrary(r.r.ID, userID) {
+	for _, episode := range db.FindEpisodesInLibrary(r.r.ID) {
 		eps = append(eps, &EpisodeResolver{r: newEpisode(&episode, userID)})
 	}
 
@@ -132,7 +132,7 @@ func (r *Resolver) RescanLibraries() bool {
 	if rescanningLibraries == false {
 		rescanningLibraries = true
 		go func() {
-			managers.NewLibraryManager(r.env.Watcher).RefreshAll()
+			//managers.NewLibraryManager(r.env.Watcher).RefreshAll()
 			rescanningLibraries = false
 		}()
 		return true
@@ -189,7 +189,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		if err != nil {
 			libRes = LibraryResponse{Error: CreateErrResolver(err)}
 		} else {
-			go managers.NewLibraryManager(r.env.Watcher).Probe(&library)
+			r.AddLibraryManager(&library)
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {

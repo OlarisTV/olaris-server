@@ -264,11 +264,20 @@ func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 	return episodes
 }
 
+// FindEpisodeFilesInLibrary returns all episodes in the given library.
+func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
+	db.Where("library_id = ?", libraryID).Find(&episodes)
+
+	return episodes
+}
+
 // FindEpisodesInLibrary returns all episodes in the given library.
-func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
-	// TODO: Fix this, episodes don't live in libraries, files do.
-	db.Find(&episodes)
-	CollectEpisodeData(episodes, userID)
+func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
+	var files []EpisodeFile
+	db.Preload("Episode", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	for _, e := range files {
+		episodes = append(episodes, *e.Episode)
+	}
 
 	return episodes
 }
