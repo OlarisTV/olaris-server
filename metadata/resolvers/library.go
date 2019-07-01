@@ -132,7 +132,9 @@ func (r *Resolver) RescanLibraries() bool {
 	if rescanningLibraries == false {
 		rescanningLibraries = true
 		go func() {
-			//managers.NewLibraryManager(r.env.Watcher).RefreshAll()
+			for _, lm := range r.libs {
+				lm.RefreshAll()
+			}
 			rescanningLibraries = false
 		}()
 		return true
