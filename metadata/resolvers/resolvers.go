@@ -11,7 +11,7 @@ import (
 
 // NewResolver is a new resolver, UPDATE THIS
 func NewResolver(env *app.MetadataContext) *Resolver {
-	r := &Resolver{exitChan: env.ExitChan, movieAddedSubscriber: make(chan *movieAddedSubscriber), movieAddedEvents: make(chan *MovieAddedEvent)}
+	r := &Resolver{exitChan: env.ExitChan, epAddedSubChan: make(chan *episodeAddedSubscriber), movieAddedSubscribers: make(chan *movieAddedSubscriber), movieAddedEvents: make(chan *MovieAddedEvent), episodeAddedEvents: make(chan *EpisodeAddedEvent)}
 
 	w := managers.NewDefaultWorkerPool()
 	r.pool = w
@@ -22,7 +22,7 @@ func NewResolver(env *app.MetadataContext) *Resolver {
 	for i := range libs {
 		r.AddLibraryManager(&libs[i])
 	}
-	go r.broadcastMovieAdded()
+	go r.broadcaster()
 	return r
 }
 
@@ -35,12 +35,14 @@ func (r *Resolver) AddLibraryManager(lib *db.Library) {
 
 // Resolver container object for all resolvers.
 type Resolver struct {
-	env                  *app.MetadataContext
-	pool                 *managers.WorkerPool
-	libs                 []*managers.LibraryManager
-	exitChan             chan bool
-	movieAddedEvents     chan *MovieAddedEvent
-	movieAddedSubscriber chan *movieAddedSubscriber
+	env                   *app.MetadataContext
+	pool                  *managers.WorkerPool
+	libs                  []*managers.LibraryManager
+	exitChan              chan bool
+	movieAddedEvents      chan *MovieAddedEvent
+	movieAddedSubscribers chan *movieAddedSubscriber
+	episodeAddedEvents    chan *EpisodeAddedEvent
+	epAddedSubChan        chan *episodeAddedSubscriber
 }
 
 // ErrorResolver holds error information.

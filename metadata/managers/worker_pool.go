@@ -10,6 +10,7 @@ import (
 // LibrarySubscriber is an interface that can implement the various notifications the libraryManager can give off
 type LibrarySubscriber interface {
 	MovieAdded(*db.Movie)
+	EpisodeAdded(*db.Episode)
 }
 
 // WorkerPool is a container for the various workers that a library needs
@@ -35,6 +36,10 @@ func NewDefaultWorkerPool() *WorkerPool {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
 			} else {
 				db.UpdateEpisode(&ep.episode)
+				if p.Subscriber != nil {
+					log.Warnln("GIVING AN UPDATE TO THE NOTIFIER")
+					p.Subscriber.EpisodeAdded(&ep.episode)
+				}
 			}
 		}
 		ok = false
