@@ -7,16 +7,16 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// NotificationDispatcher is an interface that can implement the various notifications the libraryManager can give off
-type NotificationDispatcher interface {
+// LibrarySubscriber is an interface that can implement the various notifications the libraryManager can give off
+type LibrarySubscriber interface {
 	MovieAdded(*db.Movie)
 }
 
 // WorkerPool is a container for the various workers that a library needs
 type WorkerPool struct {
-	tmdbPool  *tunny.Pool
-	probePool *tunny.Pool
-	Handler   NotificationDispatcher
+	tmdbPool   *tunny.Pool
+	probePool  *tunny.Pool
+	Subscriber LibrarySubscriber
 }
 
 // NewDefaultWorkerPool needs a description
@@ -46,9 +46,9 @@ func NewDefaultWorkerPool() *WorkerPool {
 			} else {
 				db.UpdateMovie(&movie)
 				db.MergeDuplicateMovies()
-				if p.Handler != nil {
+				if p.Subscriber != nil {
 					log.Warnln("GIVING AN UPDATE TO THE NOTIFIER")
-					p.Handler.MovieAdded(&movie)
+					p.Subscriber.MovieAdded(&movie)
 				}
 			}
 		}
