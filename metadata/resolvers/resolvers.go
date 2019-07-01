@@ -11,7 +11,7 @@ import (
 
 // NewResolver is a new resolver, UPDATE THIS
 func NewResolver(env *app.MetadataContext) *Resolver {
-	r := &Resolver{exitChan: env.ExitChan, movieAddedSubscriber: make(chan *movieAddedSubscriber), movieAddedEvents: make(chan *movieAddedEvent)}
+	r := &Resolver{exitChan: env.ExitChan, movieAddedSubscriber: make(chan *movieAddedSubscriber), movieAddedEvents: make(chan *MovieAddedEvent)}
 
 	w := managers.NewDefaultWorkerPool()
 	r.pool = w
@@ -39,7 +39,7 @@ type Resolver struct {
 	pool                 *managers.WorkerPool
 	libs                 []*managers.LibraryManager
 	exitChan             chan bool
-	movieAddedEvents     chan *movieAddedEvent
+	movieAddedEvents     chan *MovieAddedEvent
 	movieAddedSubscriber chan *movieAddedSubscriber
 }
 

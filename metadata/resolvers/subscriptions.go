@@ -13,7 +13,7 @@ type graphqlLibrarySubscriber struct {
 }
 
 func (h graphqlLibrarySubscriber) MovieAdded(movie *db.Movie) {
-	e := &movieAddedEvent{movie: &MovieResolver{*movie}}
+	e := &MovieAddedEvent{movie: &MovieResolver{*movie}}
 	go func() {
 		select {
 		case h.resolver.movieAddedEvents <- e:
@@ -24,9 +24,9 @@ func (h graphqlLibrarySubscriber) MovieAdded(movie *db.Movie) {
 }
 
 // MovieAdded subscription
-func (r *Resolver) MovieAdded(ctx context.Context) <-chan *movieAddedEvent {
-	log.Debugln("Adding subscription to movieAddedEvent")
-	c := make(chan *movieAddedEvent)
+func (r *Resolver) MovieAdded(ctx context.Context) <-chan *MovieAddedEvent {
+	log.Debugln("Adding subscription to MovieAddedEvent")
+	c := make(chan *MovieAddedEvent)
 	r.movieAddedSubscriber <- &movieAddedSubscriber{events: c, stop: ctx.Done()}
 
 	return c
@@ -34,14 +34,20 @@ func (r *Resolver) MovieAdded(ctx context.Context) <-chan *movieAddedEvent {
 
 type movieAddedSubscriber struct {
 	stop   <-chan struct{}
-	events chan<- *movieAddedEvent
+	events chan<- *MovieAddedEvent
 }
 
-type movieAddedEvent struct {
+type episodeAddedEvent struct {
+	episode *EpisodeResolver
+}
+
+// MovieAddedEvent adds an event when a movie gets added
+type MovieAddedEvent struct {
 	movie *MovieResolver
 }
 
-func (m *movieAddedEvent) Movie() *MovieResolver {
+// Movie is a resolver for the movie struct
+func (m *MovieAddedEvent) Movie() *MovieResolver {
 	return m.movie
 }
 
