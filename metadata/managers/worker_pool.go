@@ -38,7 +38,6 @@ func NewDefaultWorkerPool() *WorkerPool {
 	p := &WorkerPool{}
 	agent := agents.NewTmdbAgent()
 
-	//TODO: We probably want a more global pool.
 	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
