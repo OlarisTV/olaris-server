@@ -38,7 +38,7 @@ func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
 func (r *Resolver) MovieAdded(ctx context.Context) <-chan *MovieAddedEvent {
 	log.Debugln("Adding subscription to MovieAddedEvent")
 	c := make(chan *MovieAddedEvent)
-	r.movieAddedSubscribers <- &movieAddedSubscriber{events: c, stop: ctx.Done()}
+	r.subscriberChan <- &graphqlSubscriber{movieAddedEventChan: c, stop: ctx.Done()}
 
 	return c
 }
@@ -47,19 +47,90 @@ func (r *Resolver) MovieAdded(ctx context.Context) <-chan *MovieAddedEvent {
 func (r *Resolver) EpisodeAdded(ctx context.Context) <-chan *EpisodeAddedEvent {
 	log.Debugln("Adding subscription to EpisodeAddedEvent")
 	c := make(chan *EpisodeAddedEvent)
-	r.epAddedSubChan <- &episodeAddedSubscriber{events: c, stop: ctx.Done()}
+	r.subscriberChan <- &graphqlSubscriber{episodeAddedEventChan: c, stop: ctx.Done()}
 
 	return c
 }
 
-type episodeAddedSubscriber struct {
-	stop   <-chan struct{}
-	events chan<- *EpisodeAddedEvent
+type graphqlSubscriber struct {
+	stop                  <-chan struct{}
+	episodeAddedEventChan chan<- *EpisodeAddedEvent
+	movieAddedEventChan   chan<- *MovieAddedEvent
 }
 
-type movieAddedSubscriber struct {
-	stop   <-chan struct{}
-	events chan<- *MovieAddedEvent
+func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, event interface{}) {
+	// The double select here: https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
+	select {
+	case <-s.stop:
+		unsubChan <- id
+		return
+	default:
+	}
+
+	e, ok := event.(*EpisodeAddedEvent)
+	if ok {
+		select {
+		case <-s.stop:
+			unsubChan <- id
+		case s.episodeAddedEventChan <- e:
+		case <-time.After(time.Second):
+		}
+		return
+	}
+
+	movieEvent, ok := event.(*MovieAddedEvent)
+	if ok {
+		select {
+		case <-s.stop:
+			unsubChan <- id
+		case s.movieAddedEventChan <- movieEvent:
+		case <-time.After(time.Second):
+		}
+		return
+	}
+
+	log.Errorln("Got an event that could not be cast")
+}
+
+func (r *Resolver) broadcaster() {
+	unsubscribe := make(chan string)
+	subscriptions := map[string]*graphqlSubscriber{}
+
+	for {
+		select {
+		case id := <-unsubscribe:
+			log.WithFields(log.Fields{"id": id}).Debugln("Received unscribe event via channel")
+			delete(subscriptions, id)
+		case s := <-r.subscriberChan:
+			id := randomID()
+			subscriptions[id] = s
+			log.WithFields(log.Fields{"id": id}).Debugln("Added subscription")
+		case e := <-r.episodeAddedEvents:
+			log.Debugln("Received episode event")
+			for id, s := range subscriptions {
+				if s.episodeAddedEventChan != nil {
+					go checkAndSendEvent(id, s, unsubscribe, e)
+				}
+			}
+		case e := <-r.movieAddedEvents:
+			log.Debugln("Received movie event")
+			for id, s := range subscriptions {
+				if s.movieAddedEventChan != nil {
+					go checkAndSendEvent(id, s, unsubscribe, e)
+				}
+			}
+		}
+	}
+}
+
+func randomID() string {
+	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+	b := make([]rune, 16)
+	for i := range b {
+		b[i] = letter[rand.Intn(len(letter))]
+	}
+	return string(b)
 }
 
 // EpisodeAddedEvent blabla
@@ -80,115 +151,4 @@ type MovieAddedEvent struct {
 // Movie is a resolver for the movie struct
 func (m *MovieAddedEvent) Movie() *MovieResolver {
 	return m.movie
-}
-
-func pubMovieAdded(id string, s *movieAddedSubscriber, e *MovieAddedEvent) {
-	// The double select here: https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
-	select {
-	case <-s.stop:
-		//unsubscribe <- id
-		return
-	default:
-	}
-
-	select {
-	case <-s.stop:
-		//unsubscribe <- id
-	case s.events <- e:
-	case <-time.After(time.Second):
-	}
-}
-
-func pubEpisodeAdded(id string, s *episodeAddedSubscriber, e *EpisodeAddedEvent) {
-	// The double select here: https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
-	select {
-	case <-s.stop:
-		//unsubscribe <- id
-		return
-	default:
-	}
-
-	select {
-	case <-s.stop:
-		//unsubscribe <- id
-	case s.events <- e:
-	case <-time.After(time.Second):
-	}
-}
-
-func (r *Resolver) broadcaster() {
-	subscriptions := map[string]interface{}{}
-	for {
-		select {
-		case s := <-r.movieAddedSubscribers:
-			i := randomID()
-			subscriptions[i] = s
-			log.Println("Added movie subscription to broadcaster()")
-		case s := <-r.epAddedSubChan:
-			i := randomID()
-			subscriptions[i] = s
-
-		case e := <-r.episodeAddedEvents:
-			log.Println("got episode event")
-			for id, s := range subscriptions {
-				episodeAddedSubscriber, ok := s.(*episodeAddedSubscriber)
-				if ok {
-					go pubEpisodeAdded(id, episodeAddedSubscriber, e)
-				}
-			}
-
-		case e := <-r.movieAddedEvents:
-			log.Println("got movie event")
-			for id, s := range subscriptions {
-				movieAddedSubscriber, ok := s.(*movieAddedSubscriber)
-				if ok {
-					go pubMovieAdded(id, movieAddedSubscriber, e)
-				}
-			}
-		}
-	}
-}
-
-func (r *Resolver) broadcastMovieAdded() {
-	movieAddedSubs := map[string]*movieAddedSubscriber{}
-
-	unsubscribe := make(chan string)
-
-	for {
-		select {
-		case id := <-unsubscribe:
-			delete(movieAddedSubs, id)
-		case s := <-r.movieAddedSubscribers:
-			movieAddedSubs[randomID()] = s
-		case e := <-r.movieAddedEvents:
-			for id, s := range movieAddedSubs {
-				go func(id string, s *movieAddedSubscriber) {
-					// The double select here: https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
-					select {
-					case <-s.stop:
-						unsubscribe <- id
-						return
-					default:
-					}
-
-					select {
-					case <-s.stop:
-						unsubscribe <- id
-					case s.events <- e:
-					case <-time.After(time.Second):
-					}
-				}(id, s)
-			}
-		}
-	}
-}
-
-func randomID() string {
-	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-	b := make([]rune, 16)
-	for i := range b {
-		b[i] = letter[rand.Intn(len(letter))]
-	}
-	return string(b)
 }

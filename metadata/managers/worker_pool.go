@@ -37,7 +37,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 			} else {
 				db.UpdateEpisode(&ep.episode)
 				if p.Subscriber != nil {
-					log.Warnln("GIVING AN UPDATE TO THE NOTIFIER")
+					log.Debugln("We have an attached subscriber, sending event.")
 					p.Subscriber.EpisodeAdded(&ep.episode)
 				}
 			}
@@ -52,7 +52,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 				db.UpdateMovie(&movie)
 				db.MergeDuplicateMovies()
 				if p.Subscriber != nil {
-					log.Warnln("GIVING AN UPDATE TO THE NOTIFIER")
+					log.Debugln("We have an attached subscriber, sending event.")
 					p.Subscriber.MovieAdded(&movie)
 				}
 			}
