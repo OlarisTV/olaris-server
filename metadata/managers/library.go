@@ -44,25 +44,36 @@ type episodePayload struct {
 
 // LibraryManager manages all active libraries.
 type LibraryManager struct {
-	Watcher *fsnotify.Watcher
-	Pool    *WorkerPool
-	Library *db.Library
+	Watcher       *fsnotify.Watcher
+	Pool          *WorkerPool
+	Library       *db.Library
+	exitChan      chan bool
+	isShutingDown bool
 }
 
 // NewLibraryManager creates a new LibraryManager with a pool worker that can process episode information.
-func NewLibraryManager(lib *db.Library, w *WorkerPool, exitChan chan bool) *LibraryManager {
+func NewLibraryManager(lib *db.Library, s LibrarySubscriber) *LibraryManager {
 	var err error
-	manager := LibraryManager{Pool: w, Library: lib}
+	manager := LibraryManager{Pool: NewDefaultWorkerPool(), Library: lib, exitChan: make(chan bool)}
+	manager.Pool.SetSubscriber(s)
 
 	manager.Watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		log.Errorln("Could not start fsnotify")
 	} else {
 	}
-	go manager.startWatcher(exitChan)
+	go manager.startWatcher(manager.exitChan)
 	log.WithFields(log.Fields{"libraryID": lib.ID}).Println("Created new LibraryManager")
 
 	return &manager
+}
+
+// Shutdown shuts down the LibraryManager, right now it's just about cleaning up the fsnotify watcher.
+func (man *LibraryManager) Shutdown() {
+	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Debugln("Closing down LibraryManager")
+	man.isShutingDown = true
+	man.exitChan <- true
+	man.Pool.Shutdown()
 }
 
 // UpdateMD looks for missing metadata information and attempts to retrieve it.
@@ -81,10 +92,11 @@ func (man *LibraryManager) UpdateMD() {
 func (man *LibraryManager) UpdateEpisodesMD() error {
 	episodes := db.FindAllUnidentifiedEpisodes()
 	for i := range episodes {
-		go func(episode *db.Episode) {
+		func(episode *db.Episode) {
 			season := db.FindSeason(episode.SeasonID)
 			series := db.FindSerie(season.SeriesID)
-			man.Pool.tmdbPool.Process(episodePayload{season: season, series: series, episode: *episode})
+			defer checkPanic()
+			man.Pool.tmdbPool.Process(&episodePayload{season: season, series: series, episode: *episode})
 		}(&episodes[i])
 	}
 	return nil
@@ -177,15 +189,32 @@ func UpdateSeasonMD(season *db.Season, series *db.Series) error {
 func (man *LibraryManager) IdentifyUnidentMovies() error {
 	for _, movie := range db.FindAllUnidentifiedMoviesInLibrary(man.Library.ID) {
 		log.WithFields(log.Fields{"title": movie.Title}).Println("Attempting to fetch metadata for unidentified movie.")
-		go man.Pool.tmdbPool.Process(movie)
+		go func(m *db.Movie) {
+			defer checkPanic()
+			man.Pool.tmdbPool.Process(m)
+		}(&movie)
 	}
 	return nil
 }
+
+func checkPanic() {
+	if r := recover(); r != nil {
+		log.WithFields(log.Fields{"error": r}).Debugln("Recovered from panic in pool processing.")
+	}
+}
+
 func (man *LibraryManager) checkAndAddProbeJob(node filesystem.Node) {
 	library := man.Library
 	if (library.Kind == db.MediaTypeSeries && !db.EpisodeFileExists(node.FileLocator().String())) ||
 		(library.Kind == db.MediaTypeMovie && !db.MovieFileExists(node.FileLocator().String())) {
-		go man.Pool.probePool.Process(probeJob{man: man, node: node})
+
+		// This is really annoying however when a tunny job is added to a closed pool it will throw a panic
+		// Right now a job can still be running when we delete a library this recover catches the fact that the pool is closed but we are still queuing up
+		// TODO: Somebody smarter than me figure out a better way of doing this
+		go func(p *probeJob) {
+			defer checkPanic()
+			man.Pool.probePool.Process(p)
+		}(&probeJob{man: man, node: node})
 	} else {
 		log.WithFields(log.Fields{"path": node.Path()}).
 			Debugln("File already exists in library, not adding again.")
@@ -334,7 +363,10 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 			db.UpdateEpisodeFile(&epFile)
 
-			go man.Pool.tmdbPool.Process(episodePayload{season: season, series: series, episode: ep})
+			go func(p *episodePayload) {
+				defer checkPanic()
+				man.Pool.tmdbPool.Process(p)
+			}(&episodePayload{season: season, series: series, episode: ep})
 		} else {
 			log.WithFields(log.Fields{"title": parsedInfo.Title}).Warnln("Could not identify episode based on parsed filename.")
 		}
@@ -358,7 +390,10 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 		movieFile.Streams = collectStreams(n)
 		db.CreateMovieFile(&movieFile)
 
-		go man.Pool.tmdbPool.Process(movie)
+		go func(movie *db.Movie) {
+			defer checkPanic()
+			man.Pool.tmdbPool.Process(movie)
+		}(&movie)
 	}
 	return nil
 }

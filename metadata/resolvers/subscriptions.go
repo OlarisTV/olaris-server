@@ -92,12 +92,17 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 	log.Errorln("Got an event that could not be cast")
 }
 
-func (r *Resolver) broadcaster() {
+func (r *Resolver) startGraphQLSubscriptionManager(exitChan chan bool) {
 	unsubscribe := make(chan string)
 	subscriptions := map[string]*graphqlSubscriber{}
 
 	for {
 		select {
+		case exit := <-exitChan:
+			if exit {
+				log.Debugln("Shutting down GraphQLSubscriptionManager")
+				break
+			}
 		case id := <-unsubscribe:
 			log.WithFields(log.Fields{"id": id}).Debugln("Received unscribe event via channel")
 			delete(subscriptions, id)

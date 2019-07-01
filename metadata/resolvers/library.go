@@ -147,6 +147,8 @@ func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *
 		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
 
+	r.StopLibraryManager(uint(args.ID))
+
 	library, err := db.DeleteLibrary(int(args.ID))
 	var libRes LibraryResponse
 	// TODO(Maran): Dry up resolver creation here and in CreateLibrary

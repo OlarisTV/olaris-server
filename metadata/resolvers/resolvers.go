@@ -9,39 +9,48 @@ import (
 	"net/http"
 )
 
+// Resolver container object for all resolvers.
+type Resolver struct {
+	env                *app.MetadataContext
+	libs               []*managers.LibraryManager
+	subscriber         *graphqlLibrarySubscriber
+	exitChan           chan bool
+	movieAddedEvents   chan *MovieAddedEvent
+	episodeAddedEvents chan *EpisodeAddedEvent
+	subscriberChan     chan *graphqlSubscriber
+}
+
 // NewResolver is a new resolver, UPDATE THIS
 func NewResolver(env *app.MetadataContext) *Resolver {
 	r := &Resolver{exitChan: env.ExitChan, subscriberChan: make(chan *graphqlSubscriber), movieAddedEvents: make(chan *MovieAddedEvent), episodeAddedEvents: make(chan *EpisodeAddedEvent)}
 
-	w := managers.NewDefaultWorkerPool()
-	r.pool = w
-
-	w.Subscriber = graphqlLibrarySubscriber{resolver: r}
+	s := graphqlLibrarySubscriber{resolver: r}
+	r.subscriber = &s
 
 	libs := db.AllLibraries()
 	for i := range libs {
 		r.AddLibraryManager(&libs[i])
 	}
-	go r.broadcaster()
+
+	go r.startGraphQLSubscriptionManager(r.exitChan)
+
 	return r
 }
 
 // AddLibraryManager adds a new manager
 func (r *Resolver) AddLibraryManager(lib *db.Library) {
-	man := managers.NewLibraryManager(lib, r.pool, r.exitChan)
+	man := managers.NewLibraryManager(lib, r.subscriber)
 	r.libs = append(r.libs, man)
 	go man.RefreshAll()
 }
 
-// Resolver container object for all resolvers.
-type Resolver struct {
-	env                *app.MetadataContext
-	pool               *managers.WorkerPool
-	libs               []*managers.LibraryManager
-	exitChan           chan bool
-	movieAddedEvents   chan *MovieAddedEvent
-	episodeAddedEvents chan *EpisodeAddedEvent
-	subscriberChan     chan *graphqlSubscriber
+// StopLibraryManager stops a given library based on the supplied Library
+func (r *Resolver) StopLibraryManager(id uint) {
+	for _, lm := range r.libs {
+		if lm.Library.ID == id {
+			lm.Shutdown()
+		}
+	}
 }
 
 // ErrorResolver holds error information.

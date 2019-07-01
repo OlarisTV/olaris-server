@@ -35,7 +35,7 @@ var env *MetadataContext
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, true, true)
+	return NewMDContext(dbPath, false, true)
 }
 
 // NewMDContext lets you create a more custom environment.
