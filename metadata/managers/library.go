@@ -160,7 +160,10 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 			UpdateSeasonMD(&season, &series)
 			for _, ep := range db.FindEpisodesForSeason(season.ID, 1) {
 				log.WithFields(log.Fields{"name": ep.Name}).Println("Refreshing metadata for episode.")
-				UpdateEpisodeMD(&ep, &season, &series)
+				go func(p *episodePayload) {
+					defer checkPanic()
+					man.Pool.tmdbPool.Process(p)
+				}(&episodePayload{season: season, series: series, episode: ep})
 			}
 		}
 	}
