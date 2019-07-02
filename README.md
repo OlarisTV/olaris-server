@@ -30,16 +30,23 @@ Everything we build should be open-source. We feel strongly that more can be ach
 
 ### Build dependencies
   * Install the [Go toolchain](https://golang.org)
-	* go get github.com/jteeuwen/go-bindata/...
-	* go get github.com/elazarl/go-bindata-assetfs/...
-  * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg)
+  * Install some third party tools
+	  * go get github.com/jteeuwen/go-bindata/...
+	  * go get github.com/elazarl/go-bindata-assetfs/...
+  * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
 
 ### Make commands
 
+  First run 
+  `make download-olaris-react` this will grab the latest Olaris react build from the CI and insert it into olaris-server.
+  Optionally if you are on Linux amd64 you can use `make download-ffmpeg` to do the same for ffmpeg. If not you will have to build it yourself.
+
+  Once this is done you can use some of the following commands:
+ 
   `make run` to run a build on your local platform.
 
   `make build` to build a binary for your local platform.
 
-  `build-with-react` to build and pull in the latest web-interface this requires the build toolchain for [olaris-react](https://gitlab.com/olaris/olaris-react).
+  `make build-with-react` to build and pull in the latest web-interface this requires the build toolchain for [olaris-react](https://gitlab.com/olaris/olaris-react).
 
   `make list` for all make options
