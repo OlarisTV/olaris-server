@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
@@ -104,18 +105,20 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 	LibraryID *int32
 	UUID      *string
 }) bool {
-	// TODO: Give a proper response if ever warranted
 	if args.LibraryID != nil {
-		libID := int(*args.LibraryID)
-		library := db.FindLibrary(libID)
-		if library.ID != 0 {
-			go mhelpers.WithLock(func() {
-				if library.Kind == db.MediaTypeMovie {
-					managers.RefreshAllMovieMD()
-				} else if library.Kind == db.MediaTypeSeries {
-					managers.RefreshAllSeriesMD()
-				}
-			}, "libid"+strconv.FormatUint(uint64(library.ID), 10))
+		libID := uint(*args.LibraryID)
+
+		for _, lm := range r.libs {
+			log.Println(lm.Library.ID, libID)
+			if lm.Library.ID == libID {
+				go mhelpers.WithLock(func() {
+					if lm.Library.Kind == db.MediaTypeMovie {
+						lm.ForceMovieMetadataUpdate()
+					} else if lm.Library.Kind == db.MediaTypeSeries {
+						lm.ForceSeriesMetadataUpdate()
+					}
+				}, "libid"+strconv.FormatUint(uint64(lm.Library.ID), 10))
+			}
 		}
 		return true
 	}

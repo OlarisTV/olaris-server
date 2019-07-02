@@ -95,6 +95,6 @@ var serveCmd = &cobra.Command{
 func init() {
 	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "http port")
 	serveCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "verbose logging")
-	serveCmd.Flags().BoolVar(&dbLog, "db-log", false, "sets whether the database should log queries")
+	serveCmd.Flags().BoolVar(&dbLog, "db-log", true, "sets whether the database should log queries")
 	rootCmd.AddCommand(serveCmd)
 }

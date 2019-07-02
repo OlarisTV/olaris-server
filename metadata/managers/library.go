@@ -115,6 +115,7 @@ func (man *LibraryManager) UpdateSeasonMD() error {
 
 // UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
 func UpdateSeriesMD(series *db.Series) error {
+	log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
 	agent := agents.NewTmdbAgent()
 	agents.UpdateSeriesMD(agent, series)
 	db.UpdateSeries(series)
@@ -135,26 +136,24 @@ func (man *LibraryManager) IdentifyUnidentSeries() error {
 
 // UpdateMovieMD updates the database record with the latest data from the agent
 func UpdateMovieMD(movie *db.Movie) error {
-	// Perhaps we should supply the agent to save to resources
+	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
+
 	agent := agents.NewTmdbAgent()
 	agents.UpdateMovieMD(agent, movie)
 	db.UpdateMovie(movie)
 	return nil
 }
 
-// RefreshAllMovieMD refreshes all data from the agent and updates the database record.
-func RefreshAllMovieMD() error {
-	for _, movie := range db.FindMoviesForMDRefresh() {
-		log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
+// ForceMovieMetadataUpdate refreshes all metadata for the given movies in a library, even if metadata already exists.
+func (man *LibraryManager) ForceMovieMetadataUpdate() {
+	for _, movie := range db.FindMoviesInLibrary(man.Library.ID, 0) {
 		UpdateMovieMD(&movie)
 	}
-	return nil
 }
 
-// RefreshAllSeriesMD refreshes all data from the agent and updates the database record.
-func RefreshAllSeriesMD() error {
-	for _, series := range db.FindSeriesForMDRefresh() {
-		log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
+// ForceSeriesMetadataUpdate refreshes all data from the agent and updates the database record.
+func (man *LibraryManager) ForceSeriesMetadataUpdate() {
+	for _, series := range db.FindSeriesInLibrary(man.Library.ID) {
 		UpdateSeriesMD(&series)
 		for _, season := range db.FindSeasonsForSeries(series.ID) {
 			log.WithFields(log.Fields{"name": season.Name}).Println("Refreshing metadata for series.")
@@ -165,12 +164,10 @@ func RefreshAllSeriesMD() error {
 			}
 		}
 	}
-	return nil
 }
 
 // UpdateEpisodeMD updates the database record with the latest data from the agent
 func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
-
 	agent := agents.NewTmdbAgent()
 	agents.UpdateEpisodeMD(agent, ep, season, series)
 	db.UpdateEpisode(ep)
@@ -294,7 +291,6 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 }
 
 func collectStreams(n filesystem.Node) []db.Stream {
-
 	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
 		Debugln("Reading stream information from file")
 	var streams []db.Stream

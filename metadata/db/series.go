@@ -264,6 +264,12 @@ func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 	return episodes
 }
 
+// FindSeriesInLibrary finds all series belonging to an EpisodeFile in a given library.
+func FindSeriesInLibrary(libraryID uint) (series []Series) {
+	db.Raw("SELECT series.* FROM episode_files JOIN episodes ON episodes.id = episode_files.id JOIN seasons ON seasons.id = episodes.season_id JOIN series ON series.id = seasons.series_id WHERE library_id = ? GROUP BY series.tmdb_id", libraryID).Scan(&series)
+	return series
+}
+
 // FindEpisodeFilesInLibrary returns all episodes in the given library.
 func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 	db.Where("library_id = ?", libraryID).Find(&episodes)
