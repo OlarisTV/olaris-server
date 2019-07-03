@@ -11,7 +11,6 @@ import (
 const (
 	MediaTypeMovie = iota
 	MediaTypeSeries
-	MediaTypeMusic
 	MediaTypeOtherMovie
 )
 
