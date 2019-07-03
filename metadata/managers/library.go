@@ -117,15 +117,6 @@ func (man *LibraryManager) UpdateSeasonMD() error {
 	return nil
 }
 
-// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func UpdateSeriesMD(series *db.Series) error {
-	log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
-	agent := agents.NewTmdbAgent()
-	agents.UpdateSeriesMD(agent, series)
-	db.UpdateSeries(series)
-	return nil
-}
-
 // IdentifyUnidentSeries loops over all series with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) IdentifyUnidentSeries() error {
 	for _, series := range db.FindAllUnidentifiedSeries() {
@@ -135,16 +126,6 @@ func (man *LibraryManager) IdentifyUnidentSeries() error {
 	man.UpdateSeasonMD()
 	man.UpdateEpisodesMD()
 
-	return nil
-}
-
-// UpdateMovieMD updates the database record with the latest data from the agent
-func UpdateMovieMD(movie *db.Movie) error {
-	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
-
-	agent := agents.NewTmdbAgent()
-	agents.UpdateMovieMD(agent, movie)
-	db.UpdateMovie(movie)
 	return nil
 }
 
@@ -172,22 +153,6 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 	}
 }
 
-// UpdateEpisodeMD updates the database record with the latest data from the agent
-func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
-	agent := agents.NewTmdbAgent()
-	agents.UpdateEpisodeMD(agent, ep, season, series)
-	db.UpdateEpisode(ep)
-	return nil
-}
-
-// UpdateSeasonMD updates the database record with the latest data from the agent
-func UpdateSeasonMD(season *db.Season, series *db.Series) error {
-	agent := agents.NewTmdbAgent()
-	agents.UpdateSeasonMD(agent, season, series)
-	db.UpdateSeason(season)
-	return nil
-}
-
 // IdentifyUnidentMovies loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) IdentifyUnidentMovies() error {
 	for _, movie := range db.FindAllUnidentifiedMoviesInLibrary(man.Library.ID) {
@@ -198,12 +163,6 @@ func (man *LibraryManager) IdentifyUnidentMovies() error {
 		}(&movie)
 	}
 	return nil
-}
-
-func checkPanic() {
-	if r := recover(); r != nil {
-		log.WithFields(log.Fields{"error": r}).Debugln("Recovered from panic in pool processing.")
-	}
 }
 
 func (man *LibraryManager) checkAndAddProbeJob(node filesystem.Node) {
@@ -300,30 +259,6 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	}
 }
 
-func collectStreams(n filesystem.Node) []db.Stream {
-	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
-		Debugln("Reading stream information from file")
-	var streams []db.Stream
-
-	s, err := ffmpeg.GetStreams(n.FileLocator())
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
-		return streams
-	}
-
-	streams = append(streams, DatabaseStreamFromFfmpegStream(s.GetVideoStream()))
-
-	for _, s := range s.AudioStreams {
-		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
-	}
-
-	for _, s := range s.SubtitleStreams {
-		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
-	}
-
-	return streams
-}
-
 // ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
 func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	library := man.Library
@@ -356,6 +291,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 				UpdateSeriesMD(&series)
 
 				if series.IsIdentified() {
+					// TODO: Once we have different agent support we might want to move this into some sort of callback on an agent identify feature, for now this is probably good enough although we might miss some events
 					man.Pool.Subscriber.SeriesAdded(&series)
 				}
 			}
@@ -541,52 +477,67 @@ func (man *LibraryManager) RefreshAll() {
 	db.MergeDuplicateMovies()
 }
 
-// TODO: Please tell me we can do this in a cleaner way, this makes my eyes bleed :|
+// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
+func UpdateSeriesMD(series *db.Series) error {
+	log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
+	agent := agents.NewTmdbAgent()
+	agents.UpdateSeriesMD(agent, series)
+	db.UpdateSeries(series)
+	return nil
+}
 
-// FfmpegStreamFromDatabaseStream creates a ffmpeg stream object based on a database object
-func FfmpegStreamFromDatabaseStream(s db.Stream) ffmpeg.Stream {
-	return ffmpeg.Stream{
-		StreamKey: ffmpeg.StreamKey{
-			FileLocator: s.StreamKey.FileLocator,
-			StreamId:    s.StreamKey.StreamId,
-		},
-		TotalDuration:    s.TotalDuration,
-		TimeBase:         s.TimeBase,
-		TotalDurationDts: ffmpeg.DtsTimestamp(s.TotalDurationDts),
-		Codecs:           s.Codecs,
-		CodecName:        s.CodecName,
-		Profile:          s.Profile,
-		BitRate:          s.BitRate,
-		FrameRate:        s.FrameRate,
-		Width:            s.Width,
-		Height:           s.Height,
-		StreamType:       s.StreamType,
-		Language:         s.Language,
-		Title:            s.Title,
-		EnabledByDefault: s.EnabledByDefault,
+// UpdateEpisodeMD updates the database record with the latest data from the agent
+func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
+	agent := agents.NewTmdbAgent()
+	agents.UpdateEpisodeMD(agent, ep, season, series)
+	db.UpdateEpisode(ep)
+	return nil
+}
+
+// UpdateSeasonMD updates the database record with the latest data from the agent
+func UpdateSeasonMD(season *db.Season, series *db.Series) error {
+	agent := agents.NewTmdbAgent()
+	agents.UpdateSeasonMD(agent, season, series)
+	db.UpdateSeason(season)
+	return nil
+}
+
+// UpdateMovieMD updates the database record with the latest data from the agent
+func UpdateMovieMD(movie *db.Movie) error {
+	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
+
+	agent := agents.NewTmdbAgent()
+	agents.UpdateMovieMD(agent, movie)
+	db.UpdateMovie(movie)
+	return nil
+}
+
+func checkPanic() {
+	if r := recover(); r != nil {
+		log.WithFields(log.Fields{"error": r}).Debugln("Recovered from panic in pool processing.")
 	}
 }
 
-// DatabaseStreamFromFfmpegStream does the reverse of the above.
-func DatabaseStreamFromFfmpegStream(s ffmpeg.Stream) db.Stream {
-	return db.Stream{
-		StreamKey: db.StreamKey{
-			FileLocator: s.StreamKey.FileLocator,
-			StreamId:    s.StreamKey.StreamId,
-		},
-		TotalDuration:    s.TotalDuration,
-		TimeBase:         s.TimeBase,
-		TotalDurationDts: int64(s.TotalDurationDts),
-		Codecs:           s.Codecs,
-		CodecName:        s.CodecName,
-		Profile:          s.Profile,
-		BitRate:          s.BitRate,
-		FrameRate:        s.FrameRate,
-		Width:            s.Width,
-		Height:           s.Height,
-		StreamType:       s.StreamType,
-		Language:         s.Language,
-		Title:            s.Title,
-		EnabledByDefault: s.EnabledByDefault,
+func collectStreams(n filesystem.Node) []db.Stream {
+	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
+		Debugln("Reading stream information from file")
+	var streams []db.Stream
+
+	s, err := ffmpeg.GetStreams(n.FileLocator())
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
+		return streams
 	}
+
+	streams = append(streams, DatabaseStreamFromFfmpegStream(s.GetVideoStream()))
+
+	for _, s := range s.AudioStreams {
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
+	}
+
+	for _, s := range s.SubtitleStreams {
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
+	}
+
+	return streams
 }
