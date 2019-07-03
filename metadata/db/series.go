@@ -11,9 +11,15 @@ var mutex = &sync.Mutex{}
 // BaseItem holds information that is shared between various mediatypes.
 type BaseItem struct {
 	UUIDable
+	TmdbID       int
 	Overview     string
 	BackdropPath string
 	PosterPath   string
+}
+
+// IsIdentified returns true if the given movie has a tmdbid
+func (b *BaseItem) IsIdentified() bool {
+	return b.TmdbID != 0
 }
 
 // Series holds metadata information about series.
@@ -25,7 +31,6 @@ type Series struct {
 	FirstAirYear uint64
 	OriginalName string
 	Status       string
-	TmdbID       int
 	Type         string
 	Seasons      []*Season
 }
@@ -39,7 +44,6 @@ type Season struct {
 	SeasonNumber int
 	Series       *Series
 	SeriesID     uint
-	TmdbID       int
 	Episodes     []*Episode
 }
 
@@ -58,7 +62,6 @@ type Episode struct {
 	SeasonNum    int
 	EpisodeNum   int
 	SeasonID     uint
-	TmdbID       int
 	AirDate      string
 	StillPath    string
 	Season       *Season

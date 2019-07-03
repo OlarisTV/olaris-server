@@ -156,10 +156,9 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 	for _, series := range db.FindSeriesInLibrary(man.Library.ID) {
 		UpdateSeriesMD(&series)
 		for _, season := range db.FindSeasonsForSeries(series.ID) {
-			log.WithFields(log.Fields{"name": season.Name}).Println("Refreshing metadata for series.")
+			// Consider building a pool for this
 			UpdateSeasonMD(&season, &series)
 			for _, ep := range db.FindEpisodesForSeason(season.ID, 1) {
-				log.WithFields(log.Fields{"name": ep.Name}).Println("Refreshing metadata for episode.")
 				go func(p *episodePayload) {
 					defer checkPanic()
 					man.Pool.tmdbPool.Process(p)

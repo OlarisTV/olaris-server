@@ -23,7 +23,6 @@ type Movie struct {
 	BaseItem
 	Title         string
 	Year          uint64
-	TmdbID        int
 	ReleaseDate   string
 	OriginalTitle string
 	ImdbID        string

@@ -43,12 +43,16 @@ func NewDefaultWorkerPool() *WorkerPool {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
 		ep, ok := payload.(*episodePayload)
 		if ok {
+			var newRecord bool
+			if !ep.episode.IsIdentified() {
+				newRecord = true
+			}
 			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
 			} else {
 				db.UpdateEpisode(&ep.episode)
-				if p.Subscriber != nil {
+				if p.Subscriber != nil && (ep.episode.IsIdentified() && newRecord) {
 					log.Debugln("We have an attached subscriber, sending event.")
 					p.Subscriber.EpisodeAdded(&ep.episode)
 				}
@@ -57,13 +61,18 @@ func NewDefaultWorkerPool() *WorkerPool {
 		ok = false
 		movie, ok := payload.(*db.Movie)
 		if ok {
+			var newRecord bool
+			if !movie.IsIdentified() {
+				newRecord = true
+			}
+
 			err := agents.UpdateMovieMD(agent, movie)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for movie.")
 			} else {
 				db.UpdateMovie(movie)
 				db.MergeDuplicateMovies()
-				if p.Subscriber != nil {
+				if p.Subscriber != nil && (newRecord && movie.IsIdentified()) {
 					log.Debugln("We have an attached subscriber, sending event.")
 					p.Subscriber.MovieAdded(movie)
 				}
