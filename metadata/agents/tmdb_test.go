@@ -8,7 +8,7 @@ import (
 
 func TestSeasonLookup(t *testing.T) {
 	season := db.Season{SeasonNumber: 1}
-	series := &db.Series{TmdbID: 2426, Seasons: []*db.Season{&season}}
+	series := &db.Series{BaseItem: db.BaseItem{TmdbID: 2426}, Seasons: []*db.Season{&season}}
 	a := agents.NewTmdbAgent()
 	a.UpdateSeasonMD(&season, series)
 

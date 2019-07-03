@@ -11,9 +11,15 @@ var mutex = &sync.Mutex{}
 // BaseItem holds information that is shared between various mediatypes.
 type BaseItem struct {
 	UUIDable
+	TmdbID       int
 	Overview     string
 	BackdropPath string
 	PosterPath   string
+}
+
+// IsIdentified returns true if the given movie has a tmdbid
+func (b *BaseItem) IsIdentified() bool {
+	return b.TmdbID != 0
 }
 
 // Series holds metadata information about series.
@@ -25,7 +31,6 @@ type Series struct {
 	FirstAirYear uint64
 	OriginalName string
 	Status       string
-	TmdbID       int
 	Type         string
 	Seasons      []*Season
 }
@@ -39,7 +44,6 @@ type Season struct {
 	SeasonNumber int
 	Series       *Series
 	SeriesID     uint
-	TmdbID       int
 	Episodes     []*Episode
 }
 
@@ -58,7 +62,6 @@ type Episode struct {
 	SeasonNum    int
 	EpisodeNum   int
 	SeasonID     uint
-	TmdbID       int
 	AirDate      string
 	StillPath    string
 	Season       *Season
@@ -264,11 +267,26 @@ func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
 	return episodes
 }
 
+// FindSeriesInLibrary finds all series belonging to an EpisodeFile in a given library.
+func FindSeriesInLibrary(libraryID uint) (series []Series) {
+	db.Raw("SELECT series.* FROM episode_files JOIN episodes ON episodes.id = episode_files.id JOIN seasons ON seasons.id = episodes.season_id JOIN series ON series.id = seasons.series_id WHERE library_id = ? GROUP BY series.tmdb_id", libraryID).Scan(&series)
+	return series
+}
+
+// FindEpisodeFilesInLibrary returns all episodes in the given library.
+func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
+	db.Where("library_id = ?", libraryID).Find(&episodes)
+
+	return episodes
+}
+
 // FindEpisodesInLibrary returns all episodes in the given library.
-func FindEpisodesInLibrary(libraryID uint, userID uint) (episodes []Episode) {
-	// TODO: Fix this, episodes don't live in libraries, files do.
-	db.Find(&episodes)
-	CollectEpisodeData(episodes, userID)
+func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
+	var files []EpisodeFile
+	db.Preload("Episode", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	for _, e := range files {
+		episodes = append(episodes, *e.Episode)
+	}
 
 	return episodes
 }

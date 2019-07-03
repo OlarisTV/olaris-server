@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
@@ -74,7 +75,7 @@ func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
 // Episodes returns episodes in Library.
 func (r *LibraryResolver) Episodes(ctx context.Context) (eps []*EpisodeResolver) {
 	userID, _ := auth.UserID(ctx)
-	for _, episode := range db.FindEpisodesInLibrary(r.r.ID, userID) {
+	for _, episode := range db.FindEpisodesInLibrary(r.r.ID) {
 		eps = append(eps, &EpisodeResolver{r: newEpisode(&episode, userID)})
 	}
 
@@ -104,18 +105,20 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 	LibraryID *int32
 	UUID      *string
 }) bool {
-	// TODO: Give a proper response if ever warranted
 	if args.LibraryID != nil {
-		libID := int(*args.LibraryID)
-		library := db.FindLibrary(libID)
-		if library.ID != 0 {
-			go mhelpers.WithLock(func() {
-				if library.Kind == db.MediaTypeMovie {
-					managers.RefreshAllMovieMD()
-				} else if library.Kind == db.MediaTypeSeries {
-					managers.RefreshAllSeriesMD()
-				}
-			}, "libid"+strconv.FormatUint(uint64(library.ID), 10))
+		libID := uint(*args.LibraryID)
+
+		for _, lm := range r.libs {
+			log.Println(lm.Library.ID, libID)
+			if lm.Library.ID == libID {
+				go mhelpers.WithLock(func() {
+					if lm.Library.Kind == db.MediaTypeMovie {
+						lm.ForceMovieMetadataUpdate()
+					} else if lm.Library.Kind == db.MediaTypeSeries {
+						lm.ForceSeriesMetadataUpdate()
+					}
+				}, "libid"+strconv.FormatUint(uint64(lm.Library.ID), 10))
+			}
 		}
 		return true
 	}
@@ -132,7 +135,9 @@ func (r *Resolver) RescanLibraries() bool {
 	if rescanningLibraries == false {
 		rescanningLibraries = true
 		go func() {
-			managers.NewLibraryManager(r.env.Watcher).RefreshAll()
+			for _, lm := range r.libs {
+				lm.RefreshAll()
+			}
 			rescanningLibraries = false
 		}()
 		return true
@@ -146,6 +151,8 @@ func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *
 	if err != nil {
 		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
+
+	r.StopLibraryManager(uint(args.ID))
 
 	library, err := db.DeleteLibrary(int(args.ID))
 	var libRes LibraryResponse
@@ -189,7 +196,7 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 		if err != nil {
 			libRes = LibraryResponse{Error: CreateErrResolver(err)}
 		} else {
-			go managers.NewLibraryManager(r.env.Watcher).Probe(&library)
+			r.AddLibraryManager(&library)
 		}
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {

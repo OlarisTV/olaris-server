@@ -52,10 +52,17 @@ func MiddleWare(h http.Handler) http.Handler {
 			log.Warnln("No users present, no auth required!")
 			h.ServeHTTP(w, r)
 		} else {
-			var authHeader string
+			var authHeader, tokenStr string
 			authHeader = r.Header.Get("Authorization")
-			if authHeader != "" {
-				tokenStr := strings.Split(authHeader, " ")[1]
+
+			if authHeader == "" {
+				q := r.URL.Query()
+				tokenStr = q.Get("JWT")
+			} else {
+				tokenStr = strings.Split(authHeader, " ")[1]
+			}
+
+			if tokenStr != "" {
 				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, jwtSecretFunc)
 				if err != nil {
 					writeError(fmt.Sprintf("Unauthorized: %s", err.Error()), w, http.StatusUnauthorized)

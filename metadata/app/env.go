@@ -2,9 +2,8 @@
 package app
 
 import (
-	"fmt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/jasonlvhit/gocron"
+	"github.com/jasonlvhit/gocron" // Temp disable
 	"github.com/jinzhu/gorm"
 	"math/rand"
 	"time"
@@ -18,10 +17,9 @@ import (
 
 // MetadataContext is a container for all important vars.
 type MetadataContext struct {
-	Db             *gorm.DB
-	Watcher        *fsnotify.Watcher
-	LibraryManager *managers.LibraryManager
-	ExitChan       chan bool
+	Db       *gorm.DB
+	Watcher  *fsnotify.Watcher
+	ExitChan chan bool
 }
 
 // Cleanup cleans up any running threads / processes for the context.
@@ -36,7 +34,7 @@ var env *MetadataContext
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
 	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, true, true)
+	return NewMDContext(dbPath, false, true)
 }
 
 // NewMDContext lets you create a more custom environment.
@@ -55,22 +53,9 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 	db := db.NewDb(dbPath, dbLogMode)
 	db.SetLogger(&GormLogger{})
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		panic(fmt.Sprintf("Could not start filesystem watcher: %s\n", err))
-	}
-
 	exitChan := make(chan bool)
 
-	env = &MetadataContext{Db: db, Watcher: watcher, ExitChan: exitChan}
-
-	libraryManager := managers.NewLibraryManager(watcher)
-	env.LibraryManager = libraryManager
-
-	// Scan once on start-up
-	go libraryManager.RefreshAll()
-
-	go env.startWatcher(exitChan)
+	env = &MetadataContext{Db: db, ExitChan: exitChan}
 
 	gocron.Every(2).Hours().Do(managers.RefreshAgentMetadataWithMissingArt)
 	gocron.Start()

@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -23,8 +22,6 @@ func (n *LocalNode) Name() string {
 	return n.fileInfo.Name()
 }
 func (n *LocalNode) Size() int64 {
-	fmt.Printf("%+v\n", n.fileInfo)
-
 	return n.fileInfo.Size()
 }
 func (n *LocalNode) IsDir() bool {

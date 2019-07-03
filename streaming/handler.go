@@ -37,4 +37,5 @@ func Cleanup() {
 			log.Warn("Playback session reference count leak: ", s.TranscodingSession)
 		}
 	}
+	log.Println("Cleaned up all streaming context")
 }

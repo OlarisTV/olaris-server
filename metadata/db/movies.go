@@ -23,7 +23,6 @@ type Movie struct {
 	BaseItem
 	Title         string
 	Year          uint64
-	TmdbID        int
 	ReleaseDate   string
 	OriginalTitle string
 	ImdbID        string
@@ -135,10 +134,15 @@ func CollectMovieInfo(movies []Movie, userID uint) {
 	}
 }
 
-// FindAllUnidentifiedMovies retrives all movies without an tmdb_id in the database.
-func FindAllUnidentifiedMovies() (movies []Movie) {
-	db.Where("tmdb_id = ?", 0).Find(&movies)
-	log.Debugln("Collecting unidentified movies", len(movies))
+// FindAllUnidentifiedMoviesInLibrary retrieves all movies without an tmdb_id in the database.
+func FindAllUnidentifiedMoviesInLibrary(libraryID uint) (movies []Movie) {
+	var files []MovieFile
+	db.Preload("Movie", "tmdb_id == 0").Where("library_id = ?", libraryID).Find(&files)
+	for _, f := range files {
+		if f.Movie.Title != "" {
+			movies = append(movies, f.Movie)
+		}
+	}
 
 	return movies
 }
@@ -181,12 +185,20 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 	}
 }
 
-// FindMoviesInLibrary finds all movies in the given library.
+// FindMoviesInLibrary finds movies that have files in a certain library
 func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
-	//TODO: I don't think movies belong to libraries, movieFiles belong to libraries.
-	db.Where("tmdb_id != 0", libraryID).Find(&movies)
-	// TODO: We should only do this when it's actually resolved and needed.
-	CollectMovieInfo(movies, userID)
+	var files []MovieFile
+	db.Preload("Movie", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	for _, f := range files {
+		movies = append(movies, f.Movie)
+	}
+	return movies
+
+}
+
+// FindMovieFilesInLibrary finds all movies in the given library.
+func FindMovieFilesInLibrary(libraryID uint) (movies []MovieFile) {
+	db.Where("library_id =?", libraryID).Find(&movies)
 
 	return movies
 }

@@ -9,11 +9,19 @@ import (
 var SchemaTxt = `
 	schema {
 		query: Query
+		subscription: Subscription
 		mutation: Mutation
 	}
 
 	union MediaItem = Movie | Episode
 	union SearchItem = Movie | Series
+
+	type Subscription {
+		movieAdded(): MovieAddedEvent!
+		episodeAdded(): EpisodeAddedEvent!
+		seriesAdded(): SeriesAddedEvent!
+		seasonAdded(): SeasonAddedEvent!
+	}
 
 	# The query type, represents all of the entry points into our object graph
 	type Query {
@@ -269,6 +277,22 @@ var SchemaTxt = `
 		library: Library!
 	}
 
+	type MovieAddedEvent {
+		movie: Movie!
+	}
+
+	type EpisodeAddedEvent {
+		episode: Episode!
+	}
+
+	type SeriesAddedEvent {
+		series: Series!
+	}
+
+	type SeasonAddedEvent {
+		season: Season!
+	}
+
 	# Invite that can be used to allow other users access to your server.
 	type Invite {
 		code: String
@@ -279,6 +303,6 @@ var SchemaTxt = `
 
 // InitSchema inits the graphql schema.
 func InitSchema(env *app.MetadataContext) *graphql.Schema {
-	Schema := graphql.MustParseSchema(SchemaTxt, &Resolver{env: env})
+	Schema := graphql.MustParseSchema(SchemaTxt, NewResolver(env))
 	return Schema
 }
