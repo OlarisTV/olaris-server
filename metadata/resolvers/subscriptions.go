@@ -118,7 +118,7 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case s.episodeAddedEventChan <- episodeAddedEvent:
 		case <-time.After(time.Second):
 			log.Warningln(
-				"Timed out trying to deliver to deliver EpisodeAddedEvent: %+v",
+				"Timed out trying to deliver to deliver EpisodeAddedEvent:",
 				episodeAddedEvent)
 		}
 		return
@@ -131,7 +131,7 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case s.movieAddedEventChan <- movieEvent:
 		case <-time.After(time.Second):
 			log.Warningln(
-				"Timed out trying to deliver to deliver MovieAddedEvent: %+v",
+				"Timed out trying to deliver to deliver MovieAddedEvent:",
 				movieEvent)
 		}
 		return
@@ -144,7 +144,7 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case s.seriesAddedEventChan <- seriesEvent:
 		case <-time.After(time.Second):
 			log.Warningln(
-				"Timed out trying to deliver to deliver SeriesAddedEvent: %+v",
+				"Timed out trying to deliver to deliver SeriesAddedEvent:",
 				seriesEvent)
 		}
 		return
@@ -157,7 +157,7 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case s.seasonAddedEventChan <- seasonEvent:
 		case <-time.After(time.Second):
 			log.Warningln(
-				"Timed out trying to deliver to deliver SeasonAddedEvent: %+v",
+				"Timed out trying to deliver to deliver SeasonAddedEvent:",
 				seasonEvent)
 		}
 		return
