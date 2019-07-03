@@ -32,7 +32,8 @@ var SupportedExtensions = map[string]bool{
 	".mpeg": true,
 }
 
-var seriesMutex, moviesMutex = &sync.Mutex{}
+var seriesMutex = &sync.Mutex{}
+var moviesMutex = &sync.Mutex{}
 
 type probeJob struct {
 	node filesystem.Node
@@ -364,6 +365,9 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			if season.TmdbID == 0 {
 				log.Debugf("Season %d for '%s' has no metadata yet, looking it up.", season.SeasonNumber, series.Name)
 				UpdateSeasonMD(&season, &series)
+				if season.IsIdentified() {
+					man.Pool.Subscriber.SeasonAdded(&season)
+				}
 			}
 			seriesMutex.Unlock()
 

@@ -9,4 +9,5 @@ type LibrarySubscriber interface {
 	MovieAdded(*db.Movie)
 	EpisodeAdded(*db.Episode)
 	SeriesAdded(*db.Series)
+	SeasonAdded(*db.Season)
 }

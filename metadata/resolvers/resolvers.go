@@ -17,13 +17,14 @@ type Resolver struct {
 	exitChan           chan bool
 	movieAddedEvents   chan *MovieAddedEvent
 	seriesAddedEvents  chan *SeriesAddedEvent
+	seasonAddedEvents  chan *SeasonAddedEvent
 	episodeAddedEvents chan *EpisodeAddedEvent
 	subscriberChan     chan *graphqlSubscriber
 }
 
 // NewResolver is a new resolver, UPDATE THIS
 func NewResolver(env *app.MetadataContext) *Resolver {
-	r := &Resolver{exitChan: env.ExitChan, subscriberChan: make(chan *graphqlSubscriber), movieAddedEvents: make(chan *MovieAddedEvent), episodeAddedEvents: make(chan *EpisodeAddedEvent), seriesAddedEvents: make(chan *SeriesAddedEvent)}
+	r := &Resolver{exitChan: env.ExitChan, subscriberChan: make(chan *graphqlSubscriber), movieAddedEvents: make(chan *MovieAddedEvent), episodeAddedEvents: make(chan *EpisodeAddedEvent), seriesAddedEvents: make(chan *SeriesAddedEvent), seasonAddedEvents: make(chan *SeasonAddedEvent)}
 
 	s := graphqlLibrarySubscriber{resolver: r}
 	r.subscriber = &s

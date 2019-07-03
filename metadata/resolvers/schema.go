@@ -20,6 +20,7 @@ var SchemaTxt = `
 		movieAdded(): MovieAddedEvent!
 		episodeAdded(): EpisodeAddedEvent!
 		seriesAdded(): SeriesAddedEvent!
+		seasonAdded(): SeasonAddedEvent!
 	}
 
 	# The query type, represents all of the entry points into our object graph
@@ -286,6 +287,10 @@ var SchemaTxt = `
 
 	type SeriesAddedEvent {
 		series: Series!
+	}
+
+	type SeasonAddedEvent {
+		season: Season!
 	}
 
 	# Invite that can be used to allow other users access to your server.

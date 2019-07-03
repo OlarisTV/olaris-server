@@ -45,11 +45,31 @@ func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
 	return
 }
 
+func (h graphqlLibrarySubscriber) SeasonAdded(season *db.Season) {
+	e := &SeasonAddedEvent{season: &SeasonResolver{Season{Season: *season}}}
+	go func() {
+		select {
+		case h.resolver.seasonAddedEvents <- e:
+		case <-time.After(1 * time.Second):
+		}
+	}()
+	return
+}
+
 // SeriesAdded creates a subscription for all SeriesAdded events
 func (r *Resolver) SeriesAdded(ctx context.Context) <-chan *SeriesAddedEvent {
 	log.Debugln("Adding subscription to SeriesAddedEvent")
 	c := make(chan *SeriesAddedEvent)
 	r.subscriberChan <- &graphqlSubscriber{seriesAddedEventChan: c, stop: ctx.Done()}
+
+	return c
+}
+
+// SeasonAdded creates a subscription for all SeasonAdded events
+func (r *Resolver) SeasonAdded(ctx context.Context) <-chan *SeasonAddedEvent {
+	log.Debugln("Adding subscription to SeasonAddedEvent")
+	c := make(chan *SeasonAddedEvent)
+	r.subscriberChan <- &graphqlSubscriber{seasonAddedEventChan: c, stop: ctx.Done()}
 
 	return c
 }
@@ -77,6 +97,7 @@ type graphqlSubscriber struct {
 	episodeAddedEventChan chan<- *EpisodeAddedEvent
 	movieAddedEventChan   chan<- *MovieAddedEvent
 	seriesAddedEventChan  chan<- *SeriesAddedEvent
+	seasonAddedEventChan  chan<- *SeasonAddedEvent
 }
 
 func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, event interface{}) {
@@ -116,6 +137,17 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case <-s.stop:
 			unsubChan <- id
 		case s.seriesAddedEventChan <- seriesEvent:
+		case <-time.After(time.Second):
+		}
+		return
+	}
+
+	seasonEvent, ok := event.(*SeasonAddedEvent)
+	if ok {
+		select {
+		case <-s.stop:
+			unsubChan <- id
+		case s.seasonAddedEventChan <- seasonEvent:
 		case <-time.After(time.Second):
 		}
 		return
@@ -163,6 +195,13 @@ func (r *Resolver) startGraphQLSubscriptionManager(exitChan chan bool) {
 					go checkAndSendEvent(id, s, unsubscribe, e)
 				}
 			}
+		case e := <-r.seasonAddedEvents:
+			log.Debugln("Received season event")
+			for id, s := range subscriptions {
+				if s.seasonAddedEventChan != nil {
+					go checkAndSendEvent(id, s, unsubscribe, e)
+				}
+			}
 		}
 	}
 }
@@ -185,6 +224,16 @@ type SeriesAddedEvent struct {
 // Series is a resolver for the series object
 func (s *SeriesAddedEvent) Series() *SeriesResolver {
 	return s.series
+}
+
+// SeasonAddedEvent is fired when a new episode has been found and correctly identified
+type SeasonAddedEvent struct {
+	season *SeasonResolver
+}
+
+// Season is a resolver for the season object
+func (s *SeasonAddedEvent) Season() *SeasonResolver {
+	return s.season
 }
 
 // EpisodeAddedEvent is fired when a new episode has been found and correctly identified
