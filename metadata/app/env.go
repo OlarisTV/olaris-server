@@ -2,7 +2,6 @@
 package app
 
 import (
-	_ "fmt" //temp
 	"github.com/fsnotify/fsnotify"
 	"github.com/jasonlvhit/gocron" // Temp disable
 	"github.com/jinzhu/gorm"
