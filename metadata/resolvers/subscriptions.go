@@ -14,10 +14,12 @@ type graphqlLibrarySubscriber struct {
 
 func (h graphqlLibrarySubscriber) MovieAdded(movie *db.Movie) {
 	e := &MovieAddedEvent{movie: &MovieResolver{*movie}}
+
 	go func() {
 		select {
 		case h.resolver.movieAddedEvents <- e:
 		case <-time.After(1 * time.Second):
+			warnDroppedEvent("Movie", movie.Title)
 		}
 	}()
 	return
@@ -29,6 +31,7 @@ func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
 		select {
 		case h.resolver.episodeAddedEvents <- e:
 		case <-time.After(1 * time.Second):
+			warnDroppedEvent("Episode", episode.Name)
 		}
 	}()
 	return
@@ -40,6 +43,7 @@ func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
 		select {
 		case h.resolver.seriesAddedEvents <- e:
 		case <-time.After(1 * time.Second):
+			warnDroppedEvent("Series", series.Name)
 		}
 	}()
 	return
@@ -51,6 +55,7 @@ func (h graphqlLibrarySubscriber) SeasonAdded(season *db.Season) {
 		select {
 		case h.resolver.seasonAddedEvents <- e:
 		case <-time.After(1 * time.Second):
+			warnDroppedEvent("Season", season.Name)
 		}
 	}()
 	return
@@ -264,4 +269,8 @@ type MovieAddedEvent struct {
 // Movie is a resolver for the movie struct
 func (m *MovieAddedEvent) Movie() *MovieResolver {
 	return m.movie
+}
+
+func warnDroppedEvent(m string, n string) {
+	log.WithFields(log.Fields{"eventType": m, "name": n}).Warnln("Subscription event could not be pushed into channel. Events might be missed.")
 }
