@@ -33,10 +33,11 @@ func NewDefaultWorkerPool() *WorkerPool {
 	agent := agents.NewTmdbAgent()
 
 	// The MovieDB currently has a 40 requests per 10 seconds limit. Assuming every request takes a second then four workers is probably ideal.
+	// TODO(Maran): Create a global rate limiter for TMDB here instead of relying on these
+	//  estimates.
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
-		ep, ok := payload.(*episodePayload)
-		if ok {
+		if ep, ok := payload.(*episodePayload); ok {
 			var newRecord bool
 			if !ep.episode.IsIdentified() {
 				newRecord = true
@@ -52,9 +53,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 				}
 			}
 		}
-		ok = false
-		movie, ok := payload.(*db.Movie)
-		if ok {
+		if movie, ok := payload.(*db.Movie); ok {
 			//TODO: Is there a cleaner way of finding out if a movie was just now identified so we can send the event?
 			var newRecord bool
 			if !movie.IsIdentified() {
@@ -79,8 +78,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 
 	p.probePool = tunny.NewFunc(4, func(payload interface{}) interface{} {
 		log.Println("Current Probe queue length:", p.probePool.QueueLength())
-		job, ok := payload.(*probeJob)
-		if ok {
+		if job, ok := payload.(*probeJob); ok {
 			job.man.ProbeFile(job.node)
 		} else {
 			log.Warnln("Got a ProbeJob that couldn't be cast as such, refreshing library might fail.")

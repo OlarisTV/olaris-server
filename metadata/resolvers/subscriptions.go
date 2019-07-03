@@ -101,7 +101,9 @@ type graphqlSubscriber struct {
 }
 
 func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, event interface{}) {
-	// The double select here: https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
+	// Check the stop chan first, otherwise it might never be processed if events are always
+	// available.
+	// See https://github.com/matiasanaya/go-graphql-subscription-example/issues/4#issuecomment-424604826
 	select {
 	case <-s.stop:
 		unsubChan <- id
@@ -109,46 +111,54 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 	default:
 	}
 
-	e, ok := event.(*EpisodeAddedEvent)
-	if ok {
+	if episodeAddedEvent, ok := event.(*EpisodeAddedEvent); ok {
 		select {
 		case <-s.stop:
 			unsubChan <- id
-		case s.episodeAddedEventChan <- e:
+		case s.episodeAddedEventChan <- episodeAddedEvent:
 		case <-time.After(time.Second):
+			log.Warningln(
+				"Timed out trying to deliver to deliver EpisodeAddedEvent: %+v",
+				episodeAddedEvent)
 		}
 		return
 	}
 
-	movieEvent, ok := event.(*MovieAddedEvent)
-	if ok {
+	if movieEvent, ok := event.(*MovieAddedEvent); ok {
 		select {
 		case <-s.stop:
 			unsubChan <- id
 		case s.movieAddedEventChan <- movieEvent:
 		case <-time.After(time.Second):
+			log.Warningln(
+				"Timed out trying to deliver to deliver MovieAddedEvent: %+v",
+				movieEvent)
 		}
 		return
 	}
 
-	seriesEvent, ok := event.(*SeriesAddedEvent)
-	if ok {
+	if seriesEvent, ok := event.(*SeriesAddedEvent); ok {
 		select {
 		case <-s.stop:
 			unsubChan <- id
 		case s.seriesAddedEventChan <- seriesEvent:
 		case <-time.After(time.Second):
+			log.Warningln(
+				"Timed out trying to deliver to deliver SeriesAddedEvent: %+v",
+				seriesEvent)
 		}
 		return
 	}
 
-	seasonEvent, ok := event.(*SeasonAddedEvent)
-	if ok {
+	if seasonEvent, ok := event.(*SeasonAddedEvent); ok {
 		select {
 		case <-s.stop:
 			unsubChan <- id
 		case s.seasonAddedEventChan <- seasonEvent:
 		case <-time.After(time.Second):
+			log.Warningln(
+				"Timed out trying to deliver to deliver SeasonAddedEvent: %+v",
+				seasonEvent)
 		}
 		return
 	}
