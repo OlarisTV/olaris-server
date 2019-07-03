@@ -34,6 +34,26 @@ func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
 	return
 }
 
+func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
+	e := &SeriesAddedEvent{series: &SeriesResolver{Series{Series: *series}}}
+	go func() {
+		select {
+		case h.resolver.seriesAddedEvents <- e:
+		case <-time.After(1 * time.Second):
+		}
+	}()
+	return
+}
+
+// SeriesAdded creates a subscription for all SeriesAdded events
+func (r *Resolver) SeriesAdded(ctx context.Context) <-chan *SeriesAddedEvent {
+	log.Debugln("Adding subscription to SeriesAddedEvent")
+	c := make(chan *SeriesAddedEvent)
+	r.subscriberChan <- &graphqlSubscriber{seriesAddedEventChan: c, stop: ctx.Done()}
+
+	return c
+}
+
 // MovieAdded creates a subscription for all MovieAdded events
 func (r *Resolver) MovieAdded(ctx context.Context) <-chan *MovieAddedEvent {
 	log.Debugln("Adding subscription to MovieAddedEvent")
@@ -56,6 +76,7 @@ type graphqlSubscriber struct {
 	stop                  <-chan struct{}
 	episodeAddedEventChan chan<- *EpisodeAddedEvent
 	movieAddedEventChan   chan<- *MovieAddedEvent
+	seriesAddedEventChan  chan<- *SeriesAddedEvent
 }
 
 func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, event interface{}) {
@@ -84,6 +105,17 @@ func checkAndSendEvent(id string, s *graphqlSubscriber, unsubChan chan string, e
 		case <-s.stop:
 			unsubChan <- id
 		case s.movieAddedEventChan <- movieEvent:
+		case <-time.After(time.Second):
+		}
+		return
+	}
+
+	seriesEvent, ok := event.(*SeriesAddedEvent)
+	if ok {
+		select {
+		case <-s.stop:
+			unsubChan <- id
+		case s.seriesAddedEventChan <- seriesEvent:
 		case <-time.After(time.Second):
 		}
 		return
@@ -124,6 +156,13 @@ func (r *Resolver) startGraphQLSubscriptionManager(exitChan chan bool) {
 					go checkAndSendEvent(id, s, unsubscribe, e)
 				}
 			}
+		case e := <-r.seriesAddedEvents:
+			log.Debugln("Received series event")
+			for id, s := range subscriptions {
+				if s.seriesAddedEventChan != nil {
+					go checkAndSendEvent(id, s, unsubscribe, e)
+				}
+			}
 		}
 	}
 }
@@ -138,7 +177,17 @@ func randomID() string {
 	return string(b)
 }
 
-// EpisodeAddedEvent blabla
+// SeriesAddedEvent is fired when a new episode has been found and correctly identified
+type SeriesAddedEvent struct {
+	series *SeriesResolver
+}
+
+// Series is a resolver for the series object
+func (s *SeriesAddedEvent) Series() *SeriesResolver {
+	return s.series
+}
+
+// EpisodeAddedEvent is fired when a new episode has been found and correctly identified
 type EpisodeAddedEvent struct {
 	episode *EpisodeResolver
 }
@@ -148,7 +197,7 @@ func (e *EpisodeAddedEvent) Episode() *EpisodeResolver {
 	return e.episode
 }
 
-// MovieAddedEvent adds an event when a movie gets added
+// MovieAddedEvent adds an event when a movie has been found and correctly identified
 type MovieAddedEvent struct {
 	movie *MovieResolver
 }

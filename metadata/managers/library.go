@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -30,6 +31,8 @@ var SupportedExtensions = map[string]bool{
 	".mpg":  true,
 	".mpeg": true,
 }
+
+var seriesMutex, moviesMutex = &sync.Mutex{}
 
 type probeJob struct {
 	node filesystem.Node
@@ -286,6 +289,10 @@ func (man *LibraryManager) Refresh() {
 // AddWatcher adds a fsnotify watcher to the given path.
 func (man *LibraryManager) AddWatcher(filePath string) {
 	log.WithFields(log.Fields{"filepath": filePath}).Debugln("Adding path to fsnotify.")
+
+	// Since there is no way to get a list of current watchers we are just going to remove a watcher just in case.
+	man.Watcher.Remove(filePath)
+
 	err := man.Watcher.Add(filePath)
 	if err != nil {
 		log.Warnln("Could not add filesystem notification watcher:", err)
@@ -339,11 +346,17 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			var series db.Series
 			var season db.Season
 
+			// Multiple workers might try and create the series or season here at the same time while scanning an episode
+			seriesMutex.Lock()
 			db.FirstOrCreateSeries(&series, db.Series{Name: parsedInfo.Title})
 
 			if series.TmdbID == 0 {
 				log.Debugf("Series '%s' has no metadata yet, looking it up.", series.Name)
 				UpdateSeriesMD(&series)
+
+				if series.IsIdentified() {
+					man.Pool.Subscriber.SeriesAdded(&series)
+				}
 			}
 
 			newSeason := db.Season{SeriesID: series.ID, SeasonNumber: parsedInfo.SeasonNum}
@@ -352,6 +365,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 				log.Debugf("Season %d for '%s' has no metadata yet, looking it up.", season.SeasonNumber, series.Name)
 				UpdateSeasonMD(&season, &series)
 			}
+			seriesMutex.Unlock()
 
 			ep := db.Episode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, SeasonID: season.ID}
 			db.FirstOrCreateEpisode(&ep, ep)
@@ -373,7 +387,9 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 		mvi := parsers.ParseMovieName(name)
 		// Create a movie stub so the metadata can get to work on it after probing
 		movie := db.Movie{Title: mvi.Title, Year: mvi.Year}
+		moviesMutex.Lock()
 		db.FirstOrCreateMovie(&movie, movie)
+		moviesMutex.Unlock()
 
 		mi := db.MediaItem{
 			FileName:  basename,

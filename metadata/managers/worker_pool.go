@@ -7,12 +7,6 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// LibrarySubscriber is an interface that can implement the various notifications the libraryManager can give off
-type LibrarySubscriber interface {
-	MovieAdded(*db.Movie)
-	EpisodeAdded(*db.Episode)
-}
-
 // WorkerPool is a container for the various workers that a library needs
 type WorkerPool struct {
 	tmdbPool   *tunny.Pool
@@ -61,6 +55,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 		ok = false
 		movie, ok := payload.(*db.Movie)
 		if ok {
+			//TODO: Is there a cleaner way of finding out if a movie was just now identified so we can send the event?
 			var newRecord bool
 			if !movie.IsIdentified() {
 				newRecord = true
