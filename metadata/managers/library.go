@@ -322,13 +322,6 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 		}
 
 	case db.MediaTypeMovie:
-		mvi := parsers.ParseMovieName(name)
-		// Create a movie stub so the metadata can get to work on it after probing
-		movie := db.Movie{Title: mvi.Title, Year: mvi.Year}
-		moviesMutex.Lock()
-		db.FirstOrCreateMovie(&movie, movie)
-		moviesMutex.Unlock()
-
 		mi := db.MediaItem{
 			FileName:  basename,
 			FilePath:  n.FileLocator().String(),
@@ -336,14 +329,14 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			LibraryID: library.ID,
 		}
 
-		movieFile := db.MovieFile{MediaItem: mi, MovieID: movie.ID}
+		movieFile := db.MovieFile{MediaItem: mi}
 		movieFile.Streams = collectStreams(n)
 		db.CreateMovieFile(&movieFile)
 
-		go func(movie *db.Movie) {
+		go func(movieFile *db.MovieFile) {
 			defer checkPanic()
-			man.Pool.tmdbPool.Process(movie)
-		}(&movie)
+			man.Pool.tmdbPool.Process(movieFile)
+		}(&movieFile)
 	}
 	return nil
 }
@@ -505,7 +498,7 @@ func UpdateMovieMD(movie *db.Movie) error {
 
 	agent := agents.NewTmdbAgent()
 	agent.UpdateMovieMD(movie)
-	db.UpdateMovie(movie)
+	db.SaveMovie(movie)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package agents
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -57,7 +58,7 @@ func (a *TmdbAgent) UpdateSeasonMD(season *db.Season, series *db.Series) error {
 		season.PosterPath = fullSeason.PosterPath
 		log.WithFields(log.Fields{"seasonName": season.Name, "tmdbId": season.TmdbID}).Debugln("Found season metadata.")
 	} else {
-		log.WithFields(log.Fields{"error": err}).Warnln("Could not grab seasonal information.")
+		log.WithFields(log.Fields{"error": err}).Warnln("Could not grab season information.")
 		return err
 	}
 	return nil
@@ -102,6 +103,25 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series) error {
 	return nil
 }
 
+func (a *TmdbAgent) UpdateMovieMetadataFromTmdbID(movie *db.Movie, tmdbID int) error {
+	r, err := a.Tmdb.GetMovieInfo(tmdbID, nil)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to query TMDB for movie metadata")
+	}
+
+	movie.TmdbID = r.ID
+	movie.Title = r.Title
+	movie.OriginalTitle = r.OriginalTitle
+	movie.ReleaseDate = r.ReleaseDate
+	movie.Overview = r.Overview
+	movie.BackdropPath = r.BackdropPath
+	movie.PosterPath = r.PosterPath
+	movie.ImdbID = r.ImdbID
+
+	return nil
+}
+
 // UpdateMovieMD the given movie with Metadata from themoviedatabase.org
 func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
 	if movie.TmdbID == 0 {
@@ -130,18 +150,7 @@ func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
 		}
 	}
 
-	fullMov, err := a.Tmdb.GetMovieInfo(movie.TmdbID, nil)
-	if err == nil {
-		log.WithFields(log.Fields{
-			"title": movie.Title,
-			"year":  movie.Year,
-		}).Debugln("Updating metadata from tmdb agent.")
-
-		movie.Overview = fullMov.Overview
-		movie.BackdropPath = fullMov.BackdropPath
-		movie.PosterPath = fullMov.PosterPath
-		movie.ImdbID = fullMov.ImdbID
-	} else {
+	if err := a.UpdateMovieMetadataFromTmdbID(movie, movie.TmdbID); err != nil {
 		log.WithFields(log.Fields{"error": err}).Warnln("Could not get full results.")
 		return err
 	}

@@ -4,6 +4,7 @@ package app
 import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
+	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"math/rand"
 	"path"
 	"time"
@@ -17,8 +18,11 @@ import (
 
 // MetadataContext is a container for all important vars.
 type MetadataContext struct {
-	Db       *gorm.DB
-	Watcher  *fsnotify.Watcher
+	Db      *gorm.DB
+	Watcher *fsnotify.Watcher
+
+	MetadataRetrievalAgent agents.MetadataRetrievalAgent
+
 	ExitChan chan bool
 }
 
@@ -58,7 +62,11 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 
 	exitChan := make(chan bool)
 
-	env = &MetadataContext{Db: db, ExitChan: exitChan}
+	env = &MetadataContext{
+		Db:                     db,
+		ExitChan:               exitChan,
+		MetadataRetrievalAgent: agents.NewTmdbAgent(),
+	}
 
 	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
 	go func() {

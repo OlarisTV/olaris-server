@@ -163,7 +163,7 @@ func FindAllMovies(qd *QueryDetails) (movies []Movie) {
 
 // FindMovieByUUID finds the movie specified by the given uuid.
 func FindMovieByUUID(uuid string) (movies []Movie) {
-	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
+	db.Where("uuid = ?", uuid).Find(&movies)
 	CollectMovieInfo(movies)
 
 	return movies
@@ -213,20 +213,20 @@ func CreateMovie(movie *Movie) {
 	db.Create(movie)
 }
 
-// UpdateMovie updates a movie in the database.
-func UpdateMovie(movie *Movie) {
+// SaveMovie updates a movie in the database.
+func SaveMovie(movie *Movie) {
 	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
 	db.Save(movie)
+}
+
+// SaveMovieFile saves a MovieFile
+func SaveMovieFile(movieFile *MovieFile) {
+	db.Save(movieFile)
 }
 
 // FirstOrCreateMovie returns the first instance or writes a movie to the db.
 func FirstOrCreateMovie(movie *Movie, movieDef Movie) {
 	db.FirstOrCreate(movie, movieDef)
-}
-
-// UpdateMovieFile updates a movieFile in the database.
-func UpdateMovieFile(movie *Movie) {
-	db.Save(movie)
 }
 
 // FirstMovie gets the first movie out of the database (used in tests).
@@ -244,6 +244,22 @@ func MovieFileExists(filePath string) bool {
 		return false
 	}
 	return true
+}
+
+func FindMovieFileByUUID(uuid string) (*MovieFile, error) {
+	var movieFile MovieFile
+	if err := db.First(&movieFile, "uuid = ?", uuid).Error; err != nil {
+		return nil, err
+	}
+	return &movieFile, nil
+}
+
+func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
+	var movie Movie
+	if err := db.Model(movieFile).Related(&movie).Error; err != nil {
+		return nil, err
+	}
+	return &movie, nil
 }
 
 type mergeResult struct {

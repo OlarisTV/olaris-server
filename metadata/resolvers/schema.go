@@ -70,8 +70,9 @@ var SchemaTxt = `
 		# Rescan all library paths for new files that are not indexed yet.
 		rescanLibraries(): Boolean!
 
+		# Tag an unidentified MovieFile
+		updateMovieFileMetadata(input: UpdateMovieFileMetadataInput!): UpdateMovieFileMetadataPayload!
 	}
-
 
 	type LibraryResponse {
 		library: Library
@@ -275,6 +276,21 @@ var SchemaTxt = `
 		fileSize: Int!
 		# Get the library for the given file
 		library: Library!
+	}
+
+	input UpdateMovieFileMetadataInput {
+		// UUID of the movie file to update
+		movieFileUUID: String!
+
+		// TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+		// item appropriately.
+		tmdbID: Int!
+	}
+
+	type UpdateMovieFileMetadataPayload {
+		error: Error
+
+		mediaItem: MediaItem
 	}
 
 	type MovieAddedEvent {
