@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestParseSerieName(t *testing.T) {
+func TestParseSeriesName(t *testing.T) {
 	tests := make(map[string]ParsedSeriesInfo)
 	tests["Battlestar Galactica - S01E04 (1978)"] = ParsedSeriesInfo{Year: 1978, Title: "Battlestar Galactica", EpisodeNum: 4, SeasonNum: 1}
 	tests["Battlestar Galactica - S02E03"] = ParsedSeriesInfo{Year: 0, Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}

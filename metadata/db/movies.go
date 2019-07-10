@@ -12,7 +12,6 @@ type MovieFile struct {
 	gorm.Model
 	MediaItem
 	Movie   Movie
-	Library Library `gorm:"ForeignKey:LibraryID"`
 	MovieID uint
 	Streams []Stream `gorm:"polymorphic:Owner;"`
 }
