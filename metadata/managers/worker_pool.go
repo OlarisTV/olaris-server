@@ -5,6 +5,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/parsers"
+	"path/filepath"
+	"strings"
 )
 
 // WorkerPool is a container for the various workers that a library needs
@@ -38,39 +41,13 @@ func NewDefaultWorkerPool() *WorkerPool {
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
 		if ep, ok := payload.(*episodePayload); ok {
-			var newRecord bool
-			if !ep.episode.IsIdentified() {
-				newRecord = true
-			}
-			err := agent.UpdateEpisodeMD(&ep.episode, &ep.season, &ep.series)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
-			} else {
-				db.UpdateEpisode(&ep.episode)
-				if p.Subscriber != nil && (ep.episode.IsIdentified() && newRecord) {
-					log.Debugln("We have an attached subscriber, sending event.")
-					p.Subscriber.EpisodeAdded(&ep.episode)
-				}
-			}
+			return processEpisodePayload(ep, agent, p.Subscriber)
 		}
 		if movie, ok := payload.(*db.Movie); ok {
-			//TODO: Is there a cleaner way of finding out if a movie was just now identified so we can send the event?
-			var newRecord bool
-			if !movie.IsIdentified() {
-				newRecord = true
-			}
-
-			err := agent.UpdateMovieMD(movie)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for movie.")
-			} else {
-				db.UpdateMovie(movie)
-				db.MergeDuplicateMovies()
-				if p.Subscriber != nil && (newRecord && movie.IsIdentified()) {
-					log.Debugln("We have an attached subscriber, sending event.")
-					p.Subscriber.MovieAdded(movie)
-				}
-			}
+			return processMoviePayload(movie, agent, p.Subscriber)
+		}
+		if movieFile, ok := payload.(*db.MovieFile); ok {
+			return processMovieFilePayload(movieFile, agent, p.Subscriber)
 		}
 
 		return nil
@@ -87,4 +64,74 @@ func NewDefaultWorkerPool() *WorkerPool {
 	})
 
 	return p
+}
+
+func processEpisodePayload(ep *episodePayload, agent *agents.TmdbAgent, subscriber LibrarySubscriber) error {
+	var newRecord bool
+	if !ep.episode.IsIdentified() {
+		newRecord = true
+	}
+	err := agent.UpdateEpisodeMD(&ep.episode, &ep.season, &ep.series)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
+		return err
+	}
+
+	db.UpdateEpisode(&ep.episode)
+	if subscriber != nil && (ep.episode.IsIdentified() && newRecord) {
+		log.Debugln("We have an attached subscriber, sending event.")
+		subscriber.EpisodeAdded(&ep.episode)
+	}
+	return nil
+}
+
+func processMoviePayload(
+	movie *db.Movie,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	//TODO: Is there a cleaner way of finding out if a movie was just now identified so we can send the event?
+	var newRecord bool
+	if !movie.IsIdentified() {
+		newRecord = true
+	}
+
+	err := agent.UpdateMovieMD(movie)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for movie.")
+		return err
+	}
+
+	if movie.IsIdentified() {
+		db.SaveMovie(movie)
+		db.MergeDuplicateMovies()
+		if subscriber != nil && newRecord {
+			log.Debugln("We have an attached subscriber, sending event.")
+			subscriber.MovieAdded(movie)
+		}
+	}
+
+	return nil
+}
+
+func processMovieFilePayload(
+	movieFile *db.MovieFile,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	movie, err := db.FindMovieForMovieFile(movieFile)
+	if err != nil {
+		movie = &db.Movie{}
+	}
+
+	name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
+	parsedInfo := parsers.ParseMovieName(name)
+	movie.Year = parsedInfo.Year
+	movie.Title = parsedInfo.Title
+	movie.MovieFiles = []db.MovieFile{*movieFile}
+
+	// TODO(Leon Handreke): We should probaby have one function responsible for creating new
+	//  Movie models (this one) and another for updating existing ones (processMoviePayload)
+	return processMoviePayload(movie, agent, subscriber)
+
 }
