@@ -233,12 +233,6 @@ func SearchSeriesByTitle(userID uint, name string) (series []Series) {
 	return series
 }
 
-// FindSerie finds a serie by it's ID.
-func FindSerie(seriesID uint) (series Series) {
-	db.Where("id = ?", seriesID).Find(&series)
-	return series
-}
-
 // FindSeriesByUUID retrives a serie based on it's UUID.
 func FindSeriesByUUID(uuid string) (series []Series) {
 	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.

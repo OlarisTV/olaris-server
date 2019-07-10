@@ -98,7 +98,7 @@ func (man *LibraryManager) UpdateEpisodesMD() error {
 	for i := range episodes {
 		func(episode *db.Episode) {
 			season := db.FindSeason(episode.SeasonID)
-			series := db.FindSerie(season.SeriesID)
+			series := db.FindSeries(season.SeriesID)
 			defer checkPanic()
 			man.Pool.tmdbPool.Process(&episodePayload{season: season, series: series, episode: *episode})
 		}(&episodes[i])
@@ -110,7 +110,7 @@ func (man *LibraryManager) UpdateEpisodesMD() error {
 func (man *LibraryManager) UpdateSeasonMD() error {
 	agent := agents.NewTmdbAgent()
 	for _, season := range db.FindAllUnidentifiedSeasons() {
-		series := db.FindSerie(season.SeriesID)
+		series := db.FindSeries(season.SeriesID)
 		agents.UpdateSeasonMD(agent, &season, &series)
 		db.UpdateSeason(&season)
 	}
