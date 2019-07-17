@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"time"
 )
@@ -87,7 +88,7 @@ func CreateUserWithCode(username string, password string, code string) (User, er
 		db.Where("code = ?", code).First(&invite)
 
 		if (invite.Code == "") || (invite.UserID != 0) {
-			fmt.Println("Not a valid code or already used.")
+			log.Warnln("Not a valid code or already used.")
 			return User{}, fmt.Errorf("invite code invalid")
 		}
 	} else {

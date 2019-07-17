@@ -85,7 +85,6 @@ func GetTransmuxedRepresentation(stream Stream) StreamRepresentation {
 }
 
 func guessTransmuxedSegmentList(keyframeIntervals []Interval) [][]Segment {
-	//fmt.Println(keyframeIntervals)
 	segmentId := 0
 	var sessions [][]Segment
 	timeBase := keyframeIntervals[0].TimeBase
@@ -134,6 +133,5 @@ func guessTransmuxedSegmentList(keyframeIntervals []Interval) [][]Segment {
 	}
 	sessions = append(sessions, session)
 
-	//fmt.Println(sessions)
 	return sessions
 }

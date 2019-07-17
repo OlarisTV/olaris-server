@@ -2,7 +2,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
@@ -41,6 +40,5 @@ func TestPlayState(t *testing.T) {
 
 	assert.Equal(t, "Test Title", movieResolver.Title())
 
-	fmt.Printf("%+v\n", movieResolver.PlayState(ctx))
 	assert.EqualValues(t, 33, movieResolver.PlayState(ctx).Playtime())
 }

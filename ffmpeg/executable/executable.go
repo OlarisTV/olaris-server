@@ -2,7 +2,6 @@ package executable
 
 import (
 	"flag"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io/ioutil"
@@ -37,8 +36,9 @@ func getExecutablePath(name string) string {
 		helpers.EnsurePath(binaryDir)
 
 		if err := ioutil.WriteFile(binaryPath, data, 0700); err != nil {
-			fmt.Println(err.Error())
-			log.Warnf("Failed to write %s built-in binary, using system version instead", name)
+			log.Warnf(
+				"Failed to write %s built-in binary, using system version instead: %s",
+				name, err.Error())
 			return name
 		}
 		os.Chmod(binaryPath, 0700)
