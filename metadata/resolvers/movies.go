@@ -31,12 +31,11 @@ func createQd(args *queryArgs) *db.QueryDetails {
 
 // Movies returns all movies.
 func (r *Resolver) Movies(ctx context.Context, args *queryArgs) []*MovieResolver {
-	userID, _ := auth.UserID(ctx)
 	var l []*MovieResolver
 	var movies []db.Movie
 	qd := createQd(args)
 	if args.UUID != nil {
-		movies = db.FindMovieByUUID(args.UUID, userID)
+		movies = db.FindMovieByUUID(args.UUID)
 	} else {
 		movies = db.FindAllMovies(qd)
 	}

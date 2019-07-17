@@ -50,7 +50,7 @@ func TestSearchMovieByTitle(t *testing.T) {
 	defer setupTest(t)()
 	createMovieData()
 	var movies []db.Movie
-	movies = db.SearchMovieByTitle(1, "max")
+	movies = db.SearchMovieByTitle("max")
 	if len(movies) == 0 {
 		t.Error("Did not get any movies while searching")
 		return
@@ -73,7 +73,7 @@ func TestCollectMovie(t *testing.T) {
 	}
 
 	movies := []db.Movie{mov}
-	db.CollectMovieInfo(movies, 1)
+	db.CollectMovieInfo(movies)
 	t.Log(movies)
 	if len(movies[0].MovieFiles) == 0 {
 		t.Error("Expected movie to have files information after calling CollectMovieInfo but there was nothing present")

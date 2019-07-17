@@ -26,7 +26,7 @@ func TestEpisodePlayState(t *testing.T) {
 		EpisodeFiles: []db.EpisodeFile{episodeFile},
 		Name:         "Test Name",
 	}
-	db.FirstOrCreateEpisode(&episode, episode)
+	db.FirstOrCreateEpisode(&episode)
 	db.SavePlayState(&db.PlayState{
 		Finished: false, Playtime: 33,
 		MediaUUID: episode.UUID, UserID: testUserID})

@@ -131,7 +131,7 @@ func (man *LibraryManager) IdentifyUnidentSeries() error {
 
 // ForceMovieMetadataUpdate refreshes all metadata for the given movies in a library, even if metadata already exists.
 func (man *LibraryManager) ForceMovieMetadataUpdate() {
-	for _, movie := range db.FindMoviesInLibrary(man.Library.ID, 0) {
+	for _, movie := range db.FindMoviesInLibrary(man.Library.ID) {
 		UpdateMovieMD(&movie)
 	}
 }
@@ -143,7 +143,7 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 		for _, season := range db.FindSeasonsForSeries(series.ID) {
 			// Consider building a pool for this
 			UpdateSeasonMD(&season, &series)
-			for _, ep := range db.FindEpisodesForSeason(season.ID, 1) {
+			for _, ep := range db.FindEpisodesForSeason(season.ID) {
 				go func(p *episodePayload) {
 					defer checkPanic()
 					man.Pool.tmdbPool.Process(p)
@@ -308,7 +308,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			seriesMutex.Unlock()
 
 			ep := db.Episode{SeasonNum: parsedInfo.SeasonNum, EpisodeNum: parsedInfo.EpisodeNum, SeasonID: season.ID}
-			db.FirstOrCreateEpisode(&ep, ep)
+			db.FirstOrCreateEpisode(&ep)
 
 			epFile := db.EpisodeFile{MediaItem: mi, EpisodeID: ep.ID}
 			epFile.Streams = collectStreams(n)
@@ -386,7 +386,7 @@ func RefreshAgentMetadataWithMissingArt() {
 // RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
 func RefreshAgentMetadataForUUID(UUID string) bool {
 	log.WithFields(log.Fields{"uuid": UUID}).Debugln("Looking to refresh metadata agent data.")
-	movies := db.FindMovieByUUID(&UUID, 0)
+	movies := db.FindMovieByUUID(&UUID)
 	if len(movies) > 0 {
 		go mhelpers.WithLock(func() {
 			UpdateMovieMD(&movies[0])
@@ -410,7 +410,7 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 		return true
 	}
 
-	episode := db.FindEpisodeByUUID(UUID, 0)
+	episode := db.FindEpisodeByUUID(UUID)
 	if episode.ID != 0 {
 		go mhelpers.WithLock(func() {
 			UpdateEpisodeMD(&episode, episode.GetSeason(), episode.GetSeries())

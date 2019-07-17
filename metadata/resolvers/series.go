@@ -44,7 +44,7 @@ func newSeries(dbSeries *db.Series, userID uint) Series {
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
 	userID, _ := auth.UserID(ctx)
-	dbepisode := db.FindEpisodeByUUID(*args.UUID, userID)
+	dbepisode := db.FindEpisodeByUUID(*args.UUID)
 	if dbepisode.ID != 0 {
 		ep := newEpisode(&dbepisode, userID)
 		return &EpisodeResolver{r: ep}
@@ -210,7 +210,7 @@ func (r *SeasonResolver) Series() *SeriesResolver {
 // Episodes returns seasonal episodes.
 func (r *SeasonResolver) Episodes() []*EpisodeResolver {
 	var eps []*EpisodeResolver
-	for _, episode := range db.FindEpisodesForSeason(r.r.ID, r.r.UserID) {
+	for _, episode := range db.FindEpisodesForSeason(r.r.ID) {
 		epp := newEpisode(&episode, r.r.UserID)
 		ep := &EpisodeResolver{r: epp}
 		eps = append(eps, ep)

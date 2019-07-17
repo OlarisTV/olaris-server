@@ -61,9 +61,8 @@ func (r *LibraryResolver) ID() int32 {
 
 // Movies returns movies in Library.
 func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
-	userID, _ := auth.UserID(ctx)
 	var mr []*MovieResolver
-	for _, movie := range db.FindMoviesInLibrary(r.r.ID, userID) {
+	for _, movie := range db.FindMoviesInLibrary(r.r.ID) {
 		if movie.Title != "" {
 			mov := MovieResolver{r: movie}
 			mr = append(mr, &mov)

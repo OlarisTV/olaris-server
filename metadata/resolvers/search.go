@@ -32,10 +32,10 @@ func (r *Resolver) Search(ctx context.Context, args *searchArgs) *[]*SearchItemR
 	userID, _ := auth.UserID(ctx)
 	var l []*SearchItemResolver
 
-	for _, movie := range db.SearchMovieByTitle(userID, args.Name) {
+	for _, movie := range db.SearchMovieByTitle(args.Name) {
 		l = append(l, &SearchItemResolver{r: &MovieResolver{r: movie}})
 	}
-	for _, serie := range db.SearchSeriesByTitle(userID, args.Name) {
+	for _, serie := range db.SearchSeriesByTitle(args.Name) {
 		l = append(l, &SearchItemResolver{r: &SeriesResolver{newSeries(&serie, userID)}})
 	}
 

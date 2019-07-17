@@ -176,7 +176,7 @@ func (file EpisodeFile) DeleteSelfAndMD() {
 }
 
 // CollectEpisodeData collects all relevant information for the given episode such as streams and playstates.
-func CollectEpisodeData(episodes []Episode, userID uint) {
+func CollectEpisodeData(episodes []Episode) {
 	for i := range episodes {
 		db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
 	}
@@ -228,7 +228,7 @@ func FindAllUnidentifiedEpisodes() (episodes []Episode) {
 }
 
 // SearchSeriesByTitle searches for series based on their name.
-func SearchSeriesByTitle(userID uint, name string) (series []Series) {
+func SearchSeriesByTitle(name string) (series []Series) {
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
 	return series
 }
@@ -253,10 +253,10 @@ func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
 }
 
 // FindEpisodesForSeason finds all episodes for the given season UUID.
-func FindEpisodesForSeason(seasonID uint, userID uint) (episodes []Episode) {
+func FindEpisodesForSeason(seasonID uint) (episodes []Episode) {
 	db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
 	// TODO: Don't do this here and move it to the resolver
-	CollectEpisodeData(episodes, userID)
+	CollectEpisodeData(episodes)
 
 	return episodes
 }
@@ -304,7 +304,7 @@ func FindSeason(seasonID uint) (season Season) {
 }
 
 // FindEpisodeByUUID finds a episode based on it's UUID.
-func FindEpisodeByUUID(uuid string, userID uint) (episode Episode) {
+func FindEpisodeByUUID(uuid string) (episode Episode) {
 	var episodes []Episode
 	db.Where("uuid = ?", uuid).First(&episodes)
 	if len(episodes) == 1 {

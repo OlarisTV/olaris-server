@@ -123,7 +123,7 @@ type QueryDetails struct {
 
 // CollectMovieInfo ensures that all relevant information for a movie is loaded
 // this can include stream information (audio/video/subtitle tracks) and personalized playstate information.
-func CollectMovieInfo(movies []Movie, userID uint) {
+func CollectMovieInfo(movies []Movie) {
 	// Can't use 'movie' in range here as it won't modify the original object
 	for i := range movies {
 		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
@@ -152,23 +152,23 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
 	db.Where("tmdb_id != 0").Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
-	CollectMovieInfo(movies, qd.UserID)
+	CollectMovieInfo(movies)
 
 	return movies
 }
 
 // FindMovieByUUID finds the movie specified by the given uuid.
-func FindMovieByUUID(uuid *string, userID uint) (movies []Movie) {
+func FindMovieByUUID(uuid *string) (movies []Movie) {
 	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
-	CollectMovieInfo(movies, userID)
+	CollectMovieInfo(movies)
 
 	return movies
 }
 
 // SearchMovieByTitle search movies by title.
-func SearchMovieByTitle(userID uint, name string) (movies []Movie) {
+func SearchMovieByTitle(name string) (movies []Movie) {
 	db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
-	CollectMovieInfo(movies, userID)
+	CollectMovieInfo(movies)
 	return movies
 }
 
@@ -182,7 +182,7 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 }
 
 // FindMoviesInLibrary finds movies that have files in a certain library
-func FindMoviesInLibrary(libraryID uint, userID uint) (movies []Movie) {
+func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
 	var files []MovieFile
 	db.Preload("Movie", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
 	for _, f := range files {
