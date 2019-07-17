@@ -2,8 +2,6 @@ package db_test
 
 import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -21,12 +19,7 @@ func createMovieData() {
 }
 
 func setupTest(t *testing.T) func() {
-	tmp, err := ioutil.TempDir(os.TempDir(), "bss-test")
-	if err != nil {
-		t.Error("Could not create tmpfile for database tests:", err)
-	}
-
-	dbc := db.NewDb(tmp, false)
+	dbc := db.NewDb(db.InMemory, false)
 
 	// Test teardown - return a closure for use by 'defer'
 	return func() {

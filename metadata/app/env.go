@@ -6,6 +6,7 @@ import (
 	"github.com/jasonlvhit/gocron" // Temp disable
 	"github.com/jinzhu/gorm"
 	"math/rand"
+	"path"
 	"time"
 	// Import sqlite dialect
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -32,9 +33,12 @@ func (m *MetadataContext) Cleanup() {
 var env *MetadataContext
 
 // NewDefaultMDContext creates a new env with sane defaults.
-func NewDefaultMDContext() *MetadataContext {
-	dbPath := helpers.MetadataConfigPath()
-	return NewMDContext(dbPath, false, true)
+func NewDefaultMDContext(dbLogMode bool, verboseLog bool) *MetadataContext {
+	dbDir := helpers.MetadataConfigPath()
+	helpers.EnsurePath(dbDir)
+
+	dbPath := path.Join(dbDir, "metadata.db")
+	return NewMDContext(dbPath, dbLogMode, verboseLog)
 }
 
 // NewMDContext lets you create a more custom environment.

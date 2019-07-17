@@ -25,7 +25,7 @@ var libraryCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new library",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		mctx := app.NewDefaultMDContext()
+		mctx := app.NewDefaultMDContext(true, false)
 		defer mctx.Db.Close()
 
 		err := db.AddLibrary(&db.Library{Name: name, FilePath: path, Kind: db.MediaType(mediaType), Backend: backendType, RcloneName: rcloneName})

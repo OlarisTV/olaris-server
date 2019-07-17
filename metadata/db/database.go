@@ -6,20 +6,18 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/gormigrate.v1"
-	"path"
 	// Import sqlite dialect
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"gitlab.com/olaris/olaris-server/helpers"
 )
 
 var db *gorm.DB
 
-// NewDb initializes a new database instance.
-func NewDb(dbDir string, dbLogMode bool) *gorm.DB {
-	var err error
+// InMemory can be passed as a database path to NewDb to create an in-memory database
+const InMemory string = ":memory:"
 
-	helpers.EnsurePath(dbDir)
-	dbPath := path.Join(dbDir, "metadata.db")
+// NewDb initializes a new database instance.
+func NewDb(dbPath string, dbLogMode bool) *gorm.DB {
+	var err error
 
 	db, err = gorm.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=1000")
 	db.LogMode(dbLogMode)
