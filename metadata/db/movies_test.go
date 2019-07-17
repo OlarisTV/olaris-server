@@ -12,10 +12,16 @@ func createMovieData() {
 	stream := db.Stream{CodecName: "test"}
 	mf := db.MovieFile{MediaItem: mi, Streams: []db.Stream{stream}}
 
-	ps := db.PlayState{Finished: false, Playtime: 33, UserID: 1}
-
-	movie = db.Movie{Title: "Test", OriginalTitle: "Mad Max: Road Fury", MovieFiles: []db.MovieFile{mf}, PlayState: ps}
+	movie = db.Movie{
+		Title:         "Test",
+		OriginalTitle: "Mad Max: Road Fury",
+		MovieFiles:    []db.MovieFile{mf},
+	}
 	db.CreateMovie(&movie)
+	ps := db.PlayState{
+		MediaUUID: movie.UUID,
+		Finished:  false, Playtime: 33, UserID: 1}
+	db.SavePlayState(&ps)
 }
 
 func setupTest(t *testing.T) func() {
@@ -74,9 +80,5 @@ func TestCollectMovie(t *testing.T) {
 	}
 	if len(movies[0].MovieFiles[0].Streams) == 0 {
 		t.Error("Expected movie to have stream information after calling CollectMovieInfo but there was nothing present")
-	}
-	playstate := db.PlayState{}
-	if movies[0].PlayState == playstate {
-		t.Error("Expected movie to have Playstate information after calling CollectMovieInfo but there was nothing present")
 	}
 }

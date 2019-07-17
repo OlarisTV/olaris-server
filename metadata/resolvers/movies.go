@@ -107,8 +107,13 @@ func (r *MovieResolver) TmdbID() int32 {
 }
 
 // PlayState returns playstate for given user.
-func (r *MovieResolver) PlayState() *PlayStateResolver {
-	return &PlayStateResolver{r: r.r.PlayState}
+func (r *MovieResolver) PlayState(ctx context.Context) *PlayStateResolver {
+	userID, _ := auth.UserID(ctx)
+	playState, _ := db.FindPlayState(r.r.UUID, userID)
+	if playState == nil {
+		playState = &db.PlayState{}
+	}
+	return &PlayStateResolver{r: *playState}
 }
 
 // MovieFileResolver resolves the movie information

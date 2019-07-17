@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
 )
 
 // PlayState holds status information about media files, it keeps track of progress and whether or not the content has been viewed
@@ -10,11 +9,10 @@ import (
 type PlayState struct {
 	gorm.Model
 	UUIDable
-	UserID    uint
+	UserID    uint `gorm:"unique_index:idx_unique_play_state_per_media"`
 	Finished  bool
 	Playtime  float64
-	OwnerID   uint
-	OwnerType string
+	MediaUUID string `gorm:"unique_index:idx_unique_play_state_per_media"`
 }
 
 // latestEpResult holds information about the episode that is up next for the given user.
@@ -31,7 +29,12 @@ type latestEpResult struct {
 
 // UpNextMovies returns a list of movies that are recently added and not watched yet.
 func UpNextMovies(userID uint) (movies []*Movie) {
-	db.Select("movies.*, play_states.*").Order("play_states.updated_at DESC").Joins("JOIN play_states ON play_states.owner_id = movies.id").Where("play_states.finished = 0 AND play_states.owner_type = 'movies'").Where("play_states.user_id = ?", userID).Preload("PlayState").Find(&movies)
+	db.Select("movies.*, play_states.*").
+		Order("play_states.updated_at DESC").
+		Joins("JOIN play_states ON play_states.media_uuid = movies.uuid").
+		Where("play_states.finished = 0").
+		Where("play_states.user_id = ?", userID).
+		Preload("PlayState").Find(&movies)
 	for i := range movies {
 		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
 	}
@@ -43,7 +46,7 @@ func UpNextEpisodes(userID uint) []*Episode {
 	result := []latestEpResult{}
 	eps := []*Episode{}
 	db.Raw("SELECT episodes.id AS episode_id, episodes.episode_num AS episode_num, episodes.season_num, seasons.id AS season_id, play_states.playtime, series.id AS series_id, play_states.finished, max((episodes.season_num*100)+episodes.episode_num) AS height FROM play_states"+
-		" INNER JOIN episodes ON episodes.ID = play_states.owner_id AND play_states.owner_type = 'episodes'"+
+		" INNER JOIN episodes ON episodes.uuid = play_states.media_uuid "+
 		" INNER JOIN seasons ON seasons.id = episodes.season_id"+
 		" INNER join series ON series.id = seasons.series_id"+
 		" WHERE play_states.user_id = ?"+
@@ -95,46 +98,37 @@ func LatestPlayStates(limit uint, userID uint) []PlayState {
 	return pss
 }
 
-func updatePS(contentType string, contentID uint, userID uint, finished bool, playtime float64) *PlayState {
-	newPs := PlayState{OwnerID: contentID, UserID: userID, OwnerType: contentType}
-	var ps PlayState
-	db.FirstOrInit(&ps, newPs)
-
-	// We set this here so we return a playstate that is reset to the react app
-	ps.Finished = finished
-	ps.Playtime = playtime
-
-	// This seems to imply we marked something as 'unwatched', if that's the case just blow up the playstate all together.
-	if finished == false && playtime == 0 && ps.ID != 0 {
-		log.Debugln("Removing playstate")
-		db.Unscoped().Delete(&ps)
-	} else {
-		log.WithFields(log.Fields{"type": contentType, "playtime": ps.Playtime, "finished": ps.Finished}).Debugln("Updating playstate.")
-		db.Save(&ps)
-	}
-	return &ps
+func SavePlayState(playState *PlayState) error {
+	var updatedPlayState PlayState
+	// Upsert the given PlayState. The WHERE clause uniquely identifies the
+	// PlayState due to the UNIQUE index on media_uuid/user_id.
+	return db.
+		Where(&PlayState{MediaUUID: playState.MediaUUID, UserID: playState.UserID}).
+		Assign(playState).
+		FirstOrCreate(&updatedPlayState).
+		Error
 }
 
-// CreatePlayState creates new playstate for the given user and media content.
-func CreatePlayState(userID uint, mediaUUID string, finished bool, playtime float64) *PlayState {
-	count := 0
-	var movie Movie
-	var episode Episode
-	var ps PlayState
-	log.WithFields(log.Fields{"mediaUUID": mediaUUID}).Debugln("Looking for media to update playstate.")
+func DeletePlayState(mediaUUID string, userID uint) error {
+	return db.Unscoped().Delete(&PlayState{MediaUUID: mediaUUID, UserID: userID}).Error
+}
 
-	db.Where("uuid = ?", mediaUUID).Find(&movie).Count(&count)
-	if count > 0 {
-		return updatePS("movies", movie.ID, userID, finished, playtime)
+// FindPlayState finds a playstate
+func FindPlayState(mediaUUID string, userID uint) (*PlayState, error) {
+	if userID == 0 {
+		// We panic in this case, we currently don't have a usecase for this and doing it
+		// is a serious privacy risk.
+		panic("Trying to query for all PlayStates")
 	}
 
-	count = 0
-	db.Where("uuid = ?", mediaUUID).Find(&episode).Count(&count)
-	if count > 0 {
-		return updatePS("episodes", episode.ID, userID, finished, playtime)
+	var playState PlayState
+	if err := db.First(&playState, &PlayState{
+		MediaUUID: mediaUUID,
+		UserID:    userID,
+	}).
+		Error; err != nil {
+
+		return nil, err
 	}
-
-	log.WithFields(log.Fields{"mediaUUID": mediaUUID}).Debugln("Could not find media to update.")
-	return &ps
-
+	return &playState, nil
 }

@@ -39,6 +39,10 @@ func UserID(ctx context.Context) (uint, bool) {
 	return userID, ok
 }
 
+func ContextWithUserID(ctx context.Context, userID uint) context.Context {
+	return context.WithValue(ctx, contextKeyUserID, userID)
+}
+
 // UserAdmin checks whether the JWT is authorised as admin.
 func UserAdmin(ctx context.Context) (bool, bool) {
 	isAdmin, ok := ctx.Value(contextKeyIsAdmin).(bool)

@@ -65,7 +65,6 @@ type Episode struct {
 	AirDate      string
 	StillPath    string
 	Season       *Season
-	PlayState    PlayState `gorm:"polymorphic:Owner;"`
 	EpisodeFiles []EpisodeFile
 }
 
@@ -180,7 +179,6 @@ func (file EpisodeFile) DeleteSelfAndMD() {
 func CollectEpisodeData(episodes []Episode, userID uint) {
 	for i := range episodes {
 		db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-		db.Model(episodes[i]).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episodes[i].ID, "tv_episodes").First(&episodes[i].PlayState)
 	}
 }
 
@@ -198,7 +196,10 @@ func UnwatchedEpisodesInSeriesCount(seriesID uint, userID uint) uint {
 // UnwatchedEpisodesInSeasonCount retrieves the amount of unwatched episodes in a given season.
 func UnwatchedEpisodesInSeasonCount(seasonID uint, userID uint) uint {
 	var res countResult
-	db.Raw("select count(*) as count from episodes where season_id = ? AND id NOT IN (SELECT owner_id FROM play_states WHERE owner_type = 'episodes' AND finished = 1 AND user_id = ? AND owner_id IN( SELECT id FROM episodes WHERE season_id = ?))", seasonID, userID, seasonID).Scan(&res)
+	db.Raw("select count(*) as count from episodes where season_id = ? "+
+		"AND uuid NOT IN (SELECT media_uuid FROM play_states WHERE finished = 1 "+
+		"AND user_id = ? AND media_uuid IN( SELECT uuid FROM episodes WHERE season_id = ?))", seasonID, userID,
+		seasonID).Scan(&res)
 	return res.Count
 }
 
@@ -284,12 +285,6 @@ func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
 	return episodes
 }
 
-// FindPlaystateForEpisode returns the playstate for the given episode
-func FindPlaystateForEpisode(episodeID uint, userID uint) (ps PlayState) {
-	db.Where("user_id = ? AND owner_id = ? and owner_type = ?", userID, episodeID, "episodes").First(&ps)
-	return ps
-}
-
 // FindAllSeasons returns all seasons
 func FindAllSeasons() (seasons []Season) {
 	db.Find(&seasons)
@@ -315,7 +310,6 @@ func FindEpisodeByUUID(uuid string, userID uint) (episode Episode) {
 	if len(episodes) == 1 {
 		episode = episodes[0]
 		db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
-		db.Model(&episode).Where("user_id = ? AND owner_id = ? and owner_type =?", userID, episode.ID, "episodes").First(&episode.PlayState)
 	}
 	return episode
 }
@@ -385,8 +379,8 @@ func FirstOrCreateSeries(series *Series, seriesDef Series) {
 }
 
 // FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
-func FirstOrCreateEpisode(episode *Episode, episodeDef Episode) {
-	db.FirstOrCreate(episode, episodeDef)
+func FirstOrCreateEpisode(episode *Episode) {
+	db.FirstOrCreate(episode, *episode)
 }
 
 // FirstOrCreateSeason returns the first instance or writes a episodes to the db.

@@ -274,9 +274,13 @@ func (r *EpisodeResolver) EpisodeNumber() int32 {
 }
 
 // PlayState returns episode playstate information.
-func (r *EpisodeResolver) PlayState() *PlayStateResolver {
-	ps := db.FindPlaystateForEpisode(r.r.ID, r.r.UserID)
-	return &PlayStateResolver{r: ps}
+func (r *EpisodeResolver) PlayState(ctx context.Context) *PlayStateResolver {
+	userID, _ := auth.UserID(ctx)
+	playState, _ := db.FindPlayState(r.r.Episode.UUID, userID)
+	if playState == nil {
+		playState = &db.PlayState{}
+	}
+	return &PlayStateResolver{r: *playState}
 }
 
 // PlayStateResolver resolves playstate
