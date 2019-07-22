@@ -16,7 +16,7 @@ var libraryCmd = &cobra.Command{
 }
 
 var name string
-var path string
+var filePath string
 var mediaType int
 var backendType int
 var rcloneName string
@@ -28,7 +28,7 @@ var libraryCreateCmd = &cobra.Command{
 		mctx := app.NewDefaultMDContext(true, false)
 		defer mctx.Db.Close()
 
-		err := db.AddLibrary(&db.Library{Name: name, FilePath: path, Kind: db.MediaType(mediaType), Backend: backendType, RcloneName: rcloneName})
+		err := db.AddLibrary(&db.Library{Name: name, FilePath: filePath, Kind: db.MediaType(mediaType), Backend: backendType, RcloneName: rcloneName})
 		return err
 	},
 }
@@ -37,7 +37,7 @@ func init() {
 	libraryCreateCmd.Flags().StringVar(&name, "name", "", "A name for this library")
 	libraryCreateCmd.MarkFlagRequired("name")
 
-	libraryCreateCmd.Flags().StringVar(&path, "path", "", "Path for this library")
+	libraryCreateCmd.Flags().StringVar(&filePath, "path", "", "Path for this library")
 	libraryCreateCmd.MarkFlagRequired("path")
 
 	libraryCreateCmd.Flags().IntVar(&mediaType, "media_type", 0, "Media type, 0 for Movies, 1 for Series")

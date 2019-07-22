@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"path"
 	// Backend for Rclone
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +38,10 @@ var serveCmd = &cobra.Command{
 		rr := mainRouter.PathPrefix("/olaris")
 		rrr := mainRouter.PathPrefix("/olaris")
 
-		mctx := app.NewMDContext(helpers.MetadataConfigPath(), dbLog, verbose)
+		dbDir := helpers.MetadataConfigPath()
+		dbPath := path.Join(dbDir, "metadata.db")
+
+		mctx := app.NewMDContext(dbPath, dbLog, verbose)
 
 		metaRouter := r.PathPrefix("/m").Subrouter()
 		metadata.RegisterRoutes(mctx, metaRouter)
