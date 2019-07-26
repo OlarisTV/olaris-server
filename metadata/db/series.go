@@ -380,7 +380,7 @@ func FirstOrCreateSeries(series *Series, seriesDef Series) {
 
 // FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
 func FirstOrCreateEpisode(episode *Episode) {
-	db.FirstOrCreate(episode)
+	db.FirstOrCreate(episode, *episode)
 }
 
 // CreateEpisode writes an episode to the db.
