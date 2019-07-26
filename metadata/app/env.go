@@ -3,7 +3,6 @@ package app
 
 import (
 	"github.com/fsnotify/fsnotify"
-	"github.com/jasonlvhit/gocron" // Temp disable
 	"github.com/jinzhu/gorm"
 	"math/rand"
 	"path"
@@ -61,8 +60,12 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 
 	env = &MetadataContext{Db: db, ExitChan: exitChan}
 
-	gocron.Every(2).Hours().Do(managers.RefreshAgentMetadataWithMissingArt)
-	gocron.Start()
+	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
+	go func() {
+		for _ = range metadataRefreshTicker.C {
+			managers.RefreshAgentMetadataWithMissingArt()
+		}
+	}()
 
 	return env
 }
