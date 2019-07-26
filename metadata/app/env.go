@@ -62,7 +62,7 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 
 	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
 	go func() {
-		for _ = range metadataRefreshTicker.C {
+		for range metadataRefreshTicker.C {
 			managers.RefreshAgentMetadataWithMissingArt()
 		}
 	}()
