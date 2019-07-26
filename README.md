@@ -33,6 +33,7 @@ Everything we build should be open-source. We feel strongly that more can be ach
   * Install some third party tools
 	  * go get github.com/jteeuwen/go-bindata/...
 	  * go get github.com/elazarl/go-bindata-assetfs/...
+	  * go get github.com/maxbrunsfeld/counterfeiter
   * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
 
 ### Make commands

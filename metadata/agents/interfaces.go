@@ -1,8 +1,8 @@
 package agents
 
-import (
-	"gitlab.com/olaris/olaris-server/metadata/db"
-)
+//go:generate counterfeiter . MetadataRetrievalAgent
+
+import "gitlab.com/olaris/olaris-server/metadata/db"
 
 // MetadataRetrievalAgent can retrieve metadata for media items.
 type MetadataRetrievalAgent interface {

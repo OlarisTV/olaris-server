@@ -13,27 +13,29 @@ before_script:
   - apt-get update
   - apt-get install unzip
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
-  - ln -s $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
+  - cp -r $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
   - go get github.com/jteeuwen/go-bindata/...
   - go get github.com/elazarl/go-bindata-assetfs/...
+  - go get github.com/maxbrunsfeld/counterfeiter
   - make ready-ci
 
 stages:
+    - format
     - test
     - build
 
 format:
-    stage: test
+    stage: format
     script:
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
-      - go test -race $(go list ./... | grep -v /vendor/)
 
-compile:
+build:
     stage: build
     script:
       - make build-linux
+      - cp -r build CI_PROJECT_DIR/
     artifacts:
       paths:
         - build/olaris-linux-386
@@ -41,3 +43,8 @@ compile:
         - build/olaris-linux-arm
         - build/olaris-linux-arm64
       expire_in: 4 week
+
+test:
+    stage: test
+    script:
+      - go test -race $(go list ./... | grep -v /vendor/)
