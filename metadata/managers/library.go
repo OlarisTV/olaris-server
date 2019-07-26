@@ -111,7 +111,7 @@ func (man *LibraryManager) UpdateSeasonMD() error {
 	agent := agents.NewTmdbAgent()
 	for _, season := range db.FindAllUnidentifiedSeasons() {
 		series := db.FindSeries(season.SeriesID)
-		agents.UpdateSeasonMD(agent, &season, &series)
+		agent.UpdateSeasonMD(&season, &series)
 		db.UpdateSeason(&season)
 	}
 	return nil
@@ -478,7 +478,7 @@ func (man *LibraryManager) RefreshAll() {
 func UpdateSeriesMD(series *db.Series) error {
 	log.WithFields(log.Fields{"name": series.Name}).Println("Refreshing metadata for series.")
 	agent := agents.NewTmdbAgent()
-	agents.UpdateSeriesMD(agent, series)
+	agent.UpdateSeriesMD(series)
 	db.UpdateSeries(series)
 	return nil
 }
@@ -486,7 +486,7 @@ func UpdateSeriesMD(series *db.Series) error {
 // UpdateEpisodeMD updates the database record with the latest data from the agent
 func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error {
 	agent := agents.NewTmdbAgent()
-	agents.UpdateEpisodeMD(agent, ep, season, series)
+	agent.UpdateEpisodeMD(ep, season, series)
 	db.UpdateEpisode(ep)
 	return nil
 }
@@ -494,7 +494,7 @@ func UpdateEpisodeMD(ep *db.Episode, season *db.Season, series *db.Series) error
 // UpdateSeasonMD updates the database record with the latest data from the agent
 func UpdateSeasonMD(season *db.Season, series *db.Series) error {
 	agent := agents.NewTmdbAgent()
-	agents.UpdateSeasonMD(agent, season, series)
+	agent.UpdateSeasonMD(season, series)
 	db.UpdateSeason(season)
 	return nil
 }
@@ -504,7 +504,7 @@ func UpdateMovieMD(movie *db.Movie) error {
 	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
 
 	agent := agents.NewTmdbAgent()
-	agents.UpdateMovieMD(agent, movie)
+	agent.UpdateMovieMD(movie)
 	db.UpdateMovie(movie)
 	return nil
 }
