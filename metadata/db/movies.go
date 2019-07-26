@@ -89,7 +89,7 @@ func (file MovieFile) DeleteSelfAndMD() {
 
 // String returns a nice overview of the given movie file.
 func (file *MovieFile) String() string {
-	return fmt.Sprintf("Movie: %s\nYear: %d\nPath:%s", file.Title, file.Year, file.FilePath)
+	return fmt.Sprintf("MovieFile Path:%s", file.FilePath)
 }
 
 // YearAsString returns the year, as a string....

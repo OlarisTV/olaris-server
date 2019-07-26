@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/satori/go.uuid"
-	"strconv"
 )
 
 // Defines various mediatypes, only Movie and Series support atm.
@@ -57,18 +56,11 @@ type MediaFile interface {
 // MediaItem is an embeddeable struct that holds information about filesystem files (episode or movies).
 type MediaItem struct {
 	UUIDable
-	Title     string
-	Year      uint64
 	FileName  string
 	FilePath  string
 	Size      int64
 	Library   Library
 	LibraryID uint
-}
-
-// YearAsString converts the year to string (no surprise there huh.)
-func (mi *MediaItem) YearAsString() string {
-	return strconv.FormatUint(mi.Year, 10)
 }
 
 // FindContentByUUID can retrieve episode or movie data based on a UUID.

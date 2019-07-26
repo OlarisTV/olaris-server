@@ -275,9 +275,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 				FileName:  basename,
 				FilePath:  n.FileLocator().String(),
 				Size:      n.Size(),
-				Title:     parsedInfo.Title,
 				LibraryID: library.ID,
-				Year:      parsedInfo.Year,
 			}
 			var series db.Series
 			var season db.Season
@@ -335,8 +333,6 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			FileName:  basename,
 			FilePath:  n.FileLocator().String(),
 			Size:      n.Size(),
-			Title:     mvi.Title,
-			Year:      mvi.Year,
 			LibraryID: library.ID,
 		}
 

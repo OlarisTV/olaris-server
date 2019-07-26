@@ -8,7 +8,7 @@ import (
 var movie db.Movie
 
 func createMovieData() {
-	mi := db.MediaItem{FilePath: "/tmp/test", Title: "Test.mkv"}
+	mi := db.MediaItem{FilePath: "/tmp/test.mkv"}
 	stream := db.Stream{CodecName: "test"}
 	mf := db.MovieFile{MediaItem: mi, Streams: []db.Stream{stream}}
 
