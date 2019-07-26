@@ -7,6 +7,7 @@ bin
 node_modules
 cmd/olaris-server/bsmds-linux
 **/bindata.go
+**/*fakes/*
 react/build
 yarn.lock
 build
