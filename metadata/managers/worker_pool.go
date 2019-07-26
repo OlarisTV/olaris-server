@@ -42,7 +42,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 			if !ep.episode.IsIdentified() {
 				newRecord = true
 			}
-			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
+			err := agent.UpdateEpisodeMD(&ep.episode, &ep.season, &ep.series)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
 			} else {
@@ -60,7 +60,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 				newRecord = true
 			}
 
-			err := agents.UpdateMovieMD(agent, movie)
+			err := agent.UpdateMovieMD(movie)
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for movie.")
 			} else {
