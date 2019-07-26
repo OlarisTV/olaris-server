@@ -158,7 +158,7 @@ func FindAllMovies(qd *QueryDetails) (movies []Movie) {
 }
 
 // FindMovieByUUID finds the movie specified by the given uuid.
-func FindMovieByUUID(uuid *string) (movies []Movie) {
+func FindMovieByUUID(uuid string) (movies []Movie) {
 	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
 	CollectMovieInfo(movies)
 

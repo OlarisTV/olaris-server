@@ -80,7 +80,7 @@ func (r *StreamResolver) Resolution() *string {
 // UpdateStreams is a resolver method for the UpdateStreams method
 func (r *Resolver) UpdateStreams(args *mustUUIDArgs) bool {
 	if args.UUID != nil {
-		ok := db.UpdateStreams(args.UUID)
+		ok := db.UpdateStreams(*args.UUID)
 		return ok
 	}
 

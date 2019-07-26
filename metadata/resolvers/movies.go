@@ -35,7 +35,7 @@ func (r *Resolver) Movies(ctx context.Context, args *queryArgs) []*MovieResolver
 	var movies []db.Movie
 	qd := createQd(args)
 	if args.UUID != nil {
-		movies = db.FindMovieByUUID(args.UUID)
+		movies = db.FindMovieByUUID(*args.UUID)
 	} else {
 		movies = db.FindAllMovies(qd)
 	}

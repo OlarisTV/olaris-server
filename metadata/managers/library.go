@@ -382,7 +382,7 @@ func RefreshAgentMetadataWithMissingArt() {
 // RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
 func RefreshAgentMetadataForUUID(UUID string) bool {
 	log.WithFields(log.Fields{"uuid": UUID}).Debugln("Looking to refresh metadata agent data.")
-	movies := db.FindMovieByUUID(&UUID)
+	movies := db.FindMovieByUUID(UUID)
 	if len(movies) > 0 {
 		go mhelpers.WithLock(func() {
 			UpdateMovieMD(&movies[0])
