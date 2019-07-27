@@ -39,6 +39,8 @@ var SchemaTxt = `
 		remotes(): [String]!
 
 		unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
+
+		tmdbSearchMovies(query: String!): [TmdbMovieSearchItem]!
 	}
 
 	type Mutation {
@@ -315,6 +317,21 @@ var SchemaTxt = `
 	type Invite {
 		code: String
 		user: User
+	}
+
+	type TmdbMovieSearchItem {
+		# Official title according to the MovieDB
+		title: String!
+		# Release year
+		releaseYear: Int!
+		# Short description of the movie
+		overview: String!
+		# TMDB ID
+		tmdbID: Int!
+		# ID to retrieve backdrop
+		backdropPath: String!
+		# ID to retrieve poster
+		posterPath: String!
 	}
 
 `

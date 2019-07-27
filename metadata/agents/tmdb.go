@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"strconv"
+	"time"
 )
 
 const tmdbAPIKey = "0cdacd9ab172ac6ff69c8d84b2c938a8"
@@ -23,6 +24,10 @@ func NewTmdbAgent() *TmdbAgent {
 		Proxies:  nil,
 		UseProxy: false,
 	})}
+}
+
+func ParseTmdbDate(tmdbDate string) (time.Time, error) {
+	return time.Parse("2006-01-02", tmdbDate)
 }
 
 // UpdateEpisodeMD updates the metadata information for the given episode.
@@ -156,4 +161,12 @@ func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
 	}
 
 	return nil
+}
+
+// TmdbSearchMovie directly exposes the TMDb search interface
+func (a *TmdbAgent) TmdbSearchMovie(
+	name string,
+	options map[string]string,
+) (*tmdb.MovieSearchResults, error) {
+	return a.Tmdb.SearchMovie(name, options)
 }
