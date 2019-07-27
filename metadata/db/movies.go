@@ -79,7 +79,9 @@ func (file MovieFile) DeleteSelfAndMD() {
 		db.Unscoped().Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
 
 		// Delete movie
-		db.Unscoped().Delete(&file.Movie)
+		if file.MovieID != 0 {
+			db.Unscoped().Delete(&file.Movie)
+		}
 	}
 
 	// Delete all file information
