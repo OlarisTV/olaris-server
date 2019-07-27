@@ -37,6 +37,8 @@ var SchemaTxt = `
 		invites(): [Invite]
 		# List of all remotes found in a rclone config file if one exists.
 		remotes(): [String]!
+
+		unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
 	}
 
 	type Mutation {
