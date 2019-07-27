@@ -430,6 +430,7 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
 			m.DeleteSelfAndMD()
 		}
 	case db.BackendRclone:

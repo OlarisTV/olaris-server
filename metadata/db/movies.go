@@ -55,7 +55,9 @@ func (file MovieFile) GetFilePath() string {
 
 // GetLibrary is a wrapper for the MediaFile interface
 func (file MovieFile) GetLibrary() *Library {
-	return &file.Library
+	var library Library
+	db.Model(&file).Related(&library)
+	return &library
 }
 
 // GetStreams returns all streams for this file

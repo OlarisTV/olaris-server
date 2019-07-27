@@ -129,7 +129,9 @@ func (file EpisodeFile) GetFilePath() string {
 
 // GetLibrary is a wrapper for the MediaFile interface
 func (file EpisodeFile) GetLibrary() *Library {
-	return &file.Library
+	var library Library
+	db.Model(&file).Related(&library)
+	return &library
 }
 
 // DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
