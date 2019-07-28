@@ -41,6 +41,7 @@ var SchemaTxt = `
 		unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
 
 		tmdbSearchMovies(query: String!): [TmdbMovieSearchItem]!
+		tmdbSearchSeries(query: String!): [TmdbSeriesSearchItem]!
 	}
 
 	type Mutation {
@@ -326,6 +327,19 @@ var SchemaTxt = `
 		releaseYear: Int!
 		# Short description of the movie
 		overview: String!
+		# TMDB ID
+		tmdbID: Int!
+		# ID to retrieve backdrop
+		backdropPath: String!
+		# ID to retrieve poster
+		posterPath: String!
+	}
+
+	type TmdbSeriesSearchItem {
+		# Official title according to the MovieDB
+		name: String!
+		# Release year
+		firstAirYear: Int!
 		# TMDB ID
 		tmdbID: Int!
 		# ID to retrieve backdrop
