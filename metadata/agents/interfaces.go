@@ -17,4 +17,5 @@ type MetadataRetrievalAgent interface {
 	// TODO(Leon Handreke): This totally breaks the abstraction, but we need the interface
 	//  to be able to fake it.
 	TmdbSearchMovie(name string, options map[string]string) (*tmdb.MovieSearchResults, error)
+	TmdbSearchTv(name string, options map[string]string) (*tmdb.TvSearchResults, error)
 }

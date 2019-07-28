@@ -170,3 +170,11 @@ func (a *TmdbAgent) TmdbSearchMovie(
 ) (*tmdb.MovieSearchResults, error) {
 	return a.Tmdb.SearchMovie(name, options)
 }
+
+// TmdbSearchTv directly exposes the TMDb search interface
+func (a *TmdbAgent) TmdbSearchTv(
+	name string,
+	options map[string]string,
+) (*tmdb.TvSearchResults, error) {
+	return a.Tmdb.SearchTv(name, options)
+}
