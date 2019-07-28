@@ -1,8 +1,6 @@
 package resolvers
 
 import (
-	"context"
-	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
@@ -28,15 +26,14 @@ type searchArgs struct {
 }
 
 // Search searches for media content.
-func (r *Resolver) Search(ctx context.Context, args *searchArgs) *[]*SearchItemResolver {
-	userID, _ := auth.UserID(ctx)
+func (r *Resolver) Search(args *searchArgs) *[]*SearchItemResolver {
 	var l []*SearchItemResolver
 
 	for _, movie := range db.SearchMovieByTitle(args.Name) {
 		l = append(l, &SearchItemResolver{r: &MovieResolver{r: movie}})
 	}
 	for _, serie := range db.SearchSeriesByTitle(args.Name) {
-		l = append(l, &SearchItemResolver{r: &SeriesResolver{newSeries(&serie, userID)}})
+		l = append(l, &SearchItemResolver{r: &SeriesResolver{serie}})
 	}
 
 	return &l

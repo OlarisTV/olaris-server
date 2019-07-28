@@ -26,7 +26,7 @@ func (h graphqlLibrarySubscriber) MovieAdded(movie *db.Movie) {
 }
 
 func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
-	e := &EpisodeAddedEvent{episode: &EpisodeResolver{Episode{Episode: *episode}}}
+	e := &EpisodeAddedEvent{episode: &EpisodeResolver{*episode}}
 	go func() {
 		select {
 		case h.resolver.episodeAddedEvents <- e:
@@ -38,7 +38,7 @@ func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
 }
 
 func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
-	e := &SeriesAddedEvent{series: &SeriesResolver{Series{Series: *series}}}
+	e := &SeriesAddedEvent{series: &SeriesResolver{*series}}
 	go func() {
 		select {
 		case h.resolver.seriesAddedEvents <- e:
@@ -50,7 +50,7 @@ func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
 }
 
 func (h graphqlLibrarySubscriber) SeasonAdded(season *db.Season) {
-	e := &SeasonAddedEvent{season: &SeasonResolver{Season{Season: *season}}}
+	e := &SeasonAddedEvent{season: &SeasonResolver{*season}}
 	go func() {
 		select {
 		case h.resolver.seasonAddedEvents <- e:

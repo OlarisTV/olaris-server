@@ -10,61 +10,26 @@ type mustUUIDArgs struct {
 	UUID *string
 }
 
-// Season wrapper object around db.Season
-type Season struct {
-	db.Season
-	UnwatchedEpisodeCount uint
-	UserID                uint
-}
-
-// Series wrapper object around db.Series so it can hold the userid
-type Series struct {
-	db.Series
-	UnwatchedEpisodeCount uint
-	// TODO: Figure out if this is racey
-	UserID uint
-}
-
-// Episode is a wrapper object around db.Episode
-type Episode struct {
-	db.Episode
-	UserID uint
-}
-
-func newEpisode(dbEpisode *db.Episode, userID uint) Episode {
-	return Episode{*dbEpisode, userID}
-}
-func newSeason(dbSeason *db.Season, userID uint) Season {
-	return Season{*dbSeason, 0, userID}
-}
-func newSeries(dbSeries *db.Series, userID uint) Series {
-	return Series{*dbSeries, 0, userID}
-}
-
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
-	userID, _ := auth.UserID(ctx)
-	dbepisode := db.FindEpisodeByUUID(*args.UUID)
-	if dbepisode.ID != 0 {
-		ep := newEpisode(&dbepisode, userID)
-		return &EpisodeResolver{r: ep}
+	episode := db.FindEpisodeByUUID(*args.UUID)
+	// TODO(Maran): This is ugly, we should a) catch a DB error here (modify the DB API)
+	// and b) return an actual error to the client, not just an empty dict
+	if episode.ID != 0 {
+		return &EpisodeResolver{r: episode}
 	}
-	return &EpisodeResolver{r: Episode{}}
+	return &EpisodeResolver{r: db.Episode{}}
 
 }
 
 // Season returns season.
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
-	userID, _ := auth.UserID(ctx)
-	dbseason := db.FindSeasonByUUID(*args.UUID)
-	season := newSeason(&dbseason, userID)
-
+	season := db.FindSeasonByUUID(*args.UUID)
 	return &SeasonResolver{r: season}
 }
 
 // Series return series.
 func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolver {
-	userID, _ := auth.UserID(ctx)
 	var resolvers []*SeriesResolver
 	var series []db.Series
 
@@ -76,12 +41,8 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 		series = db.FindAllSeries(qd)
 	}
 
-	for _, serie := range series {
-		s := newSeries(&serie, userID)
-
-		res := SeriesResolver{r: s}
-
-		resolvers = append(resolvers, &res)
+	for _, s := range series {
+		resolvers = append(resolvers, &SeriesResolver{r: s})
 	}
 
 	return resolvers
@@ -89,7 +50,7 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 
 // SeriesResolver resolvers a serie.
 type SeriesResolver struct {
-	r Series
+	r db.Series
 }
 
 // Name returns name.
@@ -138,8 +99,9 @@ func (r *SeriesResolver) TmdbID() int32 {
 }
 
 // UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
-func (r *SeriesResolver) UnwatchedEpisodesCount() int32 {
-	epCount := db.UnwatchedEpisodesInSeriesCount(r.r.ID, r.r.UserID)
+func (r *SeriesResolver) UnwatchedEpisodesCount(ctx context.Context) int32 {
+	userID, _ := auth.UserID(ctx)
+	epCount := db.UnwatchedEpisodesInSeriesCount(r.r.ID, userID)
 	return int32(epCount)
 }
 
@@ -147,8 +109,7 @@ func (r *SeriesResolver) UnwatchedEpisodesCount() int32 {
 func (r *SeriesResolver) Seasons() []*SeasonResolver {
 	var seasons []*SeasonResolver
 
-	for _, dbseason := range db.FindSeasonsForSeries(r.r.ID) {
-		season := newSeason(&dbseason, r.r.UserID)
+	for _, season := range db.FindSeasonsForSeries(r.r.ID) {
 		seasons = append(seasons, &SeasonResolver{r: season})
 	}
 
@@ -157,7 +118,7 @@ func (r *SeriesResolver) Seasons() []*SeasonResolver {
 
 // SeasonResolver resolves season
 type SeasonResolver struct {
-	r Season
+	r db.Season
 }
 
 // Name returns name.
@@ -186,8 +147,9 @@ func (r *SeasonResolver) PosterPath() string {
 }
 
 // UnwatchedEpisodesCount returns the amount of unwatched episodes for the given season
-func (r *SeasonResolver) UnwatchedEpisodesCount() int32 {
-	return int32(db.UnwatchedEpisodesInSeasonCount(r.r.ID, r.r.UserID))
+func (r *SeasonResolver) UnwatchedEpisodesCount(ctx context.Context) int32 {
+	userID, _ := auth.UserID(ctx)
+	return int32(db.UnwatchedEpisodesInSeasonCount(r.r.ID, userID))
 }
 
 // TmdbID returns tmdb id.
@@ -202,25 +164,22 @@ func (r *SeasonResolver) SeasonNumber() int32 {
 
 // Series returns the series this season belongs to.
 func (r *SeasonResolver) Series() *SeriesResolver {
-	s := db.FindSeries(r.r.SeriesID)
-	series := newSeries(&s, r.r.UserID)
+	series := db.FindSeries(r.r.SeriesID)
 	return &SeriesResolver{series}
 }
 
 // Episodes returns seasonal episodes.
 func (r *SeasonResolver) Episodes() []*EpisodeResolver {
-	var eps []*EpisodeResolver
+	var res []*EpisodeResolver
 	for _, episode := range db.FindEpisodesForSeason(r.r.ID) {
-		epp := newEpisode(&episode, r.r.UserID)
-		ep := &EpisodeResolver{r: epp}
-		eps = append(eps, ep)
+		res = append(res, &EpisodeResolver{r: episode})
 	}
-	return eps
+	return res
 }
 
 // EpisodeResolver resolves episode.
 type EpisodeResolver struct {
-	r Episode
+	r db.Episode
 }
 
 // Files return all files for this episode.
@@ -239,8 +198,7 @@ func (r *EpisodeResolver) Name() string {
 // Season returns the season the episode belongs to.
 func (r *EpisodeResolver) Season() *SeasonResolver {
 	s := db.FindSeason(r.r.SeasonID)
-	season := newSeason(&s, r.r.UserID)
-	return &SeasonResolver{season}
+	return &SeasonResolver{s}
 }
 
 // UUID returns uuid.
@@ -276,7 +234,7 @@ func (r *EpisodeResolver) EpisodeNumber() int32 {
 // PlayState returns episode playstate information.
 func (r *EpisodeResolver) PlayState(ctx context.Context) *PlayStateResolver {
 	userID, _ := auth.UserID(ctx)
-	playState, _ := db.FindPlayState(r.r.Episode.UUID, userID)
+	playState, _ := db.FindPlayState(r.r.UUID, userID)
 	if playState == nil {
 		playState = &db.PlayState{}
 	}

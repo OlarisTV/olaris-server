@@ -62,8 +62,7 @@ func (r *Resolver) RecentlyAdded(ctx context.Context) *[]*MediaItemResolver {
 
 	for _, item := range sortables {
 		if res, ok := item.(*db.Episode); ok {
-			// TODO: Maran: Can we make it so we don't have to use a wrapper around newEpisode to get playstate etc. in?
-			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: newEpisode(res, userID)}})
+			l = append(l, &MediaItemResolver{r: &EpisodeResolver{r: *res}})
 		}
 		if res, ok := item.(*db.Movie); ok {
 			l = append(l, &MediaItemResolver{r: &MovieResolver{r: *res}})

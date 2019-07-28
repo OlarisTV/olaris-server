@@ -3,7 +3,6 @@ package resolvers
 import (
 	"context"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/managers"
@@ -72,10 +71,9 @@ func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
 }
 
 // Episodes returns episodes in Library.
-func (r *LibraryResolver) Episodes(ctx context.Context) (eps []*EpisodeResolver) {
-	userID, _ := auth.UserID(ctx)
+func (r *LibraryResolver) Episodes() (eps []*EpisodeResolver) {
 	for _, episode := range db.FindEpisodesInLibrary(r.r.ID) {
-		eps = append(eps, &EpisodeResolver{r: newEpisode(&episode, userID)})
+		eps = append(eps, &EpisodeResolver{r: episode})
 	}
 
 	return eps
