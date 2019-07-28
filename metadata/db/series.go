@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"sync"
 )
@@ -427,4 +428,18 @@ func ItemsWithMissingMetadata() []string {
 	}
 
 	return uuids
+}
+
+// FindAllUnidentifiedEpisodeFiles find all EpisodeFiles without an associated Episode
+func FindAllUnidentifiedEpisodeFiles(qd QueryDetails) ([]EpisodeFile, error) {
+	var episodeFiles []EpisodeFile
+
+	query := db.
+		Find(&episodeFiles, "episode_id = 0").
+		Offset(qd.Offset).Limit(qd.Limit)
+	if err := query.Error; err != nil {
+		return []EpisodeFile{},
+			errors.Wrap(err, "Failed to find unidentified episode files")
+	}
+	return episodeFiles, nil
 }
