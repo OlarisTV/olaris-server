@@ -39,6 +39,7 @@ var SchemaTxt = `
 		remotes(): [String]!
 
 		unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
+		unidentifiedEpisodeFiles(offset: Int, limit: Int): [EpisodeFile]!
 
 		tmdbSearchMovies(query: String!): [TmdbMovieSearchItem]!
 		tmdbSearchSeries(query: String!): [TmdbSeriesSearchItem]!
