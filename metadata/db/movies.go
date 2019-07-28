@@ -148,6 +148,7 @@ func FindAllUnidentifiedMoviesInLibrary(libraryID uint) (movies []Movie) {
 	return movies
 }
 
+// FindAllUnidentifiedMovieFiles find all MovieFiles without an associated Movie
 func FindAllUnidentifiedMovieFiles(qd QueryDetails) ([]MovieFile, error) {
 	var movieFiles []MovieFile
 
@@ -155,7 +156,8 @@ func FindAllUnidentifiedMovieFiles(qd QueryDetails) ([]MovieFile, error) {
 		Find(&movieFiles, "movie_id = 0").
 		Offset(qd.Offset).Limit(qd.Limit)
 	if err := query.Error; err != nil {
-		return []MovieFile{}, errors.Wrap(err, "Failed to find unidentified movie files")
+		return []MovieFile{},
+			errors.Wrap(err, "Failed to find unidentified movie files")
 	}
 	return movieFiles, nil
 }
