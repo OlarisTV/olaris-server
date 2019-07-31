@@ -128,11 +128,11 @@ type QueryDetails struct {
 
 // CollectMovieInfo ensures that all relevant information for a movie is loaded
 // this can include stream information (audio/video/subtitle tracks) and personalized playstate information.
-func CollectMovieInfo(movies []Movie) {
-	// Can't use 'movie' in range here as it won't modify the original object
-	for i := range movies {
-		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
-	}
+func CollectMovieInfo(movie *Movie) {
+	db.Model(movie).
+		Preload("Streams").
+		Association("MovieFiles").
+		Find(&movie.MovieFiles)
 }
 
 // FindAllUnidentifiedMoviesInLibrary retrieves all movies without an tmdb_id in the database.
@@ -171,23 +171,29 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
 	db.Where("tmdb_id != 0").Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
-	CollectMovieInfo(movies)
+	for _, movie := range movies {
+		CollectMovieInfo(&movie)
+	}
 
 	return movies
 }
 
 // FindMovieByUUID finds the movie specified by the given uuid.
-func FindMovieByUUID(uuid string) (movies []Movie) {
-	db.Where("uuid = ?", uuid).Find(&movies)
-	CollectMovieInfo(movies)
-
-	return movies
+func FindMovieByUUID(uuid string) (*Movie, error) {
+	var movie Movie
+	if err := db.Take(&movie, "uuid = ?", uuid).Error; err != nil {
+		return nil, err
+	}
+	CollectMovieInfo(&movie)
+	return &movie, nil
 }
 
 // SearchMovieByTitle search movies by title.
 func SearchMovieByTitle(name string) (movies []Movie) {
 	db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
-	CollectMovieInfo(movies)
+	for _, movie := range movies {
+		CollectMovieInfo(&movie)
+	}
 	return movies
 }
 
