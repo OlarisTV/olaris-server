@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"gitlab.com/olaris/olaris-server/metadata/managers"
 )
 
 // UpdateMovieFileMetadataInput is a request
@@ -27,21 +28,31 @@ func (r *Resolver) UpdateMovieFileMetadata(
 		return &UpdateMovieFileMetadataPayloadResolver{error: err}
 	}
 
-	// Currently, we'll only use this call to retag MovieFiles without a movie,
-	// but implementing it as an update can't hurt either.
-	movie, err := db.FindMovieForMovieFile(movieFile)
-	// TODO(Leon Handreke): We don't pipe through the DB error here, maybe this is not a
-	// RecordNotFound after all. For now, we just ignore errors here.
-	if err != nil {
-		movie = &db.Movie{MovieFiles: []db.MovieFile{*movieFile}}
+	oldMovie, err := db.FindMovieForMovieFile(movieFile)
+	// If this MovieFile already has the correct Movie associated
+	if err == nil && oldMovie.TmdbID == int(args.Input.TmdbID) {
+		return &UpdateMovieFileMetadataPayloadResolver{mediaItem: oldMovie}
 	}
+	// If this is the only MovieFile associated with this movie,
+	// purge it afterwards.
+	shouldPurgeOldMovie := oldMovie != nil && len(oldMovie.MovieFiles) == 1
 
 	tmdbAgent := r.env.MetadataRetrievalAgent
-	if err := tmdbAgent.UpdateMovieMetadataFromTmdbID(movie, int(args.Input.TmdbID)); err != nil {
+	movie, err := managers.GetOrCreateMovieByTmdbID(
+		int(args.Input.TmdbID),
+		tmdbAgent,
+		nil, // TODO(Leon Handreke): How do we get the subscriber here.
+	)
+	if err != nil {
 		return &UpdateMovieFileMetadataPayloadResolver{error: err}
 	}
 
-	db.SaveMovie(movie)
+	movieFile.Movie = *movie
+	db.SaveMovieFile(movieFile)
+
+	if shouldPurgeOldMovie {
+		db.DeleteMovie(oldMovie)
+	}
 
 	return &UpdateMovieFileMetadataPayloadResolver{mediaItem: movie}
 }
