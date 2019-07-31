@@ -108,8 +108,8 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series) error {
 	return nil
 }
 
-func (a *TmdbAgent) UpdateMovieMetadataFromTmdbID(movie *db.Movie, tmdbID int) error {
-	r, err := a.Tmdb.GetMovieInfo(tmdbID, nil)
+func (a *TmdbAgent) UpdateMovieMetadata(movie *db.Movie) error {
+	r, err := a.Tmdb.GetMovieInfo(movie.TmdbID, nil)
 
 	if err != nil {
 		return errors.Wrap(err, "Failed to query TMDB for movie metadata")
@@ -123,42 +123,6 @@ func (a *TmdbAgent) UpdateMovieMetadataFromTmdbID(movie *db.Movie, tmdbID int) e
 	movie.BackdropPath = r.BackdropPath
 	movie.PosterPath = r.PosterPath
 	movie.ImdbID = r.ImdbID
-
-	return nil
-}
-
-// UpdateMovieMD the given movie with Metadata from themoviedatabase.org
-func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie) error {
-	if movie.TmdbID == 0 {
-		var options = make(map[string]string)
-		if movie.Year > 0 {
-			options["year"] = movie.YearAsString()
-		}
-		searchRes, err := a.Tmdb.SearchMovie(movie.Title, options)
-
-		if err != nil {
-			return err
-		}
-
-		if len(searchRes.Results) > 0 {
-			log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
-			mov := searchRes.Results[0] // Take the first result for now
-			movie.OriginalTitle = mov.OriginalTitle
-			movie.ReleaseDate = mov.ReleaseDate
-			movie.TmdbID = mov.ID
-			log.WithFields(movie.LogFields()).Println("Identified movie.")
-		} else {
-			log.WithFields(log.Fields{
-				"title": movie.Title,
-				"year":  movie.Year,
-			}).Warnln("Could not find match based on parsed title and given year.")
-		}
-	}
-
-	if err := a.UpdateMovieMetadataFromTmdbID(movie, movie.TmdbID); err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Could not get full results.")
-		return err
-	}
 
 	return nil
 }

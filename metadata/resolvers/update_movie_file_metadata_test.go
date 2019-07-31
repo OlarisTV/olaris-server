@@ -29,9 +29,8 @@ func TestUpdateMovieFile(t *testing.T) {
 	}
 	db.CreateMovieFile(&movieFile)
 
-	tmdbAgent.UpdateMovieMetadataFromTmdbIDStub = func(movie *db.Movie, tmdbID int) error {
-		assert.Equal(t, tmdbID, testTmdbID)
-		movie.TmdbID = testTmdbID
+	tmdbAgent.UpdateMovieMetadataStub = func(movie *db.Movie) error {
+		movie.Title = "North of the Sun"
 		return nil
 	}
 
@@ -44,9 +43,10 @@ func TestUpdateMovieFile(t *testing.T) {
 		})
 
 	// Check that the Movie model was created
-	movies := db.FindAllMovies(&db.QueryDetails{Limit: 1})
+	movies := db.FindAllMovies(&db.QueryDetails{Limit: 10})
 	assert.Len(t, movies, 1)
 	assert.Equal(t, testTmdbID, movies[0].TmdbID)
+	assert.Equal(t, "North of the Sun", movies[0].Title)
 }
 
 func TestUpdateMovieFileUnknownTmdbID(t *testing.T) {
@@ -67,7 +67,7 @@ func TestUpdateMovieFileUnknownTmdbID(t *testing.T) {
 	}
 	db.CreateMovieFile(&movieFile)
 
-	tmdbAgent.UpdateMovieMetadataFromTmdbIDStub = func(movie *db.Movie, tmdbID int) error {
+	tmdbAgent.UpdateMovieMetadataStub = func(movie *db.Movie) error {
 		// Don't modify for this test, the movie was not found in Tmdb.
 		return errors.New("Not found")
 	}

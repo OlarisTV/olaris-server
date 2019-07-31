@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"testing"
 )
@@ -72,13 +73,8 @@ func TestCollectMovie(t *testing.T) {
 		t.Error("Expected no movie files but got any still")
 	}
 
-	movies := []db.Movie{mov}
-	db.CollectMovieInfo(movies)
-	t.Log(movies)
-	if len(movies[0].MovieFiles) == 0 {
-		t.Error("Expected movie to have files information after calling CollectMovieInfo but there was nothing present")
-	}
-	if len(movies[0].MovieFiles[0].Streams) == 0 {
-		t.Error("Expected movie to have stream information after calling CollectMovieInfo but there was nothing present")
-	}
+	db.CollectMovieInfo(&mov)
+
+	assert.Len(t, mov.MovieFiles, 1)
+	assert.Len(t, mov.MovieFiles[0].Streams, 1)
 }
