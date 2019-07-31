@@ -1,6 +1,7 @@
 package managers
 
 import (
+	"errors"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
 	log "github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -131,8 +133,9 @@ func (man *LibraryManager) IdentifyUnidentSeries() error {
 
 // ForceMovieMetadataUpdate refreshes all metadata for the given movies in a library, even if metadata already exists.
 func (man *LibraryManager) ForceMovieMetadataUpdate() {
+	agent := agents.NewTmdbAgent()
 	for _, movie := range db.FindMoviesInLibrary(man.Library.ID) {
-		UpdateMovieMD(&movie)
+		UpdateMovieMD(&movie, agent)
 	}
 }
 
@@ -374,12 +377,14 @@ func RefreshAgentMetadataWithMissingArt() {
 
 // RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
 func RefreshAgentMetadataForUUID(UUID string) bool {
-	log.WithFields(log.Fields{"uuid": UUID}).Debugln("Looking to refresh metadata agent data.")
+
+	log.WithFields(log.Fields{"uuid": UUID}).
+		Debugln("Looking to refresh metadata agent data.")
 	movie, err := db.FindMovieByUUID(UUID)
 	if err != nil {
 		go mhelpers.WithLock(func() {
-			agent.(&movies[0])
-		}, movies[0].UUID)
+			UpdateMovieMD(movie, agents.NewTmdbAgent())
+		}, movie.UUID)
 		return true
 	}
 
@@ -407,6 +412,77 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 		return true
 	}
 	return false
+}
+
+func GetOrCreateMovieForMovieFile(
+	movieFile *db.MovieFile,
+	agent agents.MetadataRetrievalAgent,
+	subscriber LibrarySubscriber) (*db.Movie, error) {
+
+	if movieFile.MovieID != 0 {
+		return db.FindMovieByID(movieFile.MovieID)
+	}
+
+	name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
+	parsedInfo := parsers.ParseMovieName(name)
+
+	var options = make(map[string]string)
+	if parsedInfo.Year > 0 {
+		options["year"] = strconv.FormatUint(parsedInfo.Year, 10)
+	}
+	searchRes, err := agent.TmdbSearchMovie(parsedInfo.Title, options)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(searchRes.Results) == 0 {
+		log.WithFields(log.Fields{
+			"title": parsedInfo.Title,
+			"year":  parsedInfo.Year,
+		}).Warnln("Could not find match based on parsed title and given year.")
+
+		return nil, errors.New("Could not find match in TMDB ID for given filename")
+	}
+
+	log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
+	firstResult := searchRes.Results[0] // Take the first result for now
+
+	movie, err := GetOrCreateMovieByTmdbID(firstResult.ID, agent, subscriber)
+	if err != nil {
+		return nil, err
+	}
+
+	movieFile.Movie = *movie
+	db.SaveMovieFile(movieFile)
+
+	movie.MovieFiles = []db.MovieFile{*movieFile}
+	return movie, nil
+}
+
+func GetOrCreateMovieByTmdbID(
+	tmdbID int,
+	agent agents.MetadataRetrievalAgent,
+	subscriber LibrarySubscriber) (*db.Movie, error) {
+
+	// Lock so that we don't create the same movie twice
+	moviesMutex.Lock()
+	defer moviesMutex.Unlock()
+
+	movie, err := db.FindMovieByTmdbID(tmdbID)
+	if err == nil {
+		return movie, nil
+	}
+
+	movie = &db.Movie{BaseItem: db.BaseItem{TmdbID: tmdbID}}
+	if err := UpdateMovieMD(movie, agent); err != nil {
+		return nil, err
+	}
+
+	if subscriber != nil {
+		subscriber.MovieAdded(movie)
+	}
+
+	return movie, nil
 }
 
 // CheckFileAndDeleteIfMissing checks the given media file and if it's no longer present removes it from the database
@@ -463,8 +539,6 @@ func (man *LibraryManager) RefreshAll() {
 
 	man.Refresh()
 	man.UpdateMD()
-
-	db.MergeDuplicateMovies()
 }
 
 // UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
@@ -493,11 +567,13 @@ func UpdateSeasonMD(season *db.Season, series *db.Series) error {
 }
 
 // UpdateMovieMD updates the database record with the latest data from the agent
-func UpdateMovieMD(movie *db.Movie) error {
+func UpdateMovieMD(movie *db.Movie, agent agents.MetadataRetrievalAgent) error {
 	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
 
-	agent := agents.NewTmdbAgent()
-	agent.UpdateMovieMD(movie)
+	if err := agent.UpdateMovieMetadata(movie); err != nil {
+		return err
+	}
+	// TODO(Leon Handreke): return an error here.
 	db.SaveMovie(movie)
 	return nil
 }
