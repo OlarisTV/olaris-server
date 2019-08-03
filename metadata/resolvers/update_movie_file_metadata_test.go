@@ -17,7 +17,7 @@ func TestUpdateMovieFile(t *testing.T) {
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
 
-	metadataCtx := app.NewMDContext(db.InMemory, true, true)
+	metadataCtx := app.NewMDContext(db.InMemory, false, false)
 	tmdbAgent := agentsfakes.FakeMetadataRetrievalAgent{}
 	metadataCtx.MetadataRetrievalAgent = &tmdbAgent
 	r := NewResolver(metadataCtx)
@@ -55,7 +55,7 @@ func TestUpdateMovieFileUnknownTmdbID(t *testing.T) {
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
 
-	metadataCtx := app.NewMDContext(db.InMemory, true, true)
+	metadataCtx := app.NewMDContext(db.InMemory, false, false)
 	tmdbAgent := agentsfakes.FakeMetadataRetrievalAgent{}
 	metadataCtx.MetadataRetrievalAgent = &tmdbAgent
 	r := NewResolver(metadataCtx)
