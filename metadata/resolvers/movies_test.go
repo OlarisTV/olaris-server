@@ -13,7 +13,7 @@ func TestPlayState(t *testing.T) {
 	const testUserID = 1
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
-	r := NewResolver(app.NewMDContext(db.InMemory, true, true))
+	r := NewResolver(app.NewMDContext(db.InMemory, false, false))
 
 	mi := db.MediaItem{FilePath: "/tmp/test.mkv"}
 	stream := db.Stream{CodecName: "test"}
