@@ -182,41 +182,43 @@ func (man *LibraryManager) checkAndAddProbeJob(node filesystem.Node) {
 	}
 }
 
-// Refresh goes over the filesystem and parses filenames in the given library.
-func (man *LibraryManager) Refresh() {
+// RescanFilesystem goes over the filesystem and parses filenames in the given library.
+func (man *LibraryManager) RescanFilesystem() {
 	log.WithFields(man.Library.LogFields()).Println("Scanning library for changed files.")
 	stime := time.Now()
 
 	// TODO: Move this into db package
 	man.Library.RefreshStartedAt = stime
 	man.Library.RefreshCompletedAt = time.Time{}
-	db.UpdateLibrary(man.Library)
+	db.SaveLibrary(man.Library)
 
 	var rootNode filesystem.Node
 	var err error
 
 	// TODO: Should this be in it's own healthCheck method on the library or something?
-	if man.Library.Backend == db.BackendLocal {
+	switch man.Library.Backend {
+	case db.BackendLocal:
 		rootNode, err = filesystem.LocalNodeFromPath(man.Library.FilePath)
-		if err != nil {
-			log.WithFields(log.Fields{"path": man.Library.FilePath, "error": err.Error()}).Errorln("Got an error trying to create local rootnode")
-			man.Library.Healthy = false
-			db.UpdateLibrary(man.Library)
-			return
-		}
-		man.Library.Healthy = true
-		db.UpdateLibrary(man.Library)
-	} else if man.Library.Backend == db.BackendRclone {
-		rootNode, err = filesystem.RcloneNodeFromPath(path.Join(man.Library.RcloneName, man.Library.FilePath))
-		if err != nil {
-			log.WithFields(log.Fields{"rcloneName": man.Library.RcloneName, "error": err.Error()}).Errorln("Something went wrong when trying to connect to the Rclone remote")
-			man.Library.Healthy = false
-			db.UpdateLibrary(man.Library)
-			return
-		}
-		man.Library.Healthy = true
-		db.UpdateLibrary(man.Library)
+	case db.BackendRclone:
+		rootNode, err = filesystem.RcloneNodeFromPath(
+			path.Join(man.Library.RcloneName, man.Library.FilePath))
 	}
+
+	if err != nil {
+		log.
+			WithFields(log.Fields{
+				"backend":    man.Library.Backend,
+				"rcloneName": man.Library.RcloneName,
+				"path":       man.Library.FilePath,
+				"error":      err.Error()}).
+			Errorln("Failed to access library filesystem root node")
+		man.Library.Healthy = false
+		db.SaveLibrary(man.Library)
+		return
+	}
+
+	man.Library.Healthy = true
+	db.SaveLibrary(man.Library)
 
 	// We don't need to handle the error here because we already handle it in walkFn
 	_ = rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
@@ -237,7 +239,7 @@ func (man *LibraryManager) Refresh() {
 	dur := time.Since(stime)
 	log.Printf("Probing library '%s' took %f seconds", man.Library.FilePath, dur.Seconds())
 	man.Library.RefreshCompletedAt = time.Now()
-	db.UpdateLibrary(man.Library)
+	db.SaveLibrary(man.Library)
 
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Warnln("Error while probing some files.")
@@ -635,8 +637,8 @@ func (man *LibraryManager) RefreshAll() {
 		man.AddWatcher(man.Library.FilePath)
 	}
 
-	man.Refresh()
 	man.UpdateMD()
+	man.RescanFilesystem()
 }
 
 // UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.

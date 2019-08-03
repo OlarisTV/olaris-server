@@ -33,7 +33,7 @@ loop:
 
 			if n.IsDir() {
 				man.AddWatcher(event.Name)
-				man.Refresh()
+				man.RescanFilesystem()
 			} else if ValidFile(n) {
 				// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
 				time.Sleep(2 * time.Second)
