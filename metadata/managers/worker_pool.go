@@ -37,8 +37,11 @@ func NewDefaultWorkerPool() *WorkerPool {
 	//  estimates.
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
-		if ep, ok := payload.(*episodePayload); ok {
-			return processEpisodePayload(ep, agent, p.Subscriber)
+		if episode, ok := payload.(*db.Episode); ok {
+			return processEpisodePayload(episode, agent, p.Subscriber)
+		}
+		if episodeFile, ok := payload.(*db.EpisodeFile); ok {
+			return processEpisodeFilePayload(episodeFile, agent, p.Subscriber)
 		}
 		if movie, ok := payload.(*db.Movie); ok {
 			return processMoviePayload(movie, agent, p.Subscriber)
@@ -63,23 +66,26 @@ func NewDefaultWorkerPool() *WorkerPool {
 	return p
 }
 
-func processEpisodePayload(ep *episodePayload, agent *agents.TmdbAgent, subscriber LibrarySubscriber) error {
-	var newRecord bool
-	if !ep.episode.IsIdentified() {
-		newRecord = true
-	}
-	err := agent.UpdateEpisodeMD(&ep.episode, &ep.season, &ep.series)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
+func processEpisodePayload(
+	episode *db.Episode,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+	if err := UpdateEpisodeMD(episode, agent); err != nil {
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warnln("Got an error updating metadata for series.")
 		return err
 	}
-
-	db.UpdateEpisode(&ep.episode)
-	if subscriber != nil && (ep.episode.IsIdentified() && newRecord) {
-		log.Debugln("We have an attached subscriber, sending event.")
-		subscriber.EpisodeAdded(&ep.episode)
-	}
 	return nil
+}
+
+func processEpisodeFilePayload(
+	episodeFile *db.EpisodeFile,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	_, err := GetOrCreateEpisodeForEpisodeFile(episodeFile, agent, subscriber)
+	return err
 }
 
 func processMoviePayload(

@@ -8,11 +8,11 @@ import (
 )
 
 func TestSeasonLookup(t *testing.T) {
-	season := db.Season{SeasonNumber: 1}
-	series := &db.Series{BaseItem: db.BaseItem{TmdbID: 2426}, Seasons: []*db.Season{&season}}
+	const testSeasonTmdbID = 2426
+	var season db.Season
 	a := agents.NewTmdbAgent()
 
-	a.UpdateSeasonMD(&season, series)
+	a.UpdateSeasonMD(&season, testSeasonTmdbID, 1)
 
 	assert.EqualValues(t, 7625, season.TmdbID)
 }
