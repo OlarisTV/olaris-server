@@ -98,9 +98,15 @@ func migrateSchema(db *gorm.DB) error {
 		},
 		{
 			// We now just have EpisodeFiles with no Episodes attached
-			ID: "2019-08-03-remove-episodes",
+			ID: "2019-08-03-remove-unidentified-episodes",
 			Migrate: func(tx *gorm.DB) error {
 				return db.Exec("DELETE FROM episodes WHERE tmdb_id = 0;").Error
+			},
+		}, {
+			// We now just have EpisodeFiles with no Episodes attached
+			ID: "2019-08-03-remove-unidentified-movies",
+			Migrate: func(tx *gorm.DB) error {
+				return db.Exec("DELETE FROM movies WHERE tmdb_id = 0;").Error
 			},
 		},
 	})

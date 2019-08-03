@@ -136,16 +136,14 @@ func CollectMovieInfo(movie *Movie) {
 }
 
 // FindAllUnidentifiedMoviesInLibrary retrieves all movies without an tmdb_id in the database.
-func FindAllUnidentifiedMoviesInLibrary(libraryID uint) (movies []Movie) {
-	var files []MovieFile
-	db.Preload("Movie", "tmdb_id == 0").Where("library_id = ?", libraryID).Find(&files)
-	for _, f := range files {
-		if f.Movie.Title != "" {
-			movies = append(movies, f.Movie)
-		}
+func FindAllUnidentifiedMovieFilesInLibrary(libraryID uint) ([]*MovieFile, error) {
+	var files []*MovieFile
+	if err := db.
+		Find(&files, "movie_id = 0 AND library_id = ?", libraryID).
+		Error; err != nil {
+		return nil, err
 	}
-
-	return movies
+	return files, nil
 }
 
 // FindAllUnidentifiedMovieFiles find all MovieFiles without an associated Movie
@@ -170,7 +168,7 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
-	db.Where("tmdb_id != 0").Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
+	db.Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
 	for _, movie := range movies {
 		CollectMovieInfo(&movie)
 	}
@@ -223,7 +221,7 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 // FindMoviesInLibrary finds movies that have files in a certain library
 func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
 	var files []MovieFile
-	db.Preload("Movie", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	db.Preload("Movie").Where("library_id = ?", libraryID).Find(&files)
 	for _, f := range files {
 		movies = append(movies, f.Movie)
 	}

@@ -91,15 +91,14 @@ func (man *LibraryManager) IdentifyUnidentifiedFiles() {
 
 // IdentifyUnidentifiedEpisodeFiles loops over all series with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
-	agent := agents.NewTmdbAgent()
-
 	episodeFiles, err := db.FindAllUnidentifiedEpisodeFilesInLibrary(man.Library.ID)
 	if err != nil {
 		return err
 	}
 
 	for _, episodeFile := range episodeFiles {
-		_, err := GetOrCreateEpisodeForEpisodeFile(episodeFile, agent, man.Pool.Subscriber)
+		_, err := GetOrCreateEpisodeForEpisodeFile(
+			episodeFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
 		if err != nil {
 			return err
 		}
@@ -135,13 +134,17 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 
 // IdentifyUnidentifiedMovieFiles loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
-	for _, movie := range db.FindAllUnidentifiedMovieFiles(man.Library.ID) {
-		log.WithFields(log.Fields{"title": movie.Title}).
-			Println("Attempting to fetch metadata for unidentified movie.")
-		go func(m *db.Movie) {
-			defer checkPanic()
-			man.Pool.tmdbPool.Process(m)
-		}(&movie)
+	movieFiles, err := db.FindAllUnidentifiedMovieFilesInLibrary(man.Library.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, movieFile := range movieFiles {
+		_, err := GetOrCreateMovieForMovieFile(
+			movieFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
