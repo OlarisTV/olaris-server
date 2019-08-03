@@ -10,9 +10,9 @@ import (
 // MetadataRetrievalAgent can retrieve metadata for media items.
 type MetadataRetrievalAgent interface {
 	UpdateMovieMetadata(*db.Movie) error
-	UpdateSeasonMD(*db.Season, *db.Series) error
-	UpdateEpisodeMD(*db.Episode, *db.Season, *db.Series) error
-	UpdateSeriesMD(*db.Series) error
+	UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNum int) error
+	UpdateEpisodeMD(episode *db.Episode, seriesTmdbID int, seasonNum int, episodeNum int) error
+	UpdateSeriesMD(series *db.Series, tmdbID int) error
 	// TODO(Leon Handreke): This totally breaks the abstraction, but we need the interface
 	//  to be able to fake it.
 	TmdbSearchMovie(name string, options map[string]string) (*tmdb.MovieSearchResults, error)
