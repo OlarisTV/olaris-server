@@ -77,52 +77,33 @@ func (man *LibraryManager) Shutdown() {
 	man.Pool.Shutdown()
 }
 
-// UpdateMD looks for missing metadata information and attempts to retrieve it.
-func (man *LibraryManager) UpdateMD() {
+// IdentifyUnidentifiedFiles looks for missing metadata information and attempts to retrieve it.
+func (man *LibraryManager) IdentifyUnidentifiedFiles() {
 	switch kind := man.Library.Kind; kind {
 	case db.MediaTypeMovie:
 		log.WithFields(man.Library.LogFields()).Println("Updating metadata for movies.")
-		man.IdentifyUnidentMovies()
+		man.IdentifyUnidentifiedMovieFiles()
 	case db.MediaTypeSeries:
 		log.WithFields(man.Library.LogFields()).Println("Updating metadata for TV.")
-		man.IdentifyUnidentSeries()
+		man.IdentifyUnidentifiedEpisodeFiles()
 	}
 }
 
-// UpdateEpisodesMD loops over all episode with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) UpdateEpisodesMD() error {
-	episodes := db.FindAllUnidentifiedEpisodes()
-	for i := range episodes {
-		func(episode *db.Episode) {
-			defer checkPanic()
-			man.Pool.tmdbPool.Process(episode)
-		}(&episodes[i])
-	}
-	return nil
-}
-
-// UpdateSeasonMD loops over all seasons with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) UpdateSeasonMD() error {
-	agent := agents.NewTmdbAgent()
-	for _, season := range db.FindAllUnidentifiedSeasons() {
-		series, _ := db.FindSeries(season.SeriesID)
-		agent.UpdateSeasonMD(&season, series.TmdbID, season.SeasonNumber)
-		db.SaveSeason(&season)
-	}
-	return nil
-}
-
-// IdentifyUnidentSeries loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) IdentifyUnidentSeries() error {
+// IdentifyUnidentifiedEpisodeFiles loops over all series with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 	agent := agents.NewTmdbAgent()
 
-	for _, series := range db.FindAllUnidentifiedSeries() {
-		UpdateSeriesMD(&series, agent)
+	episodeFiles, err := db.FindAllUnidentifiedEpisodeFilesInLibrary(man.Library.ID)
+	if err != nil {
+		return err
 	}
 
-	man.UpdateSeasonMD()
-	man.UpdateEpisodesMD()
-
+	for _, episodeFile := range episodeFiles {
+		_, err := GetOrCreateEpisodeForEpisodeFile(episodeFile, agent, man.Pool.Subscriber)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -152,10 +133,11 @@ func (man *LibraryManager) ForceSeriesMetadataUpdate() {
 	}
 }
 
-// IdentifyUnidentMovies loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
-func (man *LibraryManager) IdentifyUnidentMovies() error {
-	for _, movie := range db.FindAllUnidentifiedMoviesInLibrary(man.Library.ID) {
-		log.WithFields(log.Fields{"title": movie.Title}).Println("Attempting to fetch metadata for unidentified movie.")
+// IdentifyUnidentifiedMovieFiles loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
+func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
+	for _, movie := range db.FindAllUnidentifiedMovieFiles(man.Library.ID) {
+		log.WithFields(log.Fields{"title": movie.Title}).
+			Println("Attempting to fetch metadata for unidentified movie.")
 		go func(m *db.Movie) {
 			defer checkPanic()
 			man.Pool.tmdbPool.Process(m)
@@ -486,9 +468,19 @@ func GetOrCreateEpisodeForEpisodeFile(
 	}
 	seriesInfo := searchRes.Results[0] // Take the first result for now
 
-	return GetOrCreateEpisodeByTmdbID(
+	episode, err := GetOrCreateEpisodeByTmdbID(
 		seriesInfo.ID, parsedInfo.SeasonNum, parsedInfo.EpisodeNum,
 		agent, subscriber)
+	if err != nil {
+		return nil, err
+	}
+
+	episodeFile.Episode = episode
+	db.SaveEpisodeFile(episodeFile)
+
+	episode.EpisodeFiles = []db.EpisodeFile{*episodeFile}
+
+	return episode, nil
 }
 
 func GetOrCreateEpisodeByTmdbID(
@@ -637,8 +629,8 @@ func (man *LibraryManager) RefreshAll() {
 		man.AddWatcher(man.Library.FilePath)
 	}
 
-	man.UpdateMD()
 	man.RescanFilesystem()
+	man.IdentifyUnidentifiedFiles()
 }
 
 // UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.

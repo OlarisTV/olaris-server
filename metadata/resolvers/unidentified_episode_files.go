@@ -13,8 +13,8 @@ type unidentifiedEpisodeFilesArgs struct {
 func (r *Resolver) UnidentifiedEpisodeFiles(
 	args *unidentifiedEpisodeFilesArgs) []*EpisodeFileResolver {
 
-	episodeFiles, err := db.FindAllUnidentifiedEpisodeFiles(
-		buildDatabaseQueryDetails(args.Offset, args.Limit))
+	qd := buildDatabaseQueryDetails(args.Offset, args.Limit)
+	episodeFiles, err := db.FindAllUnidentifiedEpisodeFiles(&qd)
 	if err != nil {
 		return []*EpisodeFileResolver{}
 	}

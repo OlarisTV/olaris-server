@@ -15,11 +15,6 @@ type BaseItem struct {
 	PosterPath   string
 }
 
-// IsIdentified returns true if the given movie has a tmdbid
-func (b *BaseItem) IsIdentified() bool {
-	return b.TmdbID != 0
-}
-
 // Series holds metadata information about series.
 type Series struct {
 	BaseItem
@@ -175,13 +170,6 @@ func (file EpisodeFile) DeleteSelfAndMD() {
 
 }
 
-// CollectEpisodeData collects all relevant information for the given episode such as streams and playstates.
-func CollectEpisodeData(episodes []Episode) {
-	for i := range episodes {
-		db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-	}
-}
-
 type countResult struct {
 	Count uint
 }
@@ -211,25 +199,17 @@ func FindSeriesForMDRefresh() (series []Series) {
 
 // FindAllSeries retrieves all identified series from the db.
 func FindAllSeries(qd *QueryDetails) (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Offset(qd.Offset).Limit(qd.Limit).Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Offset(qd.Offset).Limit(qd.Limit).
+		Find(&series)
 	return series
-}
-
-// FindAllUnidentifiedSeries finds all episodes without any metadata information
-func FindAllUnidentifiedSeries() (series []Series) {
-	db.Where("tmdb_id = 0").Find(&series)
-	return series
-}
-
-// FindAllUnidentifiedEpisodes finds all episodes without any metadata information
-func FindAllUnidentifiedEpisodes() (episodes []Episode) {
-	db.Where("tmdb_id = 0").Find(&episodes)
-	return episodes
 }
 
 // SearchSeriesByTitle searches for series based on their name.
 func SearchSeriesByTitle(name string) (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Where("name LIKE ?", "%"+name+"%").
+		Find(&series)
 	return series
 }
 
@@ -259,23 +239,18 @@ func findSeries(where ...interface{}) (*Series, error) {
 	return &series, nil
 }
 
-// FindAllUnidentifiedSeasons finds all seasons without any metadata.
-func FindAllUnidentifiedSeasons() (seasons []Season) {
-	db.Where("tmdb_id = ?", 0).Find(&seasons)
-	return seasons
-}
-
 // FindSeasonsForSeries retrieves all season for the given series based on it's UUID.
 func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
 	db.Preload("Episodes.EpisodeFiles.Streams").Where("series_id = ?", seriesID).Find(&seasons)
 	return seasons
 }
 
-// FindEpisodesForSeason finds all episodes for the given season UUID.
+// FindEpisodesForSeason finds all episodes for the given season ID.
 func FindEpisodesForSeason(seasonID uint) (episodes []Episode) {
-	db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
-	// TODO: Don't do this here and move it to the resolver
-	CollectEpisodeData(episodes)
+	db.
+		Preload("EpisodeFiles.Streams").
+		Where("season_id = ?", seasonID).
+		Find(&episodes)
 
 	return episodes
 }
@@ -296,7 +271,7 @@ func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 // FindEpisodesInLibrary returns all episodes in the given library.
 func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
 	var files []EpisodeFile
-	db.Preload("Episode", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	db.Preload("Episode").Where("library_id = ?", libraryID).Find(&files)
 	for _, e := range files {
 		episodes = append(episodes, *e.Episode)
 	}
@@ -452,14 +427,31 @@ func ItemsWithMissingMetadata() []string {
 }
 
 // FindAllUnidentifiedEpisodeFiles find all EpisodeFiles without an associated Episode
-func FindAllUnidentifiedEpisodeFiles(qd QueryDetails) ([]EpisodeFile, error) {
+func FindAllUnidentifiedEpisodeFiles(qd *QueryDetails) ([]EpisodeFile, error) {
 	var episodeFiles []EpisodeFile
 
-	query := db.
-		Find(&episodeFiles, "episode_id = 0").
-		Offset(qd.Offset).Limit(qd.Limit)
+	query := db
+	if qd != nil {
+		query = query.Offset(qd.Offset).Limit(qd.Limit)
+	}
+
+	query = query.Find(&episodeFiles, "episode_id = 0")
+
 	if err := query.Error; err != nil {
 		return []EpisodeFile{},
+			errors.Wrap(err, "Failed to find unidentified episode files")
+	}
+	return episodeFiles, nil
+}
+
+// FindAllUnidentifiedEpisodeFiles find all EpisodeFiles without an associated Episode in a library
+func FindAllUnidentifiedEpisodeFilesInLibrary(libraryID uint) ([]*EpisodeFile, error) {
+	var episodeFiles []*EpisodeFile
+
+	query := db.Find(&episodeFiles, "episode_id = 0 AND library_id = ?", libraryID)
+
+	if err := query.Error; err != nil {
+		return nil,
 			errors.Wrap(err, "Failed to find unidentified episode files")
 	}
 	return episodeFiles, nil
