@@ -78,6 +78,9 @@ var SchemaTxt = `
 
 		# Tag an unidentified MovieFile
 		updateMovieFileMetadata(input: UpdateMovieFileMetadataInput!): UpdateMovieFileMetadataPayload!
+
+		# Retag one or multiple EpisodeFiles
+		updateEpisodeFileMetadata(input: UpdateEpisodeFileMetadataInput!): UpdateEpisodeFileMetadataPayload!
 	}
 
 	type LibraryResponse {
@@ -297,6 +300,22 @@ var SchemaTxt = `
 		error: Error
 
 		mediaItem: MediaItem
+	}
+
+	input UpdateEpisodeFileMetadataInput {
+		// UUID of the episode file to update
+		episodeFileUUID: String
+		// UUID of the series for which all EpisodeFiles should be updated.
+		// episodeFileUUID and seriesUUID are mutually exclusive.
+		episodeFileUUID: String
+
+		// TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+		// item appropriately.
+		tmdbID: Int!
+	}
+
+	type UpdateEpisodeFileMetadataPayload {
+		error: Error
 	}
 
 	type MovieAddedEvent {

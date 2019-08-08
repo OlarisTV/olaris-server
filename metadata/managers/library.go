@@ -79,13 +79,21 @@ func (man *LibraryManager) Shutdown() {
 
 // IdentifyUnidentifiedFiles looks for missing metadata information and attempts to retrieve it.
 func (man *LibraryManager) IdentifyUnidentifiedFiles() {
+	log.WithFields(man.Library.LogFields()).
+		Debugln("Trying to identify unidentified files in library.")
+	var err error
 	switch kind := man.Library.Kind; kind {
 	case db.MediaTypeMovie:
-		log.WithFields(man.Library.LogFields()).Println("Updating metadata for movies.")
-		man.IdentifyUnidentifiedMovieFiles()
+		err = man.IdentifyUnidentifiedMovieFiles()
 	case db.MediaTypeSeries:
-		log.WithFields(man.Library.LogFields()).Println("Updating metadata for TV.")
-		man.IdentifyUnidentifiedEpisodeFiles()
+		err = man.IdentifyUnidentifiedEpisodeFiles()
+	}
+
+	if err != nil {
+		log.
+			WithField("error", err).
+			WithFields(man.Library.LogFields()).
+			Warn("Failed to identify unidentified files in library")
 	}
 }
 
@@ -100,7 +108,10 @@ func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 		_, err := GetOrCreateEpisodeForEpisodeFile(
 			episodeFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
 		if err != nil {
-			return err
+			log.
+				WithField("error", err).
+				WithField("episodeFile", episodeFile).
+				Warn("Failed to identify EpisodeFile")
 		}
 	}
 	return nil
@@ -479,6 +490,7 @@ func GetOrCreateEpisodeForEpisodeFile(
 	}
 
 	episodeFile.Episode = episode
+	episodeFile.EpisodeID = episode.ID
 	db.SaveEpisodeFile(episodeFile)
 
 	episode.EpisodeFiles = []db.EpisodeFile{*episodeFile}
@@ -491,20 +503,14 @@ func GetOrCreateEpisodeByTmdbID(
 	agent agents.MetadataRetrievalAgent,
 	subscriber LibrarySubscriber) (*db.Episode, error) {
 
+	season, err := getOrCreateSeasonByTmdbID(seriesTmdbID, seasonNum, agent, subscriber)
+	if err != nil {
+		return nil, err
+	}
+
 	// Lock so that we don't create the same episode twice
 	seriesMutex.Lock()
 	defer seriesMutex.Unlock()
-
-	// TODO(Leon Handreke): Do this with a JOIN in the DB
-	series, err := db.FindSeriesByTmdbID(seriesTmdbID)
-	if err != nil {
-		return nil, err
-	}
-
-	season, err := db.FindSeasonBySeasonNumber(series, seasonNum)
-	if err != nil {
-		return nil, err
-	}
 
 	episode, err := db.FindEpisodeByNumber(season, episodeNum)
 	if err == nil {
@@ -554,14 +560,14 @@ func getOrCreateSeasonByTmdbID(
 	agent agents.MetadataRetrievalAgent,
 	subscriber LibrarySubscriber) (*db.Season, error) {
 
-	// Lock so that we don't create the same series twice
-	seriesMutex.Lock()
-	defer seriesMutex.Unlock()
-
 	series, err := getOrCreateSeriesByTmdbID(seriesTmdbID, agent, subscriber)
 	if err != nil {
 		return nil, err
 	}
+
+	// Lock so that we don't create the same series twice
+	seriesMutex.Lock()
+	defer seriesMutex.Unlock()
 
 	season, err := db.FindSeasonBySeasonNumber(series, seasonNum)
 	if err == nil {
@@ -670,6 +676,43 @@ func UpdateMovieMD(movie *db.Movie, agent agents.MetadataRetrievalAgent) error {
 	// TODO(Leon Handreke): return an error here.
 	db.SaveMovie(movie)
 	return nil
+}
+
+func GarbageCollectEpisodeIfRequired(episode *db.Episode) error {
+	if len(episode.EpisodeFiles) > 0 {
+		return nil
+	}
+
+	db.DeleteEpisode(episode.ID)
+
+	// Garbage collect season
+	season, err := db.FindSeason(episode.SeasonID)
+	if err != nil {
+		return err
+	}
+	if len(season.Episodes) > 0 {
+		return nil
+	}
+	err = db.DeleteSeason(season.ID)
+	if err != nil {
+		return err
+	}
+
+	// Garbage collect series
+	series, err := db.FindSeries(season.SeriesID)
+	if err != nil {
+		return err
+	}
+	if len(series.Seasons) > 0 {
+		return nil
+	}
+	err = db.DeleteSeries(series.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func checkPanic() {

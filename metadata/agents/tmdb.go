@@ -90,6 +90,12 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 		WithFields(log.Fields{"seriesName": series.Name, "tmdbID": series.TmdbID}).
 		Debugln("Updating metadata from tmdb agent.")
 
+	firstAirDate, _ := ParseTmdbDate(fullTv.FirstAirDate)
+
+	series.Name = fullTv.Name
+	series.OriginalName = fullTv.OriginalName
+	series.FirstAirDate = fullTv.FirstAirDate
+	series.FirstAirYear = uint64(firstAirDate.Year())
 	series.Overview = fullTv.Overview
 	series.Status = fullTv.Status
 	series.Type = fullTv.Type

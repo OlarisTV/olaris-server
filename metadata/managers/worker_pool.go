@@ -37,17 +37,23 @@ func NewDefaultWorkerPool() *WorkerPool {
 	//  estimates.
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
+		var err error
 		if episode, ok := payload.(*db.Episode); ok {
-			return processEpisodePayload(episode, agent, p.Subscriber)
+			err = processEpisodePayload(episode, agent, p.Subscriber)
 		}
 		if episodeFile, ok := payload.(*db.EpisodeFile); ok {
-			return processEpisodeFilePayload(episodeFile, agent, p.Subscriber)
+			err = processEpisodeFilePayload(episodeFile, agent, p.Subscriber)
 		}
 		if movie, ok := payload.(*db.Movie); ok {
-			return processMoviePayload(movie, agent, p.Subscriber)
+			err = processMoviePayload(movie, agent, p.Subscriber)
 		}
 		if movieFile, ok := payload.(*db.MovieFile); ok {
-			return processMovieFilePayload(movieFile, agent, p.Subscriber)
+			err = processMovieFilePayload(movieFile, agent, p.Subscriber)
+		}
+
+		if err != nil {
+			log.WithField("error", err.Error()).
+				Error("tmdbPool failed to process payload")
 		}
 
 		return nil
