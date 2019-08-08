@@ -279,6 +279,20 @@ func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
 	return episodes
 }
 
+func FindEpisodeFileByUUID(uuid string) (*EpisodeFile, error) {
+	return findEpisodeFile("uuid = ?", uuid)
+}
+
+func findEpisodeFile(where ...interface{}) (*EpisodeFile, error) {
+	var episodeFile EpisodeFile
+	if err := db.
+		Preload("Streams").
+		Take(&episodeFile, where...).Error; err != nil {
+		return nil, err
+	}
+	return &episodeFile, nil
+}
+
 // FindAllSeasons returns all seasons
 func FindAllSeasons() (seasons []Season) {
 	db.Find(&seasons)
@@ -382,6 +396,18 @@ func SaveSeason(season *Season) error {
 // SaveEpisode updates an episode in the database.
 func SaveEpisode(episode *Episode) error {
 	return db.Save(episode).Error
+}
+
+func DeleteEpisode(episodeID uint) error {
+	return db.Unscoped().Delete(&Episode{}, "id = ?", episodeID).Error
+}
+
+func DeleteSeason(seasonID uint) error {
+	return db.Unscoped().Delete(&Season{}, "id = ?", seasonID).Error
+}
+
+func DeleteSeries(seriesID uint) error {
+	return db.Unscoped().Delete(&Series{}, "id = ?", seriesID).Error
 }
 
 // SaveEpisodeFile updates an episodeFile in the database.
