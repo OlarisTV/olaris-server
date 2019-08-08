@@ -40,7 +40,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		}
 		episodeFiles = append(episodeFiles, episodeFile)
 	} else if args.Input.SeriesUUID != nil {
-		episodeFiles, err = findEpisodeFilesForSeries(*args.Input.EpisodeFileUUID)
+		episodeFiles, err = findEpisodeFilesForSeries(*args.Input.SeriesUUID)
 		if err != nil {
 			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
 		}
@@ -52,7 +52,8 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 
 	var oldEpisodes []*db.Episode
 	for _, episodeFile := range episodeFiles {
-		oldEpisodes = append(oldEpisodes, episodeFile.Episode)
+		e, _ := db.FindEpisodeByID(episodeFile.EpisodeID)
+		oldEpisodes = append(oldEpisodes, e)
 	}
 
 	tmdbAgent := r.env.MetadataRetrievalAgent
