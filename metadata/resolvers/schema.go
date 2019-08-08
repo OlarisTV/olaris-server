@@ -307,7 +307,7 @@ var SchemaTxt = `
 		episodeFileUUID: String
 		// UUID of the series for which all EpisodeFiles should be updated.
 		// episodeFileUUID and seriesUUID are mutually exclusive.
-		episodeFileUUID: String
+		seriesUUID: String
 
 		// TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
 		// item appropriately.

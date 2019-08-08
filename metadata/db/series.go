@@ -279,6 +279,7 @@ func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
 	return episodes
 }
 
+// FindEpisodeFileByUUID finds an EpisodeFile by UUID
 func FindEpisodeFileByUUID(uuid string) (*EpisodeFile, error) {
 	return findEpisodeFile("uuid = ?", uuid)
 }
@@ -309,6 +310,7 @@ func FindSeason(seasonID uint) (*Season, error) {
 	return findSeason("id = ?", seasonID)
 }
 
+// FindSeasonBySeasonNumber gets a season by Series/season number
 func FindSeasonBySeasonNumber(series *Series, seasonNum int) (*Season, error) {
 	return findSeason("series_id = ? AND season_number = ?", series.ID, seasonNum)
 }
@@ -336,8 +338,9 @@ func FindEpisodeByID(id uint) (*Episode, error) {
 	return findEpisode("id = ?", id)
 }
 
+// FindEpisodeByNumber finds an Episode by Season/episode number
 func FindEpisodeByNumber(season *Season, episodeNum int) (*Episode, error) {
-	return findEpisode("season_id = ? AND episode_number = ?", season.ID, episodeNum)
+	return findEpisode("season_id = ? AND episode_num = ?", season.ID, episodeNum)
 }
 
 func findEpisode(where ...interface{}) (*Episode, error) {
@@ -398,14 +401,17 @@ func SaveEpisode(episode *Episode) error {
 	return db.Save(episode).Error
 }
 
+// DeleteEpisode deletes an Episode
 func DeleteEpisode(episodeID uint) error {
 	return db.Unscoped().Delete(&Episode{}, "id = ?", episodeID).Error
 }
 
+// DeleteSeason deletes a Season
 func DeleteSeason(seasonID uint) error {
 	return db.Unscoped().Delete(&Season{}, "id = ?", seasonID).Error
 }
 
+// DeleteSeries deletes a Series
 func DeleteSeries(seriesID uint) error {
 	return db.Unscoped().Delete(&Series{}, "id = ?", seriesID).Error
 }
@@ -470,7 +476,7 @@ func FindAllUnidentifiedEpisodeFiles(qd *QueryDetails) ([]EpisodeFile, error) {
 	return episodeFiles, nil
 }
 
-// FindAllUnidentifiedEpisodeFiles find all EpisodeFiles without an associated Episode in a library
+// FindAllUnidentifiedEpisodeFilesInLibrary find all EpisodeFiles without an associated Episode in a library
 func FindAllUnidentifiedEpisodeFilesInLibrary(libraryID uint) ([]*EpisodeFile, error) {
 	var episodeFiles []*EpisodeFile
 
