@@ -24,6 +24,7 @@ func NewTmdbAgent() *TmdbAgent {
 	})}
 }
 
+// ParseTmdbDate parses a date string returned from the TMDB API
 func ParseTmdbDate(tmdbDate string) (time.Time, error) {
 	return time.Parse("2006-01-02", tmdbDate)
 }
@@ -43,7 +44,8 @@ func (a *TmdbAgent) UpdateEpisodeMD(
 	episode.TmdbID = fullEpisode.ID
 	episode.Overview = fullEpisode.Overview
 	episode.StillPath = fullEpisode.StillPath
-	log.WithFields(log.Fields{"episodeName": episode.Name, "tmdbId": episode.TmdbID}).Debugln("Found episode metadata.")
+	log.WithFields(log.Fields{"episodeName": episode.Name, "tmdbId": episode.TmdbID}).
+		Debugln("Found episode metadata.")
 
 	return nil
 
@@ -68,27 +70,23 @@ func (a *TmdbAgent) UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNu
 	season.Name = fullSeason.Name
 	season.TmdbID = fullSeason.ID
 	season.PosterPath = fullSeason.PosterPath
-	log.WithFields(log.Fields{"seasonName": season.Name, "tmdbId": season.TmdbID}).Debugln("Found season metadata.")
+	log.WithFields(log.Fields{"seasonName": season.Name, "tmdbId": season.TmdbID}).
+		Debugln("Found season metadata.")
 	return nil
 }
 
 // UpdateSeriesMD updates the metadata information for the given series.
 func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
-	fullTv, err := a.Tmdb.GetTvInfo(series.TmdbID, nil)
+	fullTv, err := a.Tmdb.GetTvInfo(tmdbID, nil)
 
 	if err != nil {
 		log.
 			WithFields(log.Fields{
-				"seriesName": series.Name,
-				"tmdbID":     series.TmdbID,
-				"error":      err}).
+				"tmdbID": tmdbID,
+				"error":  err}).
 			Debugln("Could not grab full TV details.")
 		return err
 	}
-
-	log.
-		WithFields(log.Fields{"seriesName": series.Name, "tmdbID": series.TmdbID}).
-		Debugln("Updating metadata from tmdb agent.")
 
 	firstAirDate, _ := ParseTmdbDate(fullTv.FirstAirDate)
 
@@ -104,17 +102,21 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 	return nil
 }
 
-func (a *TmdbAgent) UpdateMovieMetadata(movie *db.Movie) error {
-	r, err := a.Tmdb.GetMovieInfo(movie.TmdbID, nil)
+// UpdateMovieMD updates
+func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie, tmdbID int) error {
+	r, err := a.Tmdb.GetMovieInfo(tmdbID, nil)
 
 	if err != nil {
 		return errors.Wrap(err, "Failed to query TMDB for movie metadata")
 	}
 
+	releaseDate, _ := ParseTmdbDate(r.ReleaseDate)
+
 	movie.TmdbID = r.ID
 	movie.Title = r.Title
 	movie.OriginalTitle = r.OriginalTitle
 	movie.ReleaseDate = r.ReleaseDate
+	movie.Year = uint64(releaseDate.Year())
 	movie.Overview = r.Overview
 	movie.BackdropPath = r.BackdropPath
 	movie.PosterPath = r.PosterPath

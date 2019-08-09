@@ -46,7 +46,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		}
 	} else {
 		return &UpdateEpisodeFileMetadataPayloadResolver{
-			error: fmt.Errorf("Neither EpisodeFile nor Series UUID given"),
+			error: errors.New("Neither EpisodeFile nor Series UUID given"),
 		}
 	}
 
@@ -65,7 +65,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
 			return &UpdateEpisodeFileMetadataPayloadResolver{
 				error: fmt.Errorf(
-					"Failed to parse Episode/Season number from filename",
+					"Failed to parse Episode/Season number from filename %s",
 					episodeFile.FileName)}
 
 		}

@@ -9,7 +9,7 @@ import (
 
 // MetadataRetrievalAgent can retrieve metadata for media items.
 type MetadataRetrievalAgent interface {
-	UpdateMovieMetadata(*db.Movie) error
+	UpdateMovieMD(movie *db.Movie, tmdbID int) error
 	UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNum int) error
 	UpdateEpisodeMD(episode *db.Episode, seriesTmdbID int, seasonNum int, episodeNum int) error
 	UpdateSeriesMD(series *db.Series, tmdbID int) error
