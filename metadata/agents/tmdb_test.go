@@ -18,10 +18,10 @@ func TestSeasonLookup(t *testing.T) {
 }
 
 func TestTmdbMovieLookup(t *testing.T) {
-	movie := db.Movie{BaseItem: db.BaseItem{TmdbID: 76341}}
+	movie := db.Movie{}
 	a := agents.NewTmdbAgent()
 
-	a.UpdateMovieMetadata(&movie)
+	a.UpdateMovieMD(&movie, 76341)
 
 	assert.Equal(t, "Mad Max: Fury Road", movie.OriginalTitle)
 	assert.EqualValues(t, 76341, movie.TmdbID)

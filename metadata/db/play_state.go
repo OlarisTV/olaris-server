@@ -34,7 +34,7 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 		Joins("JOIN play_states ON play_states.media_uuid = movies.uuid").
 		Where("play_states.finished = 0").
 		Where("play_states.user_id = ?", userID).
-		Preload("PlayState").Find(&movies)
+		Find(&movies)
 	for i := range movies {
 		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
 	}

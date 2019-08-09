@@ -154,7 +154,10 @@ func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
 		_, err := GetOrCreateMovieForMovieFile(
 			movieFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
 		if err != nil {
-			return err
+			log.
+				WithField("error", err).
+				WithField("movieFile", movieFile.FilePath).
+				Warn("Failed to identify EpisodeFile")
 		}
 	}
 	return nil
@@ -374,6 +377,9 @@ func RefreshAgentMetadataForUUID(UUID string) bool {
 	return false
 }
 
+// GetOrCreateMovieForMovieFile tries to create a Movie object by parsing the filename of the
+// given MovieFile and looking it up in TMDB. It associates the MovieFile with the new Model.
+// If no matching movie can be found in TMDB, it returns an error.
 func GetOrCreateMovieForMovieFile(
 	movieFile *db.MovieFile,
 	agent agents.MetadataRetrievalAgent,
@@ -420,6 +426,8 @@ func GetOrCreateMovieForMovieFile(
 	return movie, nil
 }
 
+// GetOrCreateMovieByTmdbID gets or creates a Movie object in the database,
+// populating it with the details of the movie indicated by the TMDB ID.
 func GetOrCreateMovieByTmdbID(
 	tmdbID int,
 	agent agents.MetadataRetrievalAgent,
@@ -446,6 +454,9 @@ func GetOrCreateMovieByTmdbID(
 	return movie, nil
 }
 
+// GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
+// given EpisodeFile and looking it up in TMDB. It associates the EpisodeFile with the new Model.
+// If no matching episode can be found in TMDB, it returns an error.
 func GetOrCreateEpisodeForEpisodeFile(
 	episodeFile *db.EpisodeFile,
 	agent agents.MetadataRetrievalAgent,
@@ -498,6 +509,8 @@ func GetOrCreateEpisodeForEpisodeFile(
 	return episode, nil
 }
 
+// GetOrCreateEpisodeByTmdbID gets or creates an Episode object in the database,
+// populating it with the details of the episode indicated by the TMDB ID.
 func GetOrCreateEpisodeByTmdbID(
 	seriesTmdbID int, seasonNum int, episodeNum int,
 	agent agents.MetadataRetrievalAgent,
@@ -668,9 +681,10 @@ func UpdateSeasonMD(season *db.Season, agent agents.MetadataRetrievalAgent) erro
 
 // UpdateMovieMD updates the database record with the latest data from the agent
 func UpdateMovieMD(movie *db.Movie, agent agents.MetadataRetrievalAgent) error {
-	log.WithFields(log.Fields{"title": movie.Title}).Println("Refreshing metadata for movie.")
+	log.WithFields(log.Fields{"title": movie.Title}).
+		Println("Refreshing metadata for movie.")
 
-	if err := agent.UpdateMovieMetadata(movie); err != nil {
+	if err := agent.UpdateMovieMD(movie, movie.TmdbID); err != nil {
 		return err
 	}
 	// TODO(Leon Handreke): return an error here.
@@ -678,6 +692,8 @@ func UpdateMovieMD(movie *db.Movie, agent agents.MetadataRetrievalAgent) error {
 	return nil
 }
 
+// GarbageCollectEpisodeIfRequired deletes an Episode and its associated Season/Series objects if
+// required if no more EpisodeFiles associated with them remain.
 func GarbageCollectEpisodeIfRequired(episode *db.Episode) error {
 	if len(episode.EpisodeFiles) > 0 {
 		return nil
