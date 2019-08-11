@@ -29,7 +29,8 @@ func TestUpdateMovieFile(t *testing.T) {
 	}
 	db.CreateMovieFile(&movieFile)
 
-	tmdbAgent.UpdateMovieMetadataStub = func(movie *db.Movie) error {
+	tmdbAgent.UpdateMovieMDStub = func(movie *db.Movie, tmdbID int) error {
+		movie.TmdbID = tmdbID
 		movie.Title = "North of the Sun"
 		return nil
 	}
@@ -67,7 +68,7 @@ func TestUpdateMovieFileUnknownTmdbID(t *testing.T) {
 	}
 	db.CreateMovieFile(&movieFile)
 
-	tmdbAgent.UpdateMovieMetadataStub = func(movie *db.Movie) error {
+	tmdbAgent.UpdateMovieMDStub = func(movie *db.Movie, tmdbID int) error {
 		// Don't modify for this test, the movie was not found in Tmdb.
 		return errors.New("Not found")
 	}
