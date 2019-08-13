@@ -19,6 +19,7 @@ before_script:
   - go get github.com/elazarl/go-bindata-assetfs/...
   - go get github.com/maxbrunsfeld/counterfeiter
   - make ready-ci
+  - make generate
 
 stages:
     - format
@@ -35,7 +36,7 @@ build:
     stage: build
     script:
       - make build-linux
-      - cp -r build CI_PROJECT_DIR/
+      - cp -r build $CI_PROJECT_DIR/
     artifacts:
       paths:
         - build/olaris-linux-386
