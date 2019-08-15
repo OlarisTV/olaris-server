@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
+	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/filesystem"
+	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
+	"math"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -412,9 +415,18 @@ func GetOrCreateMovieForMovieFile(
 	}
 
 	log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
-	firstResult := searchRes.Results[0] // Take the first result for now
 
-	movie, err := GetOrCreateMovieByTmdbID(firstResult.ID, agent, subscriber)
+	var bestDistance = math.MaxInt32
+	var bestResult tmdb.MovieShort
+	for _, r := range searchRes.Results {
+		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Title)
+		if d < bestDistance {
+			bestDistance = d
+			bestResult = r
+		}
+	}
+
+	movie, err := GetOrCreateMovieByTmdbID(bestResult.ID, agent, subscriber)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +503,18 @@ func GetOrCreateEpisodeForEpisodeFile(
 
 		return nil, errors.New("Could not find match in TMDB ID for given filename")
 	}
-	seriesInfo := searchRes.Results[0] // Take the first result for now
+
+	var bestDistance = math.MaxInt32
+	// We use the index here because the type is really long.
+	var bestResultIdx int
+	for i, r := range searchRes.Results {
+		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Name)
+		if d < bestDistance {
+			bestDistance = d
+			bestResultIdx = i
+		}
+	}
+	seriesInfo := searchRes.Results[bestResultIdx]
 
 	episode, err := GetOrCreateEpisodeByTmdbID(
 		seriesInfo.ID, parsedInfo.SeasonNum, parsedInfo.EpisodeNum,
