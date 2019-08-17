@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"path/filepath"
 	"strings"
@@ -56,8 +55,6 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		oldEpisodes = append(oldEpisodes, e)
 	}
 
-	tmdbAgent := r.env.MetadataRetrievalAgent
-
 	for _, episodeFile := range episodeFiles {
 		name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
 		parsedInfo := parsers.ParseSerieName(name)
@@ -70,11 +67,8 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 
 		}
 
-		episode, err := managers.GetOrCreateEpisodeByTmdbID(
-			int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum,
-			tmdbAgent,
-			nil, // TODO(Leon Handreke): How do we get the subscriber here.
-		)
+		episode, err := r.env.MetadataManager.GetOrCreateEpisodeByTmdbID(
+			int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
 		if err != nil {
 			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
 		}
@@ -93,7 +87,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 						err,
 						"Failed to refresh previously associated Episode")}
 			}
-			managers.GarbageCollectEpisodeIfRequired(oldEpisode)
+			r.env.MetadataManager.GarbageCollectEpisodeIfRequired(oldEpisode)
 
 		}
 	}

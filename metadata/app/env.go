@@ -5,6 +5,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
+	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
 	"math/rand"
 	"path"
 	"time"
@@ -13,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/managers"
 )
 
 // MetadataContext is a container for all important vars.
@@ -22,6 +22,7 @@ type MetadataContext struct {
 	Watcher *fsnotify.Watcher
 
 	MetadataRetrievalAgent agents.MetadataRetrievalAgent
+	MetadataManager        *metadata.MetadataManager
 
 	ExitChan chan bool
 }
@@ -36,28 +37,36 @@ func (m *MetadataContext) Cleanup() {
 var env *MetadataContext
 
 // NewDefaultMDContext creates a new env with sane defaults.
-func NewDefaultMDContext(dbLogMode bool, verboseLog bool) *MetadataContext {
+func NewDefaultMDContext() *MetadataContext {
 	dbDir := helpers.MetadataConfigPath()
 	helpers.EnsurePath(dbDir)
 
 	dbPath := path.Join(dbDir, "metadata.db")
-	return NewMDContext(dbPath, dbLogMode, verboseLog)
+	return NewMDContext(dbPath, agents.NewTmdbAgent())
+}
+
+// NewTestingMDContext creates a new MetadataContext for testing
+func NewTestingMDContext(agent agents.MetadataRetrievalAgent) *MetadataContext {
+	var a agents.MetadataRetrievalAgent
+	if agent == nil {
+		a = agents.NewTmdbAgent()
+	} else {
+		a = agent
+	}
+	return NewMDContext(db.InMemory, a)
 }
 
 // NewMDContext lets you create a more custom environment.
-func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataContext {
+func NewMDContext(
+	dbPath string,
+	agent agents.MetadataRetrievalAgent) *MetadataContext {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	logLevel := log.InfoLevel
-	if verboseLog == true {
-		logLevel = log.DebugLevel
-	}
-
-	helpers.InitLoggers(logLevel)
+	helpers.InitLoggers(log.InfoLevel)
 
 	log.Printf("Olaris Metadata Server - v%s", helpers.Version())
 
-	db := db.NewDb(dbPath, dbLogMode)
+	db := db.NewDb(dbPath, false)
 	db.SetLogger(&GormLogger{})
 
 	exitChan := make(chan bool)
@@ -65,13 +74,14 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 	env = &MetadataContext{
 		Db:                     db,
 		ExitChan:               exitChan,
-		MetadataRetrievalAgent: agents.NewTmdbAgent(),
+		MetadataRetrievalAgent: agent,
+		MetadataManager:        metadata.NewMetadataManager(agent),
 	}
 
 	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
 	go func() {
 		for range metadataRefreshTicker.C {
-			managers.RefreshAgentMetadataWithMissingArt()
+			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
 		}
 	}()
 

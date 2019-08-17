@@ -8,7 +8,7 @@ import (
 )
 
 func TestUnidentifiedEpisodeFiles(t *testing.T) {
-	metadataCtx := app.NewMDContext(db.InMemory, false, false)
+	metadataCtx := app.NewTestingMDContext(nil)
 	r := NewResolver(metadataCtx)
 
 	db.CreateEpisode(&db.Episode{

@@ -17,9 +17,8 @@ func TestUpdateMovieFile(t *testing.T) {
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
 
-	metadataCtx := app.NewMDContext(db.InMemory, false, false)
 	tmdbAgent := agentsfakes.FakeMetadataRetrievalAgent{}
-	metadataCtx.MetadataRetrievalAgent = &tmdbAgent
+	metadataCtx := app.NewTestingMDContext(&tmdbAgent)
 	r := NewResolver(metadataCtx)
 
 	movieFile := db.MovieFile{
@@ -44,7 +43,7 @@ func TestUpdateMovieFile(t *testing.T) {
 		})
 
 	// Check that the Movie model was created
-	movies := db.FindAllMovies(&db.QueryDetails{Limit: 10})
+	movies := db.FindAllMovies(nil)
 	assert.Len(t, movies, 1)
 	assert.Equal(t, testTmdbID, movies[0].TmdbID)
 	assert.Equal(t, "North of the Sun", movies[0].Title)
@@ -56,7 +55,7 @@ func TestUpdateMovieFileUnknownTmdbID(t *testing.T) {
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
 
-	metadataCtx := app.NewMDContext(db.InMemory, false, false)
+	metadataCtx := app.NewTestingMDContext(nil)
 	tmdbAgent := agentsfakes.FakeMetadataRetrievalAgent{}
 	metadataCtx.MetadataRetrievalAgent = &tmdbAgent
 	r := NewResolver(metadataCtx)

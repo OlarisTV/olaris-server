@@ -36,7 +36,12 @@ var serveCmd = &cobra.Command{
 		rr := mainRouter.PathPrefix("/olaris")
 		rrr := mainRouter.PathPrefix("/olaris")
 
-		mctx := app.NewDefaultMDContext(dbLog, verbose)
+		mctx := app.NewDefaultMDContext()
+
+		mctx.Db.LogMode(dbLog)
+		if verbose {
+			log.SetLevel(log.DebugLevel)
+		}
 
 		metaRouter := r.PathPrefix("/m").Subrouter()
 		metadata.RegisterRoutes(mctx, metaRouter)

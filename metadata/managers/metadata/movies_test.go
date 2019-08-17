@@ -1,4 +1,4 @@
-package managers
+package metadata
 
 import (
 	"github.com/ryanbradynd05/go-tmdb"
@@ -8,16 +8,20 @@ import (
 	"testing"
 )
 
-func TestGetOrCreateEpisodeForEpisodeFile_SearchByStringDistance(t *testing.T) {
+func TestGetOrCreateMovieForMovieFile_SearchByStringDistance(t *testing.T) {
 	// TODO(Leon Handreke): Dependency inject instead of relying on global singletons
 	db.NewDb(db.InMemory, false)
+
+	agent := agentsfakes.FakeMetadataRetrievalAgent{}
+	m := MetadataManager{
+		agent: &agent,
+	}
 
 	movieFile := db.MovieFile{
 		MediaItem: db.MediaItem{
 			FileName: "The Walking Dead S01E01.mkv",
 		},
 	}
-	agent := agentsfakes.FakeMetadataRetrievalAgent{}
 	// This is what TMDB really does and why we have the string distance search feature
 	agent.TmdbSearchMovieStub = func(name string, options map[string]string) (
 		*tmdb.MovieSearchResults, error) {
@@ -37,7 +41,7 @@ func TestGetOrCreateEpisodeForEpisodeFile_SearchByStringDistance(t *testing.T) {
 		return nil
 	}
 
-	movie, err := GetOrCreateMovieForMovieFile(&movieFile, &agent, nil)
+	movie, err := m.GetOrCreateMovieForMovieFile(&movieFile)
 	assert.Nil(t, err)
 	assert.Equal(t, "The Walking Dead", movie.Title)
 }

@@ -198,11 +198,20 @@ func FindSeriesForMDRefresh() (series []Series) {
 }
 
 // FindAllSeries retrieves all identified series from the db.
-func FindAllSeries(qd *QueryDetails) (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
-		Offset(qd.Offset).Limit(qd.Limit).
-		Find(&series)
-	return series
+func FindAllSeries(qd *QueryDetails) ([]*Series, error) {
+	var series []*Series
+	q := db
+	if qd != nil {
+		q = q.Offset(qd.Offset).Limit(qd.Limit)
+
+	}
+	if err := q.
+		Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Find(&series).
+		Error; err != nil {
+		return nil, err
+	}
+	return series, nil
 }
 
 // SearchSeriesByTitle searches for series based on their name.

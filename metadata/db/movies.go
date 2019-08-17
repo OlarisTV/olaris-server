@@ -168,7 +168,11 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
-	db.Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
+	q := db
+	if qd != nil {
+		q = q.Limit(qd.Limit).Offset(qd.Offset)
+	}
+	q = q.Find(&movies)
 	for _, movie := range movies {
 		CollectMovieInfo(&movie)
 	}

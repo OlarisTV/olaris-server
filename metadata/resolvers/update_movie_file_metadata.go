@@ -3,7 +3,6 @@ package resolvers
 import (
 	"context"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/managers"
 )
 
 // UpdateMovieFileMetadataInput is a request
@@ -33,16 +32,13 @@ func (r *Resolver) UpdateMovieFileMetadata(
 	if err == nil && oldMovie.TmdbID == int(args.Input.TmdbID) {
 		return &UpdateMovieFileMetadataPayloadResolver{mediaItem: oldMovie}
 	}
+	// TODO(Leon Handreke): For consistency,
+	//  put this in a GarbageCollectMovie func in MetadataManager.
 	// If this is the only MovieFile associated with this movie,
 	// purge it afterwards.
 	shouldPurgeOldMovie := oldMovie != nil && len(oldMovie.MovieFiles) == 1
 
-	tmdbAgent := r.env.MetadataRetrievalAgent
-	movie, err := managers.GetOrCreateMovieByTmdbID(
-		int(args.Input.TmdbID),
-		tmdbAgent,
-		nil, // TODO(Leon Handreke): How do we get the subscriber here.
-	)
+	movie, err := r.env.MetadataManager.GetOrCreateMovieByTmdbID(int(args.Input.TmdbID))
 	if err != nil {
 		return &UpdateMovieFileMetadataPayloadResolver{error: err}
 	}

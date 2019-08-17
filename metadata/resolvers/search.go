@@ -33,7 +33,7 @@ func (r *Resolver) Search(args *searchArgs) *[]*SearchItemResolver {
 		l = append(l, &SearchItemResolver{r: &MovieResolver{r: movie}})
 	}
 	for _, serie := range db.SearchSeriesByTitle(args.Name) {
-		l = append(l, &SearchItemResolver{r: &SeriesResolver{serie}})
+		l = append(l, &SearchItemResolver{r: &SeriesResolver{&serie}})
 	}
 
 	return &l

@@ -8,7 +8,7 @@ import (
 )
 
 func TestBeforeCreate(t *testing.T) {
-	app.NewMDContext(db.InMemory, false, false)
+	app.NewMDContext(db.InMemory, nil)
 	stream := db.Stream{Codecs: "test"}
 	db.CreateStream(&stream)
 	if stream.UUID == "" {
