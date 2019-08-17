@@ -29,18 +29,17 @@ func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolv
 
 // Series return series.
 func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolver {
-	var resolvers []*SeriesResolver
-	var series []db.Series
-
-	qd := createQd(args)
+	var series []*db.Series
 
 	if args.UUID != nil {
 		serie, _ := db.FindSeriesByUUID(*args.UUID)
-		series = []db.Series{*serie}
+		series = []*db.Series{serie}
 	} else {
-		series = db.FindAllSeries(qd)
+		qd := createQd(args)
+		series, _ = db.FindAllSeries(qd)
 	}
 
+	var resolvers []*SeriesResolver
 	for _, s := range series {
 		resolvers = append(resolvers, &SeriesResolver{r: s})
 	}
@@ -50,7 +49,7 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 
 // SeriesResolver resolvers a serie.
 type SeriesResolver struct {
-	r db.Series
+	r *db.Series
 }
 
 // Name returns name.
@@ -165,7 +164,7 @@ func (r *SeasonResolver) SeasonNumber() int32 {
 // Series returns the series this season belongs to.
 func (r *SeasonResolver) Series() *SeriesResolver {
 	series, _ := db.FindSeries(r.r.SeriesID)
-	return &SeriesResolver{*series}
+	return &SeriesResolver{series}
 }
 
 // Episodes returns seasonal episodes.

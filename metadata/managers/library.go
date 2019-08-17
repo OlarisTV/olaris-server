@@ -1,25 +1,15 @@
 package managers
 
 import (
-	"errors"
-	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
-	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/filesystem"
-	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
-	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
-	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"math"
+	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
 	"path"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
 	"time"
 )
 
@@ -38,9 +28,6 @@ var SupportedExtensions = map[string]bool{
 	".mpeg": true,
 }
 
-var seriesMutex = &sync.Mutex{}
-var moviesMutex = &sync.Mutex{}
-
 type probeJob struct {
 	node filesystem.Node
 	man  *LibraryManager
@@ -48,18 +35,23 @@ type probeJob struct {
 
 // LibraryManager manages all active libraries.
 type LibraryManager struct {
-	Watcher       *fsnotify.Watcher
-	Pool          *WorkerPool
-	Library       *db.Library
-	exitChan      chan bool
-	isShutingDown bool
+	metadataManager *metadata.MetadataManager
+	Watcher         *fsnotify.Watcher
+	Pool            *WorkerPool
+	Library         *db.Library
+	exitChan        chan bool
+	isShutingDown   bool
 }
 
-// NewLibraryManager creates a new LibraryManager with a pool worker that can process episode information.
-func NewLibraryManager(lib *db.Library, s LibrarySubscriber) *LibraryManager {
+// NewLibraryManager creates a new LibraryManager
+func NewLibraryManager(lib *db.Library, metadataManager *metadata.MetadataManager) *LibraryManager {
 	var err error
-	manager := LibraryManager{Pool: NewDefaultWorkerPool(), Library: lib, exitChan: make(chan bool)}
-	manager.Pool.SetSubscriber(s)
+	manager := LibraryManager{
+		Library:         lib,
+		metadataManager: metadataManager,
+		Pool:            NewDefaultWorkerPool(),
+		exitChan:        make(chan bool),
+	}
 
 	manager.Watcher, err = fsnotify.NewWatcher()
 	if err != nil {
@@ -108,8 +100,7 @@ func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 	}
 
 	for _, episodeFile := range episodeFiles {
-		_, err := GetOrCreateEpisodeForEpisodeFile(
-			episodeFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
+		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(episodeFile)
 		if err != nil {
 			log.
 				WithField("error", err).
@@ -120,32 +111,6 @@ func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 	return nil
 }
 
-// ForceMovieMetadataUpdate refreshes all metadata for the given movies in a library, even if metadata already exists.
-func (man *LibraryManager) ForceMovieMetadataUpdate() {
-	agent := agents.NewTmdbAgent()
-	for _, movie := range db.FindMoviesInLibrary(man.Library.ID) {
-		UpdateMovieMD(&movie, agent)
-	}
-}
-
-// ForceSeriesMetadataUpdate refreshes all data from the agent and updates the database record.
-func (man *LibraryManager) ForceSeriesMetadataUpdate() {
-	agent := agents.NewTmdbAgent()
-	for _, series := range db.FindSeriesInLibrary(man.Library.ID) {
-		UpdateSeriesMD(&series, agent)
-		for _, season := range db.FindSeasonsForSeries(series.ID) {
-			// Consider building a pool for this
-			UpdateSeasonMD(&season, agent)
-			for _, episode := range db.FindEpisodesForSeason(season.ID) {
-				go func(episode *db.Episode) {
-					defer checkPanic()
-					man.Pool.tmdbPool.Process(episode)
-				}(&episode)
-			}
-		}
-	}
-}
-
 // IdentifyUnidentifiedMovieFiles loops over all movies with no tmdb information yet and attempts to retrieve the metadata.
 func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
 	movieFiles, err := db.FindAllUnidentifiedMovieFilesInLibrary(man.Library.ID)
@@ -154,8 +119,7 @@ func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
 	}
 
 	for _, movieFile := range movieFiles {
-		_, err := GetOrCreateMovieForMovieFile(
-			movieFile, agents.NewTmdbAgent(), man.Pool.Subscriber)
+		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(movieFile)
 		if err != nil {
 			log.
 				WithField("error", err).
@@ -262,7 +226,9 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	}
 }
 
-// ProbeFile goes over the given file and tries to attempt to find out more information based on the filename.
+// ProbeFile goes over the given file,
+// creates a new entry in the database if required and tries to associate the file with a
+// with metadata based on the filename.
 func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	library := man.Library
 	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
@@ -283,29 +249,34 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 		db.SaveEpisodeFile(&episodeFile)
 
-		// Queue EpisodeFile to be associated with an Episode/Season/Series tree from TMDB
-		go func(episodeFile *db.EpisodeFile) {
-			defer checkPanic()
-			man.Pool.tmdbPool.Process(episodeFile)
-		}(&episodeFile)
-
-	case db.MediaTypeMovie:
-		mi := db.MediaItem{
-			FileName:  basename,
-			FilePath:  n.FileLocator().String(),
-			Size:      n.Size(),
-			LibraryID: library.ID,
+		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(&episodeFile)
+		if err != nil {
+			log.
+				WithField("error", err.Error()).
+				WithField("episodeFile", episodeFile).
+				Warn("Failed to to identify and create episode for EpisodeFile")
 		}
 
-		movieFile := db.MovieFile{MediaItem: mi}
-		movieFile.Streams = collectStreams(n)
+	case db.MediaTypeMovie:
+		movieFile := db.MovieFile{
+			MediaItem: db.MediaItem{
+				FileName:  basename,
+				FilePath:  n.FileLocator().String(),
+				Size:      n.Size(),
+				LibraryID: library.ID,
+			},
+			Streams: collectStreams(n),
+		}
 		db.CreateMovieFile(&movieFile)
 
-		// Queue MovieFile to be associated with a Movie from TMDB
-		go func(movieFile *db.MovieFile) {
-			defer checkPanic()
-			man.Pool.tmdbPool.Process(movieFile)
-		}(&movieFile)
+		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(&movieFile)
+		if err != nil {
+			log.
+				WithField("error", err.Error()).
+				WithField("movieFile", movieFile).
+				Warn("Failed to to identify and create Movie for MovieFile")
+		}
+
 	}
 	return nil
 }
@@ -331,295 +302,6 @@ func ValidFile(node filesystem.Node) bool {
 	}
 
 	return true
-}
-
-// RefreshAgentMetadataWithMissingArt loops over all series/episodes/seasons and movies with missing art (posters/backdrop) and tries to retrieve them.
-func RefreshAgentMetadataWithMissingArt() {
-	log.Debugln("Checking and updating media items for missing art.")
-	for _, UUID := range db.ItemsWithMissingMetadata() {
-		RefreshAgentMetadataForUUID(UUID)
-	}
-}
-
-// RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
-func RefreshAgentMetadataForUUID(UUID string) bool {
-
-	log.WithFields(log.Fields{"uuid": UUID}).
-		Debugln("Looking to refresh metadata agent data.")
-	movie, err := db.FindMovieByUUID(UUID)
-	if err != nil {
-		go mhelpers.WithLock(func() {
-			UpdateMovieMD(movie, agents.NewTmdbAgent())
-		}, movie.UUID)
-		return true
-	}
-
-	series, err := db.FindSeriesByUUID(UUID)
-	if err != nil {
-		go mhelpers.WithLock(func() {
-			UpdateSeriesMD(series, agents.NewTmdbAgent())
-		}, series.UUID)
-		return true
-	}
-
-	season, err := db.FindSeasonByUUID(UUID)
-	if err != nil {
-		go mhelpers.WithLock(func() {
-			UpdateSeasonMD(season, agents.NewTmdbAgent())
-		}, season.UUID)
-		return true
-	}
-
-	episode, err := db.FindEpisodeByUUID(UUID)
-	if err != nil {
-		go mhelpers.WithLock(func() {
-			UpdateEpisodeMD(episode, agents.NewTmdbAgent())
-		}, episode.UUID)
-		return true
-	}
-	return false
-}
-
-// GetOrCreateMovieForMovieFile tries to create a Movie object by parsing the filename of the
-// given MovieFile and looking it up in TMDB. It associates the MovieFile with the new Model.
-// If no matching movie can be found in TMDB, it returns an error.
-func GetOrCreateMovieForMovieFile(
-	movieFile *db.MovieFile,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Movie, error) {
-
-	// If we already have an associated movie, don't create a new one
-	if movieFile.MovieID != 0 {
-		return db.FindMovieByID(movieFile.MovieID)
-	}
-
-	name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
-	parsedInfo := parsers.ParseMovieName(name)
-
-	var options = make(map[string]string)
-	if parsedInfo.Year > 0 {
-		options["year"] = strconv.FormatUint(parsedInfo.Year, 10)
-	}
-	searchRes, err := agent.TmdbSearchMovie(parsedInfo.Title, options)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(searchRes.Results) == 0 {
-		log.WithFields(log.Fields{
-			"title": parsedInfo.Title,
-			"year":  parsedInfo.Year,
-		}).Warnln("Could not find match based on parsed title and given year.")
-
-		return nil, errors.New("Could not find match in TMDB ID for given filename")
-	}
-
-	log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
-
-	var bestDistance = math.MaxInt32
-	var bestResult tmdb.MovieShort
-	for _, r := range searchRes.Results {
-		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Title)
-		if d < bestDistance {
-			bestDistance = d
-			bestResult = r
-		}
-	}
-
-	movie, err := GetOrCreateMovieByTmdbID(bestResult.ID, agent, subscriber)
-	if err != nil {
-		return nil, err
-	}
-
-	movieFile.Movie = *movie
-	db.SaveMovieFile(movieFile)
-
-	movie.MovieFiles = []db.MovieFile{*movieFile}
-	return movie, nil
-}
-
-// GetOrCreateMovieByTmdbID gets or creates a Movie object in the database,
-// populating it with the details of the movie indicated by the TMDB ID.
-func GetOrCreateMovieByTmdbID(
-	tmdbID int,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Movie, error) {
-
-	// Lock so that we don't create the same movie twice
-	moviesMutex.Lock()
-	defer moviesMutex.Unlock()
-
-	movie, err := db.FindMovieByTmdbID(tmdbID)
-	if err == nil {
-		return movie, nil
-	}
-
-	movie = &db.Movie{BaseItem: db.BaseItem{TmdbID: tmdbID}}
-	if err := UpdateMovieMD(movie, agent); err != nil {
-		return nil, err
-	}
-
-	if subscriber != nil {
-		subscriber.MovieAdded(movie)
-	}
-
-	return movie, nil
-}
-
-// GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
-// given EpisodeFile and looking it up in TMDB. It associates the EpisodeFile with the new Model.
-// If no matching episode can be found in TMDB, it returns an error.
-func GetOrCreateEpisodeForEpisodeFile(
-	episodeFile *db.EpisodeFile,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Episode, error) {
-
-	if episodeFile.EpisodeID != 0 {
-		return db.FindEpisodeByID(episodeFile.EpisodeID)
-	}
-
-	name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
-	parsedInfo := parsers.ParseSerieName(name)
-
-	if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
-		// We can't do anything if we don't know the season/episode number
-		return nil, fmt.Errorf("Can't parse Season/Episode number from filename %s", name)
-	}
-
-	// Find a series for this Episode
-	var options = make(map[string]string)
-	if parsedInfo.Year != 0 {
-		options["first_air_date_year"] = strconv.FormatUint(parsedInfo.Year, 10)
-	}
-	searchRes, err := agent.TmdbSearchTv(parsedInfo.Title, options)
-	if err != nil {
-		return nil, err
-	}
-	if len(searchRes.Results) == 0 {
-		log.WithFields(log.Fields{
-			"title": parsedInfo.Title,
-			"year":  parsedInfo.Year,
-		}).Warnln("Could not find match based on parsed title and given year.")
-
-		return nil, errors.New("Could not find match in TMDB ID for given filename")
-	}
-
-	var bestDistance = math.MaxInt32
-	// We use the index here because the type is really long.
-	var bestResultIdx int
-	for i, r := range searchRes.Results {
-		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Name)
-		if d < bestDistance {
-			bestDistance = d
-			bestResultIdx = i
-		}
-	}
-	seriesInfo := searchRes.Results[bestResultIdx]
-
-	episode, err := GetOrCreateEpisodeByTmdbID(
-		seriesInfo.ID, parsedInfo.SeasonNum, parsedInfo.EpisodeNum,
-		agent, subscriber)
-	if err != nil {
-		return nil, err
-	}
-
-	episodeFile.Episode = episode
-	episodeFile.EpisodeID = episode.ID
-	db.SaveEpisodeFile(episodeFile)
-
-	episode.EpisodeFiles = []db.EpisodeFile{*episodeFile}
-
-	return episode, nil
-}
-
-// GetOrCreateEpisodeByTmdbID gets or creates an Episode object in the database,
-// populating it with the details of the episode indicated by the TMDB ID.
-func GetOrCreateEpisodeByTmdbID(
-	seriesTmdbID int, seasonNum int, episodeNum int,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Episode, error) {
-
-	season, err := getOrCreateSeasonByTmdbID(seriesTmdbID, seasonNum, agent, subscriber)
-	if err != nil {
-		return nil, err
-	}
-
-	// Lock so that we don't create the same episode twice
-	seriesMutex.Lock()
-	defer seriesMutex.Unlock()
-
-	episode, err := db.FindEpisodeByNumber(season, episodeNum)
-	if err == nil {
-		return episode, nil
-	}
-
-	episode = &db.Episode{Season: season, SeasonID: season.ID, EpisodeNum: episodeNum}
-	if err := UpdateEpisodeMD(episode, agent); err != nil {
-		return nil, err
-	}
-
-	if subscriber != nil {
-		subscriber.EpisodeAdded(episode)
-	}
-
-	return episode, nil
-}
-
-func getOrCreateSeriesByTmdbID(
-	seriesTmdbID int,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Series, error) {
-
-	// Lock so that we don't create the same series twice
-	seriesMutex.Lock()
-	defer seriesMutex.Unlock()
-
-	series, err := db.FindSeriesByTmdbID(seriesTmdbID)
-	if err == nil {
-		return series, nil
-	}
-
-	series = &db.Series{BaseItem: db.BaseItem{TmdbID: seriesTmdbID}}
-	if err := UpdateSeriesMD(series, agent); err != nil {
-		return nil, err
-	}
-
-	if subscriber != nil {
-		subscriber.SeriesAdded(series)
-	}
-
-	return series, nil
-}
-
-func getOrCreateSeasonByTmdbID(
-	seriesTmdbID int, seasonNum int,
-	agent agents.MetadataRetrievalAgent,
-	subscriber LibrarySubscriber) (*db.Season, error) {
-
-	series, err := getOrCreateSeriesByTmdbID(seriesTmdbID, agent, subscriber)
-	if err != nil {
-		return nil, err
-	}
-
-	// Lock so that we don't create the same series twice
-	seriesMutex.Lock()
-	defer seriesMutex.Unlock()
-
-	season, err := db.FindSeasonBySeasonNumber(series, seasonNum)
-	if err == nil {
-		return season, nil
-	}
-
-	season = &db.Season{Series: series, SeriesID: series.ID, SeasonNumber: seasonNum}
-	if err := UpdateSeasonMD(season, agent); err != nil {
-		return nil, err
-	}
-
-	if subscriber != nil {
-		subscriber.SeasonAdded(season)
-	}
-
-	return season, nil
 }
 
 // CheckFileAndDeleteIfMissing checks the given media file and if it's no longer present removes it from the database
@@ -676,82 +358,6 @@ func (man *LibraryManager) RefreshAll() {
 
 	man.RescanFilesystem()
 	man.IdentifyUnidentifiedFiles()
-}
-
-// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func UpdateSeriesMD(series *db.Series, agent agents.MetadataRetrievalAgent) error {
-	log.WithFields(log.Fields{"name": series.Name}).
-		Println("Refreshing metadata for series.")
-	agent.UpdateSeriesMD(series, series.TmdbID)
-	db.SaveSeries(series)
-	return nil
-}
-
-// UpdateEpisodeMD updates the database record with the latest data from the agent
-func UpdateEpisodeMD(ep *db.Episode, agent agents.MetadataRetrievalAgent) error {
-	agent.UpdateEpisodeMD(ep,
-		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum)
-	db.SaveEpisode(ep)
-	return nil
-}
-
-// UpdateSeasonMD updates the database record with the latest data from the agent
-func UpdateSeasonMD(season *db.Season, agent agents.MetadataRetrievalAgent) error {
-	agent.UpdateSeasonMD(season, season.GetSeries().TmdbID, season.SeasonNumber)
-	db.SaveSeason(season)
-	return nil
-}
-
-// UpdateMovieMD updates the database record with the latest data from the agent
-func UpdateMovieMD(movie *db.Movie, agent agents.MetadataRetrievalAgent) error {
-	log.WithFields(log.Fields{"title": movie.Title}).
-		Println("Refreshing metadata for movie.")
-
-	if err := agent.UpdateMovieMD(movie, movie.TmdbID); err != nil {
-		return err
-	}
-	// TODO(Leon Handreke): return an error here.
-	db.SaveMovie(movie)
-	return nil
-}
-
-// GarbageCollectEpisodeIfRequired deletes an Episode and its associated Season/Series objects if
-// required if no more EpisodeFiles associated with them remain.
-func GarbageCollectEpisodeIfRequired(episode *db.Episode) error {
-	if len(episode.EpisodeFiles) > 0 {
-		return nil
-	}
-
-	db.DeleteEpisode(episode.ID)
-
-	// Garbage collect season
-	season, err := db.FindSeason(episode.SeasonID)
-	if err != nil {
-		return err
-	}
-	if len(season.Episodes) > 0 {
-		return nil
-	}
-	err = db.DeleteSeason(season.ID)
-	if err != nil {
-		return err
-	}
-
-	// Garbage collect series
-	series, err := db.FindSeries(season.SeriesID)
-	if err != nil {
-		return err
-	}
-	if len(series.Seasons) > 0 {
-		return nil
-	}
-	err = db.DeleteSeries(series.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-
 }
 
 func checkPanic() {

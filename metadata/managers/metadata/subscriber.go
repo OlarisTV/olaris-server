@@ -1,10 +1,11 @@
-package managers
+package metadata
 
 import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// LibrarySubscriber is an interface that can implement the various notifications the libraryManager can give off
+// LibrarySubscriber is an interface for a receiver for the various events that the
+// MetadataManager can emit.
 type LibrarySubscriber interface {
 	MovieAdded(*db.Movie)
 	EpisodeAdded(*db.Episode)

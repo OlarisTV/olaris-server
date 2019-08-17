@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
-	"gitlab.com/olaris/olaris-server/metadata/managers"
 	"path/filepath"
 	"strconv"
 )
@@ -103,6 +102,9 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 	UUID      *string
 }) bool {
 	if args.LibraryID != nil {
+		// TODO(Leon Handreke): Either add a refresh-per-library call to the LibraryManager
+		//  or make this a global update call without a Library ID
+
 		libID := uint(*args.LibraryID)
 
 		for _, lm := range r.libs {
@@ -110,9 +112,9 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 			if lm.Library.ID == libID {
 				go mhelpers.WithLock(func() {
 					if lm.Library.Kind == db.MediaTypeMovie {
-						lm.ForceMovieMetadataUpdate()
+						r.env.MetadataManager.ForceMovieMetadataUpdate()
 					} else if lm.Library.Kind == db.MediaTypeSeries {
-						lm.ForceSeriesMetadataUpdate()
+						r.env.MetadataManager.ForceSeriesMetadataUpdate()
 					}
 				}, "libid"+strconv.FormatUint(uint64(lm.Library.ID), 10))
 			}
@@ -121,7 +123,7 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 	}
 
 	if args.UUID != nil {
-		return managers.RefreshAgentMetadataForUUID(*args.UUID)
+		return r.env.MetadataManager.RefreshAgentMetadataForUUID(*args.UUID)
 	}
 
 	return false

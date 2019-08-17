@@ -5,6 +5,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
+	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
 	"math/rand"
 	"path"
 	"time"
@@ -13,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/managers"
 )
 
 // MetadataContext is a container for all important vars.
@@ -22,6 +22,7 @@ type MetadataContext struct {
 	Watcher *fsnotify.Watcher
 
 	MetadataRetrievalAgent agents.MetadataRetrievalAgent
+	MetadataManager        *metadata.MetadataManager
 
 	ExitChan chan bool
 }
@@ -62,16 +63,18 @@ func NewMDContext(dbPath string, dbLogMode bool, verboseLog bool) *MetadataConte
 
 	exitChan := make(chan bool)
 
+	agent := agents.NewTmdbAgent()
 	env = &MetadataContext{
 		Db:                     db,
 		ExitChan:               exitChan,
-		MetadataRetrievalAgent: agents.NewTmdbAgent(),
+		MetadataRetrievalAgent: agent,
+		MetadataManager:        metadata.NewMetadataManager(agent),
 	}
 
 	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
 	go func() {
 		for range metadataRefreshTicker.C {
-			managers.RefreshAgentMetadataWithMissingArt()
+			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
 		}
 	}()
 

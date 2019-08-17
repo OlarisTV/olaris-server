@@ -34,9 +34,10 @@ func NewResolver(env *app.MetadataContext) *Resolver {
 		seasonAddedEvents:  make(chan *SeasonAddedEvent)}
 
 	s := graphqlLibrarySubscriber{resolver: r}
-	r.subscriber = &s
+	env.MetadataManager.Subscriber = s
 
 	libs := db.AllLibraries()
+
 	for i := range libs {
 		r.AddLibraryManager(&libs[i])
 	}
@@ -48,7 +49,7 @@ func NewResolver(env *app.MetadataContext) *Resolver {
 
 // AddLibraryManager adds a new manager
 func (r *Resolver) AddLibraryManager(lib *db.Library) {
-	man := managers.NewLibraryManager(lib, r.subscriber)
+	man := managers.NewLibraryManager(lib, r.env.MetadataManager)
 	r.libs = append(r.libs, man)
 	go man.RefreshAll()
 }
