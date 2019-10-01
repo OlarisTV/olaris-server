@@ -18,7 +18,7 @@ func TestSeasonLookup(t *testing.T) {
 }
 
 func TestTmdbMovieLookup(t *testing.T) {
-	movie := db.Movie{Title: "Max Max Road Fury", OriginalTitle: "", Year: 2015}
+	movie := db.Movie{Title: "Mad Max Road Fury", OriginalTitle: "", Year: 2015}
 	a := agents.NewTmdbAgent()
 	a.UpdateMovieMD(&movie)
 	if movie.OriginalTitle != "Mad Max: Fury Road" {
