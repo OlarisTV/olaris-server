@@ -12,11 +12,10 @@ type mustUUIDArgs struct {
 
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
-	episode := db.FindEpisodeByUUID(*args.UUID)
-	// TODO(Maran): This is ugly, we should a) catch a DB error here (modify the DB API)
-	// and b) return an actual error to the client, not just an empty dict
-	if episode.ID != 0 {
-		return &EpisodeResolver{r: episode}
+	episode, err := db.FindEpisodeByUUID(*args.UUID)
+	// TODO(Maran): return an actual error to the client, not just an empty dict
+	if err == nil {
+		return &EpisodeResolver{r: *episode}
 	}
 	return &EpisodeResolver{r: db.Episode{}}
 
@@ -24,8 +23,8 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 
 // Season returns season.
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
-	season := db.FindSeasonByUUID(*args.UUID)
-	return &SeasonResolver{r: season}
+	season, _ := db.FindSeasonByUUID(*args.UUID)
+	return &SeasonResolver{r: *season}
 }
 
 // Series return series.
@@ -36,7 +35,8 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 	qd := createQd(args)
 
 	if args.UUID != nil {
-		series = db.FindSeriesByUUID(*args.UUID)
+		serie, _ := db.FindSeriesByUUID(*args.UUID)
+		series = []db.Series{*serie}
 	} else {
 		series = db.FindAllSeries(qd)
 	}
@@ -164,8 +164,8 @@ func (r *SeasonResolver) SeasonNumber() int32 {
 
 // Series returns the series this season belongs to.
 func (r *SeasonResolver) Series() *SeriesResolver {
-	series := db.FindSeries(r.r.SeriesID)
-	return &SeriesResolver{series}
+	series, _ := db.FindSeries(r.r.SeriesID)
+	return &SeriesResolver{*series}
 }
 
 // Episodes returns seasonal episodes.
@@ -197,8 +197,8 @@ func (r *EpisodeResolver) Name() string {
 
 // Season returns the season the episode belongs to.
 func (r *EpisodeResolver) Season() *SeasonResolver {
-	s := db.FindSeason(r.r.SeasonID)
-	return &SeasonResolver{s}
+	s, _ := db.FindSeason(r.r.SeasonID)
+	return &SeasonResolver{*s}
 }
 
 // UUID returns uuid.

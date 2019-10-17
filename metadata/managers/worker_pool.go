@@ -37,40 +37,23 @@ func NewDefaultWorkerPool() *WorkerPool {
 	//  estimates.
 	p.tmdbPool = tunny.NewFunc(3, func(payload interface{}) interface{} {
 		log.Debugln("Current TMDB queue length:", p.tmdbPool.QueueLength())
-		if ep, ok := payload.(*episodePayload); ok {
-			var newRecord bool
-			if !ep.episode.IsIdentified() {
-				newRecord = true
-			}
-			err := agents.UpdateEpisodeMD(agent, &ep.episode, &ep.season, &ep.series)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for series.")
-			} else {
-				db.UpdateEpisode(&ep.episode)
-				if p.Subscriber != nil && (ep.episode.IsIdentified() && newRecord) {
-					log.Debugln("We have an attached subscriber, sending event.")
-					p.Subscriber.EpisodeAdded(&ep.episode)
-				}
-			}
+		var err error
+		if episode, ok := payload.(*db.Episode); ok {
+			err = processEpisodePayload(episode, agent, p.Subscriber)
+		}
+		if episodeFile, ok := payload.(*db.EpisodeFile); ok {
+			err = processEpisodeFilePayload(episodeFile, agent, p.Subscriber)
 		}
 		if movie, ok := payload.(*db.Movie); ok {
-			//TODO: Is there a cleaner way of finding out if a movie was just now identified so we can send the event?
-			var newRecord bool
-			if !movie.IsIdentified() {
-				newRecord = true
-			}
+			err = processMoviePayload(movie, agent, p.Subscriber)
+		}
+		if movieFile, ok := payload.(*db.MovieFile); ok {
+			err = processMovieFilePayload(movieFile, agent, p.Subscriber)
+		}
 
-			err := agents.UpdateMovieMD(agent, movie)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Warnln("Got an error updating metadata for movie.")
-			} else {
-				db.UpdateMovie(movie)
-				db.MergeDuplicateMovies()
-				if p.Subscriber != nil && (newRecord && movie.IsIdentified()) {
-					log.Debugln("We have an attached subscriber, sending event.")
-					p.Subscriber.MovieAdded(movie)
-				}
-			}
+		if err != nil {
+			log.WithField("error", err.Error()).
+				Error("tmdbPool failed to process payload")
 		}
 
 		return nil
@@ -87,4 +70,43 @@ func NewDefaultWorkerPool() *WorkerPool {
 	})
 
 	return p
+}
+
+func processEpisodePayload(
+	episode *db.Episode,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+	if err := UpdateEpisodeMD(episode, agent); err != nil {
+		log.
+			WithFields(log.Fields{"error": err}).
+			Warnln("Got an error updating metadata for series.")
+		return err
+	}
+	return nil
+}
+
+func processEpisodeFilePayload(
+	episodeFile *db.EpisodeFile,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	_, err := GetOrCreateEpisodeForEpisodeFile(episodeFile, agent, subscriber)
+	return err
+}
+
+func processMoviePayload(
+	movie *db.Movie,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	return UpdateMovieMD(movie, agent)
+}
+
+func processMovieFilePayload(
+	movieFile *db.MovieFile,
+	agent *agents.TmdbAgent,
+	subscriber LibrarySubscriber) error {
+
+	_, err := GetOrCreateMovieForMovieFile(movieFile, agent, subscriber)
+	return err
 }

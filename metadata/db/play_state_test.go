@@ -8,7 +8,7 @@ import (
 func createData() {
 	series := db.Series{Name: "All Episodes completely watched"}
 	episode := &db.Episode{SeasonNum: 1, EpisodeNum: 1, Name: "AECW - Episode 1"}
-	db.UpdateEpisode(episode)
+	db.SaveEpisode(episode)
 	db.SavePlayState(&db.PlayState{
 		MediaUUID: episode.UUID,
 		UserID:    1,
@@ -16,7 +16,7 @@ func createData() {
 	})
 
 	episode2 := &db.Episode{SeasonNum: 1, EpisodeNum: 2, Name: "AECW - Episode 2"}
-	db.UpdateEpisode(episode2)
+	db.SaveEpisode(episode2)
 	db.SavePlayState(&db.PlayState{
 		MediaUUID: episode2.UUID,
 		UserID:    1,
@@ -50,7 +50,7 @@ func TestAllPlayState(t *testing.T) {
 func createSeries1() {
 	series2 := db.Series{Name: "Not finished watching an episode yet"}
 	ep := &db.Episode{SeasonNum: 3, EpisodeNum: 3, Name: "NFY - Episode 3"}
-	db.UpdateEpisode(ep)
+	db.SaveEpisode(ep)
 	db.SavePlayState(&db.PlayState{
 		MediaUUID: ep.UUID,
 		UserID:    1,
@@ -65,14 +65,14 @@ func createSeries1() {
 func createSeries2() {
 	series := db.Series{Name: "Next Season"}
 	episode := &db.Episode{SeasonNum: 1, EpisodeNum: 1, Name: "NS - Episode 1"}
-	db.UpdateEpisode(episode)
+	db.SaveEpisode(episode)
 	db.SavePlayState(&db.PlayState{
 		MediaUUID: episode.UUID,
 		UserID:    1,
 		Finished:  true, Playtime: 13,
 	})
 	episode2 := &db.Episode{SeasonNum: 1, EpisodeNum: 2, Name: "NS - Episode 2"}
-	db.UpdateEpisode(episode2)
+	db.SaveEpisode(episode2)
 	db.SavePlayState(&db.PlayState{
 		MediaUUID: episode2.UUID,
 		UserID:    1,

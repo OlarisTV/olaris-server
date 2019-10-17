@@ -15,6 +15,8 @@ ENV GOPATH="/go"
 
 RUN go get github.com/jteeuwen/go-bindata/...
 RUN go get github.com/elazarl/go-bindata-assetfs/...
+RUN go get github.com/maxbrunsfeld/counterfeiter
+
 RUN go get github.com/cortesi/modd/cmd/modd
 
 ADD . /go/src/gitlab.com/olaris/olaris-server

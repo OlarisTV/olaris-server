@@ -2,11 +2,9 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"sync"
 )
-
-var mutex = &sync.Mutex{}
 
 // BaseItem holds information that is shared between various mediatypes.
 type BaseItem struct {
@@ -15,11 +13,6 @@ type BaseItem struct {
 	Overview     string
 	BackdropPath string
 	PosterPath   string
-}
-
-// IsIdentified returns true if the given movie has a tmdbid
-func (b *BaseItem) IsIdentified() bool {
-	return b.TmdbID != 0
 }
 
 // Series holds metadata information about series.
@@ -177,13 +170,6 @@ func (file EpisodeFile) DeleteSelfAndMD() {
 
 }
 
-// CollectEpisodeData collects all relevant information for the given episode such as streams and playstates.
-func CollectEpisodeData(episodes []Episode) {
-	for i := range episodes {
-		db.Model(episodes[i]).Preload("Streams").Association("EpisodeFiles").Find(&episodes[i].EpisodeFiles)
-	}
-}
-
 type countResult struct {
 	Count uint
 }
@@ -213,39 +199,44 @@ func FindSeriesForMDRefresh() (series []Series) {
 
 // FindAllSeries retrieves all identified series from the db.
 func FindAllSeries(qd *QueryDetails) (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("tmdb_id != 0").Offset(qd.Offset).Limit(qd.Limit).Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Offset(qd.Offset).Limit(qd.Limit).
+		Find(&series)
 	return series
-}
-
-// FindAllUnidentifiedSeries finds all episodes without any metadata information
-func FindAllUnidentifiedSeries() (series []Series) {
-	db.Where("tmdb_id = 0").Find(&series)
-	return series
-}
-
-// FindAllUnidentifiedEpisodes finds all episodes without any metadata information
-func FindAllUnidentifiedEpisodes() (episodes []Episode) {
-	db.Where("tmdb_id = 0").Find(&episodes)
-	return episodes
 }
 
 // SearchSeriesByTitle searches for series based on their name.
 func SearchSeriesByTitle(name string) (series []Series) {
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("name LIKE ?", "%"+name+"%").Find(&series)
+	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Where("name LIKE ?", "%"+name+"%").
+		Find(&series)
 	return series
 }
 
 // FindSeriesByUUID retrives a serie based on it's UUID.
-func FindSeriesByUUID(uuid string) (series []Series) {
-	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
-	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").Where("uuid = ?", uuid).Find(&series)
-	return series
+func FindSeriesByUUID(uuid string) (*Series, error) {
+	return findSeries("uuid = ?", uuid)
 }
 
-// FindAllUnidentifiedSeasons finds all seasons without any metadata.
-func FindAllUnidentifiedSeasons() (seasons []Season) {
-	db.Where("tmdb_id = ?", 0).Find(&seasons)
-	return seasons
+// FindSeriesByTmdbID retrives a serie based on its TMDB ID
+func FindSeriesByTmdbID(tmdbID int) (*Series, error) {
+	return findSeries("tmdb_id = ?", tmdbID)
+}
+
+// FindSeries finds a series by it's ID
+func FindSeries(seriesID uint) (*Series, error) {
+	return findSeries("id = ?", seriesID)
+}
+
+func findSeries(where ...interface{}) (*Series, error) {
+	var series Series
+
+	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
+	if err := db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
+		Take(&series, where...).Error; err != nil {
+		return nil, err
+	}
+	return &series, nil
 }
 
 // FindSeasonsForSeries retrieves all season for the given series based on it's UUID.
@@ -254,11 +245,12 @@ func FindSeasonsForSeries(seriesID uint) (seasons []Season) {
 	return seasons
 }
 
-// FindEpisodesForSeason finds all episodes for the given season UUID.
+// FindEpisodesForSeason finds all episodes for the given season ID.
 func FindEpisodesForSeason(seasonID uint) (episodes []Episode) {
-	db.Preload("EpisodeFiles.Streams").Where("season_id = ?", seasonID).Find(&episodes)
-	// TODO: Don't do this here and move it to the resolver
-	CollectEpisodeData(episodes)
+	db.
+		Preload("EpisodeFiles.Streams").
+		Where("season_id = ?", seasonID).
+		Find(&episodes)
 
 	return episodes
 }
@@ -279,12 +271,27 @@ func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 // FindEpisodesInLibrary returns all episodes in the given library.
 func FindEpisodesInLibrary(libraryID uint) (episodes []Episode) {
 	var files []EpisodeFile
-	db.Preload("Episode", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	db.Preload("Episode").Where("library_id = ?", libraryID).Find(&files)
 	for _, e := range files {
 		episodes = append(episodes, *e.Episode)
 	}
 
 	return episodes
+}
+
+// FindEpisodeFileByUUID finds an EpisodeFile by UUID
+func FindEpisodeFileByUUID(uuid string) (*EpisodeFile, error) {
+	return findEpisodeFile("uuid = ?", uuid)
+}
+
+func findEpisodeFile(where ...interface{}) (*EpisodeFile, error) {
+	var episodeFile EpisodeFile
+	if err := db.
+		Preload("Streams").
+		Take(&episodeFile, where...).Error; err != nil {
+		return nil, err
+	}
+	return &episodeFile, nil
 }
 
 // FindAllSeasons returns all seasons
@@ -294,26 +301,58 @@ func FindAllSeasons() (seasons []Season) {
 }
 
 // FindSeasonByUUID finds the season based on it's UUID.
-func FindSeasonByUUID(uuid string) (season Season) {
-	db.Where("uuid = ?", uuid).Find(&season)
-	return season
+func FindSeasonByUUID(uuid string) (*Season, error) {
+	return findSeason("uuid = ?", uuid)
 }
 
 // FindSeason finds a season by it's ID
-func FindSeason(seasonID uint) (season Season) {
-	db.Where("id = ?", seasonID).Find(&season)
-	return season
+func FindSeason(seasonID uint) (*Season, error) {
+	return findSeason("id = ?", seasonID)
+}
+
+// FindSeasonBySeasonNumber gets a season by Series/season number
+func FindSeasonBySeasonNumber(series *Series, seasonNum int) (*Season, error) {
+	return findSeason("series_id = ? AND season_number = ?", series.ID, seasonNum)
+}
+
+func findSeason(where ...interface{}) (*Season, error) {
+	var season Season
+
+	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
+	if err := db.
+		Preload("Episodes.EpisodeFiles.Streams").
+		Preload("Series").
+		Take(&season, where...).Error; err != nil {
+		return nil, err
+	}
+	return &season, nil
 }
 
 // FindEpisodeByUUID finds a episode based on it's UUID.
-func FindEpisodeByUUID(uuid string) (episode Episode) {
-	var episodes []Episode
-	db.Where("uuid = ?", uuid).First(&episodes)
-	if len(episodes) == 1 {
-		episode = episodes[0]
-		db.Model(&episode).Preload("Streams").Association("EpisodeFiles").Find(&episode.EpisodeFiles)
+func FindEpisodeByUUID(uuid string) (*Episode, error) {
+	return findEpisode("uuid = ?", uuid)
+}
+
+// FindEpisodeByID finds a episode based on its ID
+func FindEpisodeByID(id uint) (*Episode, error) {
+	return findEpisode("id = ?", id)
+}
+
+// FindEpisodeByNumber finds an Episode by Season/episode number
+func FindEpisodeByNumber(season *Season, episodeNum int) (*Episode, error) {
+	return findEpisode("season_id = ? AND episode_num = ?", season.ID, episodeNum)
+}
+
+func findEpisode(where ...interface{}) (*Episode, error) {
+	var episode Episode
+
+	// We return a singular item in an array so we can use the same GraphQL query we probably want to split this.
+	if err := db.
+		Preload("EpisodeFiles.Streams").
+		Take(&episode, where...).Error; err != nil {
+		return nil, err
 	}
-	return episode
+	return &episode, nil
 }
 
 // FindAllEpisodeFiles retrieves all episodefiles from the db.
@@ -342,59 +381,49 @@ func EpisodeFileExists(filePath string) bool {
 	return true
 }
 
-// FindSeries finds a series by it's ID
-func FindSeries(seriesID uint) (series Series) {
-	db.Where("id = ?", seriesID).Find(&series)
-	return series
-}
-
 // CreateSeries persists a series in the database.
 func CreateSeries(series *Series) {
 	db.Create(series)
 }
 
-// UpdateSeries updates a series in the database.
-func UpdateSeries(series *Series) {
-	db.Save(series)
+// SaveSeries updates a series in the database.
+func SaveSeries(series *Series) error {
+	return db.Save(series).Error
 }
 
-// UpdateSeason updates a season in the database.
-func UpdateSeason(season *Season) {
-	db.Save(season)
+// SaveSeason updates a season in the database.
+func SaveSeason(season *Season) error {
+	return db.Save(season).Error
 }
 
-// UpdateEpisode updates an episode in the database.
-func UpdateEpisode(episode *Episode) {
-	db.Save(episode)
+// SaveEpisode updates an episode in the database.
+func SaveEpisode(episode *Episode) error {
+	return db.Save(episode).Error
 }
 
-// UpdateEpisodeFile updates an episodeFile in the database.
-func UpdateEpisodeFile(file *EpisodeFile) {
-	db.Save(file)
+// DeleteEpisode deletes an Episode
+func DeleteEpisode(episodeID uint) error {
+	return db.Unscoped().Delete(&Episode{}, "id = ?", episodeID).Error
 }
 
-// FirstOrCreateSeries returns the first instance or writes a series to the db.
-func FirstOrCreateSeries(series *Series, seriesDef Series) {
-	mutex.Lock()
-	db.FirstOrCreate(series, seriesDef)
-	mutex.Unlock()
+// DeleteSeason deletes a Season
+func DeleteSeason(seasonID uint) error {
+	return db.Unscoped().Delete(&Season{}, "id = ?", seasonID).Error
 }
 
-// FirstOrCreateEpisode returns the first instance or writes a episodes to the db.
-func FirstOrCreateEpisode(episode *Episode) {
-	db.FirstOrCreate(episode, *episode)
+// DeleteSeries deletes a Series
+func DeleteSeries(seriesID uint) error {
+	return db.Unscoped().Delete(&Series{}, "id = ?", seriesID).Error
+}
+
+// SaveEpisodeFile updates an episodeFile in the database.
+func SaveEpisodeFile(episodeFile *EpisodeFile) error {
+	return db.Save(episodeFile).Error
 }
 
 // CreateEpisode writes an episode to the db.
 func CreateEpisode(episode *Episode) {
 	db.Create(episode)
-}
-
-// FirstOrCreateSeason returns the first instance or writes a episodes to the db.
-func FirstOrCreateSeason(season *Season, seasonDef Season) {
-	tx := db.Begin()
-	tx.FirstOrCreate(season, seasonDef)
-	tx.Commit()
 }
 
 // ItemsWithMissingMetadata fetches series with missing metadata.
@@ -427,4 +456,35 @@ func ItemsWithMissingMetadata() []string {
 	}
 
 	return uuids
+}
+
+// FindAllUnidentifiedEpisodeFiles find all EpisodeFiles without an associated Episode
+func FindAllUnidentifiedEpisodeFiles(qd *QueryDetails) ([]EpisodeFile, error) {
+	var episodeFiles []EpisodeFile
+
+	query := db
+	if qd != nil {
+		query = query.Offset(qd.Offset).Limit(qd.Limit)
+	}
+
+	query = query.Find(&episodeFiles, "episode_id = 0")
+
+	if err := query.Error; err != nil {
+		return []EpisodeFile{},
+			errors.Wrap(err, "Failed to find unidentified episode files")
+	}
+	return episodeFiles, nil
+}
+
+// FindAllUnidentifiedEpisodeFilesInLibrary find all EpisodeFiles without an associated Episode in a library
+func FindAllUnidentifiedEpisodeFilesInLibrary(libraryID uint) ([]*EpisodeFile, error) {
+	var episodeFiles []*EpisodeFile
+
+	query := db.Find(&episodeFiles, "episode_id = 0 AND library_id = ?", libraryID)
+
+	if err := query.Error; err != nil {
+		return nil,
+			errors.Wrap(err, "Failed to find unidentified episode files")
+	}
+	return episodeFiles, nil
 }

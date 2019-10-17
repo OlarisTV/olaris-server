@@ -1,45 +1,20 @@
 package agents
 
+//go:generate counterfeiter . MetadataRetrievalAgent
+
 import (
+	"github.com/ryanbradynd05/go-tmdb"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// MovieAgent is an interface that determines it can retrieve movie metadata.
-type MovieAgent interface {
-	UpdateMovieMD(*db.Movie) error
-}
-
-// SeasonAgent is an interface that determines it can retrieve season metadata.
-type SeasonAgent interface {
-	UpdateSeasonMD(*db.Season, *db.Series) error
-}
-
-// EpisodeAgent is an interface that determines it can retrieve episode metadata.
-type EpisodeAgent interface {
-	UpdateEpisodeMD(*db.Episode, *db.Season, *db.Series) error
-}
-
-// SeriesAgent is an interface that determines it can retrieve episode metadata.
-type SeriesAgent interface {
-	UpdateSeriesMD(*db.Series) error
-}
-
-// UpdateMovieMD is a generic method that invokes an agent and updates the metadata.
-func UpdateMovieMD(mi MovieAgent, movie *db.Movie) error {
-	return mi.UpdateMovieMD(movie)
-}
-
-// UpdateEpisodeMD is a generic method that invokes an agent and updates the metadata
-func UpdateEpisodeMD(a EpisodeAgent, episode *db.Episode, season *db.Season, series *db.Series) error {
-	return a.UpdateEpisodeMD(episode, season, series)
-}
-
-// UpdateSeasonMD is a generic method that invokes an agent and updates the metadata
-func UpdateSeasonMD(a SeasonAgent, season *db.Season, series *db.Series) error {
-	return a.UpdateSeasonMD(season, series)
-}
-
-// UpdateSeriesMD is a generic method that invokes an agent and updates the metadata
-func UpdateSeriesMD(a SeriesAgent, series *db.Series) error {
-	return a.UpdateSeriesMD(series)
+// MetadataRetrievalAgent can retrieve metadata for media items.
+type MetadataRetrievalAgent interface {
+	UpdateMovieMD(movie *db.Movie, tmdbID int) error
+	UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNum int) error
+	UpdateEpisodeMD(episode *db.Episode, seriesTmdbID int, seasonNum int, episodeNum int) error
+	UpdateSeriesMD(series *db.Series, tmdbID int) error
+	// TODO(Leon Handreke): This totally breaks the abstraction, but we need the interface
+	//  to be able to fake it.
+	TmdbSearchMovie(name string, options map[string]string) (*tmdb.MovieSearchResults, error)
+	TmdbSearchTv(name string, options map[string]string) (*tmdb.TvSearchResults, error)
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 )
@@ -127,24 +128,36 @@ type QueryDetails struct {
 
 // CollectMovieInfo ensures that all relevant information for a movie is loaded
 // this can include stream information (audio/video/subtitle tracks) and personalized playstate information.
-func CollectMovieInfo(movies []Movie) {
-	// Can't use 'movie' in range here as it won't modify the original object
-	for i := range movies {
-		db.Model(movies[i]).Preload("Streams").Association("MovieFiles").Find(&movies[i].MovieFiles)
-	}
+func CollectMovieInfo(movie *Movie) {
+	db.Model(movie).
+		Preload("Streams").
+		Association("MovieFiles").
+		Find(&movie.MovieFiles)
 }
 
 // FindAllUnidentifiedMoviesInLibrary retrieves all movies without an tmdb_id in the database.
-func FindAllUnidentifiedMoviesInLibrary(libraryID uint) (movies []Movie) {
-	var files []MovieFile
-	db.Preload("Movie", "tmdb_id == 0").Where("library_id = ?", libraryID).Find(&files)
-	for _, f := range files {
-		if f.Movie.Title != "" {
-			movies = append(movies, f.Movie)
-		}
+func FindAllUnidentifiedMovieFilesInLibrary(libraryID uint) ([]*MovieFile, error) {
+	var files []*MovieFile
+	if err := db.
+		Find(&files, "movie_id = 0 AND library_id = ?", libraryID).
+		Error; err != nil {
+		return nil, err
 	}
+	return files, nil
+}
 
-	return movies
+// FindAllUnidentifiedMovieFiles find all MovieFiles without an associated Movie
+func FindAllUnidentifiedMovieFiles(qd QueryDetails) ([]MovieFile, error) {
+	var movieFiles []MovieFile
+
+	query := db.
+		Find(&movieFiles, "movie_id = 0").
+		Offset(qd.Offset).Limit(qd.Limit)
+	if err := query.Error; err != nil {
+		return []MovieFile{},
+			errors.Wrap(err, "Failed to find unidentified movie files")
+	}
+	return movieFiles, nil
 }
 
 // FindMoviesForMDRefresh finds all movies, including unidentified ones.
@@ -155,24 +168,44 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
-	db.Where("tmdb_id != 0").Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
-	CollectMovieInfo(movies)
+	db.Limit(qd.Limit).Offset(qd.Offset).Find(&movies)
+	for _, movie := range movies {
+		CollectMovieInfo(&movie)
+	}
 
 	return movies
 }
 
 // FindMovieByUUID finds the movie specified by the given uuid.
-func FindMovieByUUID(uuid string) (movies []Movie) {
-	db.Where("tmdb_id != 0 AND uuid = ?", uuid).Find(&movies)
-	CollectMovieInfo(movies)
+func FindMovieByUUID(uuid string) (*Movie, error) {
+	return findMovie("uuid = ?", uuid)
+}
 
-	return movies
+// FindMovieByTmdbID finds the movie specified by the given TMDB ID
+func FindMovieByTmdbID(tmdbID int) (*Movie, error) {
+	return findMovie("tmdb_id = ?", tmdbID)
+}
+
+// FindMovieByID finds the movie specified by the given ID.
+func FindMovieByID(id uint) (*Movie, error) {
+	return findMovie("id = ?", id)
+}
+
+func findMovie(where ...interface{}) (*Movie, error) {
+	var movie Movie
+	if err := db.Take(&movie, where...).Error; err != nil {
+		return nil, err
+	}
+	CollectMovieInfo(&movie)
+	return &movie, nil
 }
 
 // SearchMovieByTitle search movies by title.
 func SearchMovieByTitle(name string) (movies []Movie) {
 	db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
-	CollectMovieInfo(movies)
+	for _, movie := range movies {
+		CollectMovieInfo(&movie)
+	}
 	return movies
 }
 
@@ -188,7 +221,7 @@ func DeleteMoviesFromLibrary(libraryID uint) {
 // FindMoviesInLibrary finds movies that have files in a certain library
 func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
 	var files []MovieFile
-	db.Preload("Movie", "tmdb_id != 0").Where("library_id = ?", libraryID).Find(&files)
+	db.Preload("Movie").Where("library_id = ?", libraryID).Find(&files)
 	for _, f := range files {
 		movies = append(movies, f.Movie)
 	}
@@ -213,20 +246,21 @@ func CreateMovie(movie *Movie) {
 	db.Create(movie)
 }
 
-// UpdateMovie updates a movie in the database.
-func UpdateMovie(movie *Movie) {
+// SaveMovie updates a movie in the database.
+func SaveMovie(movie *Movie) {
 	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
 	db.Save(movie)
 }
 
-// FirstOrCreateMovie returns the first instance or writes a movie to the db.
-func FirstOrCreateMovie(movie *Movie, movieDef Movie) {
-	db.FirstOrCreate(movie, movieDef)
+// DeleteMovie deletes the movie from the database
+func DeleteMovie(movie *Movie) {
+	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
+	db.Delete(movie)
 }
 
-// UpdateMovieFile updates a movieFile in the database.
-func UpdateMovieFile(movie *Movie) {
-	db.Save(movie)
+// SaveMovieFile saves a MovieFile
+func SaveMovieFile(movieFile *MovieFile) {
+	db.Save(movieFile)
 }
 
 // FirstMovie gets the first movie out of the database (used in tests).
@@ -246,47 +280,18 @@ func MovieFileExists(filePath string) bool {
 	return true
 }
 
-type mergeResult struct {
-	TmdbID  uint
-	ID      uint
-	Counter uint
+func FindMovieFileByUUID(uuid string) (*MovieFile, error) {
+	var movieFile MovieFile
+	if err := db.First(&movieFile, "uuid = ?", uuid).Error; err != nil {
+		return nil, err
+	}
+	return &movieFile, nil
 }
 
-type winner struct {
-	ID uint
-}
-
-// MergeDuplicateMovies should merge duplicate movies into a singular movie with movie files associated.
-func MergeDuplicateMovies() int {
-	log.Debugln("Checking for duplicate movies that can be merged.")
-
-	var merging []mergeResult
-	rows, err := db.Raw("SELECT tmdb_id,id, count(*) as counter FROM movies WHERE tmdb_id != 0 GROUP BY tmdb_id HAVING counter > 1").Rows()
-	if err != nil {
-		fmt.Println(err)
+func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
+	var movie Movie
+	if err := db.Model(movieFile).Related(&movie).Error; err != nil {
+		return nil, err
 	}
-	for rows.Next() {
-		var res mergeResult
-		db.ScanRows(rows, &res)
-		merging = append(merging, res)
-	}
-	rows.Close()
-
-	for _, res := range merging {
-		log.WithFields(log.Fields{"tmdb_id": res.TmdbID}).Debugln("Merging movies based on tmdb_id.")
-
-		var win winner
-		var survivorID uint
-		var loserIDs []uint
-
-		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? LIMIT 1", res.TmdbID).Scan(&win)
-		survivorID = win.ID
-		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID}).Debugln("Found MovieID for movie we will keep")
-		db.Raw("SELECT id FROM movies WHERE tmdb_id = ? AND id != ?", res.TmdbID, survivorID).Pluck("id", &loserIDs)
-		log.WithFields(log.Fields{"tmdb_id": res.TmdbID, "movieID": survivorID, "losingMovieIDs": loserIDs}).Debugln("Found IDs we will delete")
-
-		db.Exec("UPDATE movie_files SET movie_id=? WHERE movie_id IN (?)", survivorID, loserIDs)
-		db.Exec("DELETE FROM movies WHERE id IN (?)", loserIDs)
-	}
-	return 0
+	return &movie, nil
 }

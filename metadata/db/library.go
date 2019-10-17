@@ -48,8 +48,8 @@ func (lib *Library) IsRclone() bool {
 	return lib.Backend == BackendRclone
 }
 
-// UpdateLibrary persists a library object in the database.
-func UpdateLibrary(lib *Library) {
+// SaveLibrary persists a library object in the database.
+func SaveLibrary(lib *Library) {
 	db.Save(lib)
 }
 

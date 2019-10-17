@@ -1,36 +1,29 @@
 package agents_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"testing"
 )
 
 func TestSeasonLookup(t *testing.T) {
-	season := db.Season{SeasonNumber: 1}
-	series := &db.Series{BaseItem: db.BaseItem{TmdbID: 2426}, Seasons: []*db.Season{&season}}
+	const testSeasonTmdbID = 2426
+	var season db.Season
 	a := agents.NewTmdbAgent()
-	a.UpdateSeasonMD(&season, series)
 
-	if season.TmdbID != 7625 {
-		t.Errorf("Expected tmdb-id to be set to '' but it was '%v' instead", season.TmdbID)
-	}
+	a.UpdateSeasonMD(&season, testSeasonTmdbID, 1)
+
+	assert.EqualValues(t, 7625, season.TmdbID)
 }
 
 func TestTmdbMovieLookup(t *testing.T) {
-	movie := db.Movie{Title: "Mad Max Road Fury", OriginalTitle: "", Year: 2015}
+	movie := db.Movie{}
 	a := agents.NewTmdbAgent()
-	err := a.UpdateMovieMD(&movie)
 
-	if err != nil {
-		t.Errorf("Expected empty error but it was %s instead", err)
-	}
+	err := a.UpdateMovieMD(&movie, 76341)
+	assert.NoError(t, err)
 
-	if movie.OriginalTitle != "Mad Max: Fury Road" {
-		t.Errorf("Expected original title to be set to 'Max Max: Fury Road' but it was '%s' instead", movie.OriginalTitle)
-	}
-
-	if movie.TmdbID != 76341 {
-		t.Errorf("Expected tmdb-id to be set to '' but it was '%v' instead", movie.TmdbID)
-	}
+	assert.Equal(t, "Mad Max: Fury Road", movie.OriginalTitle)
+	assert.EqualValues(t, 76341, movie.TmdbID)
 }

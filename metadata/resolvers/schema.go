@@ -37,6 +37,12 @@ var SchemaTxt = `
 		invites(): [Invite]
 		# List of all remotes found in a rclone config file if one exists.
 		remotes(): [String]!
+
+		unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
+		unidentifiedEpisodeFiles(offset: Int, limit: Int): [EpisodeFile]!
+
+		tmdbSearchMovies(query: String!): [TmdbMovieSearchItem]!
+		tmdbSearchSeries(query: String!): [TmdbSeriesSearchItem]!
 	}
 
 	type Mutation {
@@ -70,8 +76,12 @@ var SchemaTxt = `
 		# Rescan all library paths for new files that are not indexed yet.
 		rescanLibraries(): Boolean!
 
-	}
+		# Tag an unidentified MovieFile
+		updateMovieFileMetadata(input: UpdateMovieFileMetadataInput!): UpdateMovieFileMetadataPayload!
 
+		# Retag one or multiple EpisodeFiles
+		updateEpisodeFileMetadata(input: UpdateEpisodeFileMetadataInput!): UpdateEpisodeFileMetadataPayload!
+	}
 
 	type LibraryResponse {
 		library: Library
@@ -277,6 +287,37 @@ var SchemaTxt = `
 		library: Library!
 	}
 
+	input UpdateMovieFileMetadataInput {
+		// UUID of the movie file to update
+		movieFileUUID: String!
+
+		// TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+		// item appropriately.
+		tmdbID: Int!
+	}
+
+	type UpdateMovieFileMetadataPayload {
+		error: Error
+
+		mediaItem: MediaItem
+	}
+
+	input UpdateEpisodeFileMetadataInput {
+		// UUID of the episode file to update
+		episodeFileUUID: String
+		// UUID of the series for which all EpisodeFiles should be updated.
+		// episodeFileUUID and seriesUUID are mutually exclusive.
+		seriesUUID: String
+
+		// TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+		// item appropriately.
+		tmdbID: Int!
+	}
+
+	type UpdateEpisodeFileMetadataPayload {
+		error: Error
+	}
+
 	type MovieAddedEvent {
 		movie: Movie!
 	}
@@ -297,6 +338,34 @@ var SchemaTxt = `
 	type Invite {
 		code: String
 		user: User
+	}
+
+	type TmdbMovieSearchItem {
+		# Official title according to the MovieDB
+		title: String!
+		# Release year
+		releaseYear: Int!
+		# Short description of the movie
+		overview: String!
+		# TMDB ID
+		tmdbID: Int!
+		# ID to retrieve backdrop
+		backdropPath: String!
+		# ID to retrieve poster
+		posterPath: String!
+	}
+
+	type TmdbSeriesSearchItem {
+		# Official title according to the MovieDB
+		name: String!
+		# Release year
+		firstAirYear: Int!
+		# TMDB ID
+		tmdbID: Int!
+		# ID to retrieve backdrop
+		backdropPath: String!
+		# ID to retrieve poster
+		posterPath: String!
 	}
 
 `
