@@ -20,7 +20,12 @@ func TestSeasonLookup(t *testing.T) {
 func TestTmdbMovieLookup(t *testing.T) {
 	movie := db.Movie{Title: "Mad Max Road Fury", OriginalTitle: "", Year: 2015}
 	a := agents.NewTmdbAgent()
-	a.UpdateMovieMD(&movie)
+	err := a.UpdateMovieMD(&movie)
+
+	if err != nil {
+		t.Errorf("Expected empty error but it was %s instead", err)
+	}
+
 	if movie.OriginalTitle != "Mad Max: Fury Road" {
 		t.Errorf("Expected original title to be set to 'Max Max: Fury Road' but it was '%s' instead", movie.OriginalTitle)
 	}
