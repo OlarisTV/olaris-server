@@ -78,7 +78,7 @@ func (file MovieFile) DeleteSelfAndMD() {
 
 	if file.IsSingleFile() {
 		// TODO: Figure out if we can use gorm associations for this
-		db.Unscoped().Delete(PlayState{}, "owner_id = ? AND owner_type = 'movies'", file.MovieID)
+		db.Unscoped().Delete(PlayState{}, "media_uuid = ?", file.UUID)
 
 		// Delete movie
 		if file.MovieID != 0 {

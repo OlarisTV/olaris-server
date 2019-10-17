@@ -148,7 +148,7 @@ func (file EpisodeFile) DeleteSelfAndMD() {
 
 	if file.IsSingleFile() {
 		// Delete all PlayState information
-		db.Unscoped().Delete(PlayState{}, "owner_id = ? AND owner_type = 'episodes'", file.EpisodeID)
+		db.Unscoped().Delete(PlayState{}, "media_uuid = ?", file.UUID)
 
 		// Delete Episode
 		db.Unscoped().Delete(&episode)
@@ -191,7 +191,7 @@ type countResult struct {
 // UnwatchedEpisodesInSeriesCount retrieves the amount of unwatched episodes in a given series.
 func UnwatchedEpisodesInSeriesCount(seriesID uint, userID uint) uint {
 	var res countResult
-	db.Raw("SELECT COUNT(*) as count FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?) AND id NOT IN(SELECT owner_id FROM play_states WHERE owner_type = 'episodes' AND finished = 1 AND user_id = ? AND owner_id IN(SELECT id FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?)))", seriesID, userID, seriesID).Scan(&res)
+	db.Raw("SELECT COUNT(*) as count FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?) AND uuid NOT IN(SELECT media_uuid FROM play_states WHERE finished = 1 AND user_id = ? AND media_uuid IN(SELECT uuid FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?)))", seriesID, userID, seriesID).Scan(&res)
 	return res.Count
 }
 
