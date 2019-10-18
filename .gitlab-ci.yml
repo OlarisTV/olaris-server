@@ -25,7 +25,7 @@ stages:
     - format
     - test
     - build
-    - build-amd64
+    - build-linux-amd64
 
 format:
     stage: format
@@ -48,7 +48,7 @@ build:
 
 
 # This stage is to have a small downloadable package for the most common platform
-build-amd64:
+build-linux-amd64:
     stage: build-linux-amd64
     script:
       - make crossbuild GOOS=linux GOARCH=amd64
