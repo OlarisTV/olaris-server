@@ -39,7 +39,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	log.WithFields(log.Fields{"uuid": UUID}).
 		Debugln("Looking to refresh metadata agent data.")
 	movie, err := db.FindMovieByUUID(UUID)
-	if err != nil {
+	if err == nil {
 		go mhelpers.WithLock(func() {
 			m.UpdateMovieMD(movie)
 		}, movie.UUID)
@@ -47,7 +47,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	}
 
 	series, err := db.FindSeriesByUUID(UUID)
-	if err != nil {
+	if err == nil {
 		go mhelpers.WithLock(func() {
 			m.UpdateSeriesMD(series)
 		}, series.UUID)
@@ -55,7 +55,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	}
 
 	season, err := db.FindSeasonByUUID(UUID)
-	if err != nil {
+	if err == nil {
 		go mhelpers.WithLock(func() {
 			m.UpdateSeasonMD(season)
 		}, season.UUID)
@@ -63,11 +63,12 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	}
 
 	episode, err := db.FindEpisodeByUUID(UUID)
-	if err != nil {
+	if err == nil {
 		go mhelpers.WithLock(func() {
 			m.UpdateEpisodeMD(episode)
 		}, episode.UUID)
 		return true
 	}
+
 	return false
 }
