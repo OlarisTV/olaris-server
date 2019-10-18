@@ -25,6 +25,7 @@ stages:
     - format
     - test
     - build
+    - build-amd64
 
 format:
     stage: format
@@ -43,6 +44,18 @@ build:
         - build/olaris-linux-amd64
         - build/olaris-linux-arm
         - build/olaris-linux-arm64
+      expire_in: 4 week
+
+
+# This stage is to have a small downloadable package for the most common platform
+build-amd64:
+    stage: build-linux-amd64
+    script:
+      - make crossbuild GOOS=linux GOARCH=amd64
+      - cp -r build $CI_PROJECT_DIR/
+    artifacts:
+      paths:
+        - build/olaris-linux-amd64
       expire_in: 4 week
 
 test:
