@@ -344,7 +344,7 @@ var SchemaTxt = `
 		# Official title according to the MovieDB
 		title: String!
 		# Release year
-		releaseYear: Int!
+		releaseYear: Int
 		# Short description of the movie
 		overview: String!
 		# TMDB ID
@@ -359,7 +359,7 @@ var SchemaTxt = `
 		# Official title according to the MovieDB
 		name: String!
 		# Release year
-		firstAirYear: Int!
+		firstAirYear: Int
 		# TMDB ID
 		tmdbID: Int!
 		# ID to retrieve backdrop

@@ -33,12 +33,17 @@ func (r *TmdbMovieSearchItemResolver) Title() string {
 	return r.r.Title
 }
 
-func (r *TmdbMovieSearchItemResolver) ReleaseYear() (int32, error) {
+func (r *TmdbMovieSearchItemResolver) ReleaseYear() (*int32, error) {
+	if r.r.ReleaseDate == "" {
+		return nil, nil
+	}
+
 	releaseDate, err := agents.ParseTmdbDate(r.r.ReleaseDate)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return int32(releaseDate.Year()), nil
+	releaseYear := int32(releaseDate.Year())
+	return &releaseYear, nil
 }
 
 func (r *TmdbMovieSearchItemResolver) Overview() string {
@@ -97,12 +102,16 @@ func (r *TmdbSeriesSearchItemResolver) Name() string {
 	return r.r.Name
 }
 
-func (r *TmdbSeriesSearchItemResolver) FirstAirYear() (int32, error) {
+func (r *TmdbSeriesSearchItemResolver) FirstAirYear() (*int32, error) {
+	if r.r.FirstAirDate == "" {
+		return nil, nil
+	}
 	firstAirDate, err := agents.ParseTmdbDate(r.r.FirstAirDate)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return int32(firstAirDate.Year()), nil
+	firstAirYear := int32(firstAirDate.Year())
+	return &firstAirYear, nil
 }
 
 func (r *TmdbSeriesSearchItemResolver) TmdbID() int32 {
