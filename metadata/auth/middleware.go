@@ -69,11 +69,21 @@ func MiddleWare(h http.Handler) http.Handler {
 			if tokenStr != "" {
 				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, jwtSecretFunc)
 				if err != nil {
-					writeError(fmt.Sprintf("Unauthorized: %s", err.Error()), w, http.StatusUnauthorized)
+					writeError(
+						fmt.Sprintf("Unauthorized: %s", err.Error()),
+						w,
+						http.StatusUnauthorized)
+					return
 				}
 
 				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					log.WithFields(log.Fields{"username": claims.Username, "userID": claims.UserID, "expiresAt": claims.StandardClaims.ExpiresAt}).Debugln("Authenicated with valid JWT")
+					log.WithFields(
+						log.Fields{
+							"username":  claims.Username,
+							"userID":    claims.UserID,
+							"expiresAt": claims.StandardClaims.ExpiresAt,
+						},
+					).Debugln("Authenicated with valid JWT")
 					ctx := r.Context()
 					ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
 					ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
@@ -83,6 +93,7 @@ func MiddleWare(h http.Handler) http.Handler {
 			}
 			log.Warnln("No authorisation header presented.")
 			writeError("Unauthorized", w, http.StatusUnauthorized)
+			return
 		}
 	})
 }
