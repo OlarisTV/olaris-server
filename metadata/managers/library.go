@@ -235,6 +235,25 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 	basename := n.Name()
 
+	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
+		Debugln("Reading stream information from file")
+
+	streams, err := ffmpeg.GetStreams(n.FileLocator())
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).
+			Debugln("Received error while opening file for stream inspection")
+	}
+
+	// TODO(Leon Handreke): Ideally, to not have to scan the file at every startup,
+	//  we would somehow create a database entry to remember that we already saw this file.
+	// Ideally, this should happen in ValidFile,
+	// but since we have to open and ffprobe the file, we do it in this async job instead.
+	if len(streams.VideoStreams) == 0 {
+		log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
+			Infoln("File doesn't have any video streams, not adding to library.")
+		return nil
+	}
+
 	switch kind := library.Kind; kind {
 	case db.MediaTypeSeries:
 		episodeFile := db.EpisodeFile{
@@ -244,7 +263,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 				Size:      n.Size(),
 				LibraryID: library.ID,
 			},
-			Streams: collectStreams(n),
+			Streams: collectStreams(streams),
 		}
 
 		db.SaveEpisodeFile(&episodeFile)
@@ -265,7 +284,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 				Size:      n.Size(),
 				LibraryID: library.ID,
 			},
-			Streams: collectStreams(n),
+			Streams: collectStreams(streams),
 		}
 		db.CreateMovieFile(&movieFile)
 
@@ -366,18 +385,12 @@ func checkPanic() {
 	}
 }
 
-func collectStreams(n filesystem.Node) []db.Stream {
-	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
-		Debugln("Reading stream information from file")
+func collectStreams(s *ffmpeg.Streams) []db.Stream {
 	var streams []db.Stream
 
-	s, err := ffmpeg.GetStreams(n.FileLocator())
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Debugln("Received error while opening file for stream inspection")
-		return streams
+	for _, s := range s.VideoStreams {
+		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
 	}
-
-	streams = append(streams, DatabaseStreamFromFfmpegStream(s.GetVideoStream()))
 
 	for _, s := range s.AudioStreams {
 		streams = append(streams, DatabaseStreamFromFfmpegStream(s))
