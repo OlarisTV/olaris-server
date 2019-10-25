@@ -63,7 +63,11 @@ func MiddleWare(h http.Handler) http.Handler {
 				q := r.URL.Query()
 				tokenStr = q.Get("JWT")
 			} else {
-				tokenStr = strings.Split(authHeader, " ")[1]
+				// Split "Bearer <token>"
+				splitHeader := strings.Split(authHeader, " ")
+				if len(splitHeader) == 2 {
+					tokenStr = splitHeader[1]
+				}
 			}
 
 			if tokenStr != "" {
