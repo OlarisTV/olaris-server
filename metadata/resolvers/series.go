@@ -33,8 +33,12 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 	var series []*db.Series
 
 	if args.UUID != nil {
-		serie, _ := db.FindSeriesByUUID(*args.UUID)
-		series = []*db.Series{serie}
+		serie, err := db.FindSeriesByUUID(*args.UUID)
+		if err != nil {
+			series = []*db.Series{}
+		} else {
+			series = []*db.Series{serie}
+		}
 	} else {
 		qd := createQd(args)
 		series, _ = db.FindAllSeries(qd)
