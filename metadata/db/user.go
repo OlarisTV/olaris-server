@@ -136,6 +136,15 @@ func FindUser(id uint) (user User) {
 	return user
 }
 
+// FindUserByUsername returns a specific user.
+func FindUserByUsername(username string) (*User, error) {
+	var user User
+	if err := db.Take(&user, "username = ?", username).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // UserCount counts the amount of users in the db.
 func UserCount() int {
 	count := 0

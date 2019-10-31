@@ -123,8 +123,8 @@ func tokenSecret() (string, error) {
 }
 
 // TODO Maran: Consider setting the jti if we want to increase security.
-func createJWT(user *db.User) (string, error) {
-	expiresAt := time.Now().Add(time.Hour * 24).Unix()
+func CreateMetadataJWT(user *db.User, validFor time.Duration) (string, error) {
+	expiresAt := time.Now().Add(validFor).Unix()
 
 	claims := UserClaims{
 		user.Username,

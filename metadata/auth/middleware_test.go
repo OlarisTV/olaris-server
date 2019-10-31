@@ -47,7 +47,7 @@ func TestMiddleWare(t *testing.T) {
 	app.NewTestingMDContext(nil)
 	user, _ := db.CreateUser("test", "testtest", false)
 
-	tokenStr, _ := createJWT(&user)
+	tokenStr, _ := CreateMetadataJWT(&user, DefaultLoginTokenValidity)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tokenStr))
 

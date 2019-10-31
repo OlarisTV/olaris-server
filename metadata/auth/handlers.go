@@ -7,7 +7,10 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
+
+const DefaultLoginTokenValidity = 24 * time.Hour
 
 type userRequest struct {
 	Username string `json:"username"`
@@ -61,7 +64,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 	u := db.User{Username: ur.Username}
 
 	if u.ValidPassword(ur.Password) == true {
-		token, err := createJWT(&u)
+		token, err := CreateMetadataJWT(&u, DefaultLoginTokenValidity)
 		if err != nil {
 			writeError(err.Error(), w, http.StatusUnauthorized)
 		} else {
