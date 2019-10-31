@@ -64,7 +64,7 @@ func (r *Resolver) DeleteUser(ctx context.Context, args struct{ ID int32 }) *Use
 		return &UserResponseResolver{&UserResponse{Error: CreateErrResolver(err)}}
 	}
 
-	user, err := db.DeleteUser(int(args.ID))
+	user, err := db.DeleteUser(uint(args.ID))
 
 	if err != nil {
 		return &UserResponseResolver{&UserResponse{Error: CreateErrResolver(err)}}

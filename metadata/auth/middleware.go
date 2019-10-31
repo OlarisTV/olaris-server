@@ -39,6 +39,7 @@ func UserID(ctx context.Context) (uint, bool) {
 	return userID, ok
 }
 
+// ContextWithUserID returns a context with the given user ID
 func ContextWithUserID(ctx context.Context, userID uint) context.Context {
 	return context.WithValue(ctx, contextKeyUserID, userID)
 }
@@ -77,6 +78,16 @@ func MiddleWare(h http.Handler) http.Handler {
 			}
 
 			if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+				// Check if the user still exists
+				_, err := db.FindUser(claims.UserID)
+				if err != nil {
+					writeError(
+						fmt.Sprintf("Unauthorized: %s", err.Error()),
+						w,
+						http.StatusUnauthorized)
+					return
+				}
+
 				log.WithFields(
 					log.Fields{
 						"username":  claims.Username,
@@ -117,6 +128,7 @@ func tokenSecret() (string, error) {
 	return secret, err
 }
 
+// CreateMetadataJWT returns a string login JWT.
 // TODO Maran: Consider setting the jti if we want to increase security.
 func CreateMetadataJWT(user *db.User, validFor time.Duration) (string, error) {
 	expiresAt := time.Now().Add(validFor).Unix()

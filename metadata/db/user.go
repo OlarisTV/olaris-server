@@ -131,9 +131,12 @@ func AllUsers() (users []User) {
 }
 
 // FindUser returns a specific user.
-func FindUser(id uint) (user User) {
-	db.Find(&user, id)
-	return user
+func FindUser(id uint) (*User, error) {
+	var user User
+	if err := db.Take(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // FindUserByUsername returns a specific user.
@@ -152,8 +155,8 @@ func UserCount() int {
 	return count
 }
 
-// DeleteUser deltes the given user.
-func DeleteUser(id int) (User, error) {
+// DeleteUser deletes the given user.
+func DeleteUser(id uint) (User, error) {
 	user := User{}
 	db.Find(&user, id)
 

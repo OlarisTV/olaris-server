@@ -16,13 +16,16 @@ func (ir *InviteResolver) Code() *string {
 }
 
 // User returns the user who redeemed this invite.
-func (ir *InviteResolver) User() (user *UserResolver) {
+func (ir *InviteResolver) User() (*UserResolver, error) {
 	if ir.r.UserID != 0 {
-		user := db.FindUser(ir.r.UserID)
-		return &UserResolver{user}
+		user, err := db.FindUser(ir.r.UserID)
+		if err != nil {
+			return nil, err
+		}
+		return &UserResolver{*user}, nil
 	}
-
-	return nil
+	// Invite has not been used yet
+	return nil, nil
 }
 
 // Invites returns all current invites.
