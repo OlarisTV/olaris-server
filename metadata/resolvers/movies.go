@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
@@ -134,8 +135,12 @@ func (r *MovieFileResolver) LibraryID() int32 {
 }
 
 // FilePath returns filesystem path
-func (r *MovieFileResolver) FilePath() string {
-	return r.r.FilePath
+func (r *MovieFileResolver) FilePath() (string, error) {
+	fileLocator, err := filesystem.ParseFileLocator(r.r.FilePath)
+	if err != nil {
+		return "", err
+	}
+	return fileLocator.Path, nil
 }
 
 // FileName returns movie filename

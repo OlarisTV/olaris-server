@@ -273,7 +273,6 @@ func (r *EpisodeFileResolver) FilePath() (string, error) {
 		return "", err
 	}
 	return fileLocator.Path, nil
-
 }
 
 // FileName returns filename.
