@@ -42,6 +42,23 @@ func TestMiddleWare_InvalidToken(t *testing.T) {
 	assert.False(t, fakeHandler.Called())
 }
 
+func TestMiddleWare_NoUsers(t *testing.T) {
+	// TOOD(Leon Handreke): We need this to fill the database singleton
+	app.NewTestingMDContext(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", "bla"))
+
+	fakeHandler := TestHandler{}
+	handler := MiddleWare(fakeHandler.HandlerFunc())
+
+	rw := httptest.NewRecorder()
+	handler.ServeHTTP(rw, req)
+
+	assert.EqualValues(t, http.StatusUnauthorized, rw.Result().StatusCode)
+	assert.False(t, fakeHandler.Called())
+}
+
 func TestMiddleWare(t *testing.T) {
 	// TOOD(Leon Handreke): We need this to fill the database singleton
 	app.NewTestingMDContext(nil)

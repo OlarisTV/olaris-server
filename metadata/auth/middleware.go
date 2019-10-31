@@ -52,53 +52,48 @@ func UserAdmin(ctx context.Context) (bool, bool) {
 // MiddleWare checks for user authentication and prevents unauthorised access to the API.
 func MiddleWare(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if db.UserCount() == 0 {
-			log.Warnln("No users present, no auth required!")
-			h.ServeHTTP(w, r)
+		var authHeader, tokenStr string
+		authHeader = r.Header.Get("Authorization")
+
+		if authHeader == "" {
+			q := r.URL.Query()
+			tokenStr = q.Get("JWT")
 		} else {
-			var authHeader, tokenStr string
-			authHeader = r.Header.Get("Authorization")
-
-			if authHeader == "" {
-				q := r.URL.Query()
-				tokenStr = q.Get("JWT")
-			} else {
-				// Split "Bearer <token>"
-				splitHeader := strings.Split(authHeader, " ")
-				if len(splitHeader) == 2 {
-					tokenStr = splitHeader[1]
-				}
+			// Split "Bearer <token>"
+			splitHeader := strings.Split(authHeader, " ")
+			if len(splitHeader) == 2 {
+				tokenStr = splitHeader[1]
 			}
-
-			if tokenStr != "" {
-				token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, jwtSecretFunc)
-				if err != nil {
-					writeError(
-						fmt.Sprintf("Unauthorized: %s", err.Error()),
-						w,
-						http.StatusUnauthorized)
-					return
-				}
-
-				if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
-					log.WithFields(
-						log.Fields{
-							"username":  claims.Username,
-							"userID":    claims.UserID,
-							"expiresAt": claims.StandardClaims.ExpiresAt,
-						},
-					).Debugln("Authenicated with valid JWT")
-					ctx := r.Context()
-					ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
-					ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
-					h.ServeHTTP(w, r.WithContext(ctx))
-					return
-				}
-			}
-			log.Warnln("No authorisation header presented.")
-			writeError("Unauthorized", w, http.StatusUnauthorized)
-			return
 		}
+
+		if tokenStr != "" {
+			token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, jwtSecretFunc)
+			if err != nil {
+				writeError(
+					fmt.Sprintf("Unauthorized: %s", err.Error()),
+					w,
+					http.StatusUnauthorized)
+				return
+			}
+
+			if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+				log.WithFields(
+					log.Fields{
+						"username":  claims.Username,
+						"userID":    claims.UserID,
+						"expiresAt": claims.StandardClaims.ExpiresAt,
+					},
+				).Debugln("Authenicated with valid JWT")
+				ctx := r.Context()
+				ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
+				ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
+				h.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+		}
+		log.Warnln("No authorisation header presented.")
+		writeError("Unauthorized", w, http.StatusUnauthorized)
+		return
 	})
 }
 
