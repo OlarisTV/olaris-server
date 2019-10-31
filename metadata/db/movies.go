@@ -297,5 +297,6 @@ func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
 	if err := db.Model(movieFile).Related(&movie).Error; err != nil {
 		return nil, err
 	}
+	CollectMovieInfo(&movie)
 	return &movie, nil
 }
