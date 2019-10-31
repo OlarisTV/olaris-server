@@ -16,19 +16,22 @@ func TestUnidentifiedEpisodeFiles(t *testing.T) {
 		EpisodeFiles: []db.EpisodeFile{
 			{
 				MediaItem: db.MediaItem{
-					FilePath: "/tmp/test1.mkv",
+					FilePath: "local#/tmp/test1.mkv",
 				},
 			},
 		},
 	})
 	metadataCtx.Db.Create(&db.EpisodeFile{
 		MediaItem: db.MediaItem{
-			FilePath: "/tmp/test2.mkv",
+			FilePath: "local#/tmp/test2.mkv",
 		},
 	})
 
 	response := r.UnidentifiedEpisodeFiles(&unidentifiedEpisodeFilesArgs{})
 
 	assert.Len(t, response, 1)
-	assert.Equal(t, "/tmp/test2.mkv", response[0].FilePath())
+	filePath, _ := response[0].FilePath()
+	assert.Equal(t, "/tmp/test2.mkv", filePath)
+
+	assert.EqualValues(t, db.BackendLocal, response[0].Library().Backend())
 }

@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
@@ -266,8 +267,13 @@ type EpisodeFileResolver struct {
 }
 
 // FilePath returns filesystem path to file.
-func (r *EpisodeFileResolver) FilePath() string {
-	return r.r.FilePath
+func (r *EpisodeFileResolver) FilePath() (string, error) {
+	fileLocator, err := filesystem.ParseFileLocator(r.r.FilePath)
+	if err != nil {
+		return "", err
+	}
+	return fileLocator.Path, nil
+
 }
 
 // FileName returns filename.
