@@ -11,7 +11,7 @@ variables:
 # Thus, making a symbolic link corrects this.
 before_script:
   - apt-get update
-  - apt-get install unzip
+  - apt-get install zip unzip
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - cp -r $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
