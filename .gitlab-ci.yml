@@ -52,10 +52,10 @@ dist-linux-amd64:
     stage: dist-linux-amd64
     script:
       - GOOS=linux GOARCH=amd64 make dist
-      - cp -r dist/olaris-linux-amd64* $CI_PROJECT_DIR/
+      - cp -r dist/olaris-linux-amd64-*.zip $CI_PROJECT_DIR/
     artifacts:
       paths:
-        - dist/
+        - olaris-linux-amd64-*.zip
       expire_in: 4 week
 
 test:
