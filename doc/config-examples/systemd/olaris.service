@@ -1,0 +1,5 @@
+[Unit]
+Description=Olaris Media Server
+
+[Service]
+ExecStart=/opt/olaris/bin/olaris

@@ -11,3 +11,4 @@ cmd/olaris-server/bsmds-linux
 react/build
 yarn.lock
 build
+dist

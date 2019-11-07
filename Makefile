@@ -8,6 +8,7 @@ GOVET=$(GOCMD) vet
 GOGET=$(GOCMD) get
 GOGENERATE=$(GOCMD) generate
 BIN_LOC=build
+DIST_DIR=dist
 FFMPEG_LOC=ffmpeg/executable/build
 BINARY_NAME=olaris
 GODEP=dep
@@ -18,6 +19,7 @@ LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
 GIT_REV := $(shell git rev-list -1 HEAD)
 REACT_BUILD_DIR=./app/build
 IDENTIFIER=$(BINARY_NAME)-$(GOOS)-$(GOARCH)
+RELEASE_IDENTIFIER=$(shell git describe --tags)
 
 all: generate
 
@@ -64,6 +66,18 @@ build-docker:
 crossbuild:
 	mkdir -p $(BIN_LOC)
 	make build FLAGS="$(BIN_LOC)/$(IDENTIFIER)"
+
+.PHONY: dist
+dist: build
+	mkdir -p builds/dist
+	cp -r doc/ builds/dist
+	mkdir -p builds/dist/bin
+	cp $(BIN_LOC)/$(IDENTIFIER) builds/dist/bin/olaris
+	mkdir -p $(DIST_DIR)
+	rm $(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip
+	# cd, otherwise zip will preserve the directory structure
+	cd builds/dist && zip -r ../../$(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip ./* && cd ../..
+	rm -r builds/dist
 
 .PHONY: test
 test:
