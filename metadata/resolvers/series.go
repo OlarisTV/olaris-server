@@ -46,7 +46,7 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 
 	var resolvers []*SeriesResolver
 	for _, s := range series {
-		resolvers = append(resolvers, &SeriesResolver{r: s})
+		resolvers = append(resolvers, &SeriesResolver{r: *s})
 	}
 
 	return resolvers
@@ -54,7 +54,7 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 
 // SeriesResolver resolvers a serie.
 type SeriesResolver struct {
-	r *db.Series
+	r db.Series
 }
 
 // Name returns name.
@@ -169,7 +169,7 @@ func (r *SeasonResolver) SeasonNumber() int32 {
 // Series returns the series this season belongs to.
 func (r *SeasonResolver) Series() *SeriesResolver {
 	series, _ := db.FindSeries(r.r.SeriesID)
-	return &SeriesResolver{series}
+	return &SeriesResolver{*series}
 }
 
 // Episodes returns seasonal episodes.

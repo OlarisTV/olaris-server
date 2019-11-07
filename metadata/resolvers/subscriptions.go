@@ -38,7 +38,7 @@ func (h graphqlLibrarySubscriber) EpisodeAdded(episode *db.Episode) {
 }
 
 func (h graphqlLibrarySubscriber) SeriesAdded(series *db.Series) {
-	e := &SeriesAddedEvent{series: &SeriesResolver{series}}
+	e := &SeriesAddedEvent{series: &SeriesResolver{*series}}
 	go func() {
 		select {
 		case h.resolver.seriesAddedEvents <- e:
