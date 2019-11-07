@@ -52,7 +52,7 @@ build-olaris-react:
 	make generate
 
 .PHONY: build
-build:
+build: generate
 	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -o $(BIN_LOC)/$(IDENTIFIER) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
 .PHONY: build-local
