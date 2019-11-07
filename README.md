@@ -25,6 +25,28 @@ Our sole focus is on video and video alone, anything that does not meet this req
 ### Open-source
 Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why were are aiming to be and to remain open-source instead of open-core where certain features are locked behind a paywall.
 
+## How to install
+
+### Unpack to `/opt`
+
+    sudo unzip olaris-linux-amd64-v0.3.0.zip -d /opt/olaris
+
+Replace the name of the zipfile with the name of the file you downloaded.
+
+### Run as daemon using systemd
+
+To run Olaris as a daemon you may use the supplied systemd unit file:
+
+    mkdir -p ~/.config/systemd/user/
+    cp /opt/olaris/doc/config-examples/systemd/olaris.service ~/.config/systemd/user/
+    systemctl --user daemon-reload
+    systemctl --user start olaris.service
+
+To start Olaris automatically:
+
+    # Allow systemd to start in user mode without a login session
+    sudo loginctl enable-linger $USER
+    systemctl --user enable olaris.service
 
 ## How to build
 
