@@ -25,7 +25,7 @@ stages:
     - format
     - test
     - build
-    - build-linux-amd64
+    - dist-linux-amd64
 
 format:
     stage: format
@@ -48,14 +48,14 @@ build:
 
 
 # This stage is to have a small downloadable package for the most common platform
-build-linux-amd64:
-    stage: build-linux-amd64
+dist-linux-amd64:
+    stage: dist-linux-amd64
     script:
-      - make crossbuild GOOS=linux GOARCH=amd64
-      - cp -r build $CI_PROJECT_DIR/
+      - GOOS=linux GOARCH=amd64 make dist
+      - cp -r dist/olaris-linux-amd64* $CI_PROJECT_DIR/
     artifacts:
       paths:
-        - build/olaris-linux-amd64
+        - dist/
       expire_in: 4 week
 
 test:

@@ -74,7 +74,7 @@ dist: build
 	mkdir -p builds/dist/bin
 	cp $(BIN_LOC)/$(IDENTIFIER) builds/dist/bin/olaris
 	mkdir -p $(DIST_DIR)
-	rm $(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip
+	rm -f $(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip
 	# cd, otherwise zip will preserve the directory structure
 	cd builds/dist && zip -r ../../$(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip ./* && cd ../..
 	rm -r builds/dist
