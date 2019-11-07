@@ -26,7 +26,7 @@ Our sole focus is on video and video alone, anything that does not meet this req
 Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why were are aiming to be and to remain open-source instead of open-core where certain features are locked behind a paywall.
 
 
-## Setting up a build environment
+## How to build
 
 ### Build dependencies
   * Install the [Go toolchain](https://golang.org)
@@ -36,18 +36,12 @@ Everything we build should be open-source. We feel strongly that more can be ach
 	  * go get github.com/maxbrunsfeld/counterfeiter
   * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
 
-### Make commands
+### Download other Olaris components
 
-  First run 
-  `make download-olaris-react` this will grab the latest Olaris react build from the CI and insert it into olaris-server.
-  Optionally if you are on Linux amd64 you can use `make download-ffmpeg` to do the same for ffmpeg. If not you will have to build it yourself.
+  * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
+  * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to build it yourself.
 
   Once this is done you can use some of the following commands:
- 
-  `make run` to run a build on your local platform.
 
-  `make build` to build a binary for your local platform.
-
-  `make build-with-react` to build and pull in the latest web-interface this requires the build toolchain for [olaris-react](https://gitlab.com/olaris/olaris-react).
-
-  `make list` for all make options
+  * `make run` to run a build on your local platform.
+  * `make build-local` to build a binary for your local platform. The binary will be placed in `build/olaris`.
