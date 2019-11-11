@@ -39,7 +39,7 @@ download-ffmpeg:
 
 .PHONY: download-olaris-react
 download-olaris-react:
-	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=compile' > react/static.zip
+	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=build' > react/static.zip
 	unzip -o react/static.zip -d react/
 	rm react/static.zip
 	make generate
