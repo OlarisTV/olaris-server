@@ -24,7 +24,7 @@ RELEASE_IDENTIFIER=$(shell git describe --tags)
 all: generate
 
 .PHONY: ready-ci
-ready-ci: download-olaris-react download-ffmpeg
+ready-ci: download-olaris-react download-ffmpeg generate
 
 .PHONY: download-ffmpeg
 download-ffmpeg:
@@ -35,21 +35,18 @@ download-ffmpeg:
 	cp ffmpeg/executable/ffmpeg-static/bin/ffprobe $(FFMPEG_LOC)/linux-amd64/ffprobe
 	rm ffmpeg/executable/build.zip
 	rm -rf ffmpeg/executable/ffmpeg-static
-	make generate
 
 .PHONY: download-olaris-react
 download-olaris-react:
 	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Folaris-react/jobs/artifacts/develop/download?job=build' > react/static.zip
 	unzip -o react/static.zip -d react/
 	rm react/static.zip
-	make generate
 
 .PHONY: build-olaris-react
 build-olaris-react:
 	if [ ! -d "./builds/olaris-react" ]; then mkdir -p builds && cd builds && git clone $(REACT_REPO) olaris-react; fi
 	cd builds/olaris-react && git fetch --all && git reset --hard origin/develop && yarn install && yarn build
 	cp -r builds/olaris-react/build ./react/
-	make generate
 
 .PHONY: build
 build: generate
@@ -60,7 +57,7 @@ build-local:
 	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
 build-docker:
-	docker build -t olaris-server .
+	docker build -t olaris-server:$(RELEASE_IDENTIFIER) .
 
 .PHONY: crossbuild
 crossbuild:
