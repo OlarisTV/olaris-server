@@ -56,8 +56,15 @@ build: generate
 build-local:
 	$(GOBUILD) -o $(BIN_LOC)/$(BINARY_NAME) $(LDFLAGS) -v $(CMD_SERVER_PATH)
 
-build-docker:
-	docker build -t olaris-server:$(RELEASE_IDENTIFIER) .
+docker-build:
+	docker build -t olaristv/olaris-server:latest .
+
+docker-tag:
+	docker tag olaristv/olaris-server:latest olaristv/olaris-server:$(RELEASE_IDENTIFIER)
+
+docker-push:
+	docker push olaristv/olaris-server:latest
+	docker push olaristv/olaris-server:$(RELEASE_IDENTIFIER)
 
 .PHONY: crossbuild
 crossbuild:
