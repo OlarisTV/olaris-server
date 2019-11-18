@@ -25,15 +25,17 @@ Our sole focus is on video and video alone, anything that does not meet this req
 ### Open-source
 Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why were are aiming to be and to remain open-source instead of open-core where certain features are locked behind a paywall.
 
-## How to install
+## How to run olaris
 
-### Unpack to `/opt`
+### Local install
+
+#### Unpack to `/opt`
 
     sudo unzip olaris-linux-amd64-v0.3.0.zip -d /opt/olaris
 
 Replace the name of the zipfile with the name of the file you downloaded.
 
-### Run as daemon using systemd
+#### Run as daemon using systemd
 
 To run Olaris as a daemon you may use the supplied systemd unit file:
 
@@ -47,6 +49,21 @@ To start Olaris automatically:
     # Allow systemd to start in user mode without a login session
     sudo loginctl enable-linger $USER
     systemctl --user enable olaris.service
+
+### Run using Docker
+
+The following command runs Olaris in a Docker container under your own user‘s UID, ensuring that the Olaris config files end up in your home directory with the correct permissions. It exposes Olaris on port 8080 only on your local machine.
+
+The command below mounts `~/Videos` to `/var/media` in the container --- please update this path to match the location of your media files. When you create a library in Olaris, please keep in mind that Olaris is running inside the container and will see your media at `/var/media/`.
+
+    mkdir -p ~/.config/olaris ~/.config/rclone
+    docker run \
+      -p 127.0.0.1:8080:8080/tcp \
+      --mount type=bind,source="$HOME/Videos",target=/var/media \
+      --mount type=bind,source="$HOME/.config/olaris",target=/home/olaris/.config/olaris \
+      --mount type=bind,source="$HOME/.config/rclone",target="/home/olaris/.config/rclone" \
+      -e OLARIS_UID=$(id -u) -e OLARIS_GID=$(id -g) \
+      olaristv/olaris-server
 
 ## How to build
 
