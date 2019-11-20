@@ -2,8 +2,8 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"path/filepath"
@@ -49,47 +49,45 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		}
 	}
 
-	var oldEpisodes []*db.Episode
-	for _, episodeFile := range episodeFiles {
-		e, _ := db.FindEpisodeByID(episodeFile.EpisodeID)
-		oldEpisodes = append(oldEpisodes, e)
-	}
-
 	for _, episodeFile := range episodeFiles {
 		name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
 		parsedInfo := parsers.ParseSerieName(name)
 
 		if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
-			return &UpdateEpisodeFileMetadataPayloadResolver{
-				error: fmt.Errorf(
-					"Failed to parse Episode/Season number from filename %s",
-					episodeFile.FileName)}
-
+			log.Warnln(
+				"Failed to parse Episode/Season number from filename:",
+				episodeFile.FileName)
+			continue
 		}
 
+		// TODO(Leon Handreke): Make the handling for figure out whether the episode
+		// actually exists more explicit. Right now, it's in the err clause + continue.
 		episode, err := r.env.MetadataManager.GetOrCreateEpisodeByTmdbID(
 			int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
 		if err != nil {
-			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
+			log.Warnln("Failed to create episode: ", err.Error())
+			continue
 		}
+
+		// Remember previous episode ID so we can maybe garbage collect it.
+		oldEpisodeID := episodeFile.EpisodeID
 
 		episodeFile.Episode = episode
 		episodeFile.EpisodeID = episode.ID
 		db.SaveEpisodeFile(episodeFile)
 
 		// Garbage collect previously associated Episode objects from DB
-		for _, oldEpisode := range oldEpisodes {
-			// Refresh the episode with the updates above
-			oldEpisode, err = db.FindEpisodeByID(oldEpisode.ID)
-			if err != nil {
-				return &UpdateEpisodeFileMetadataPayloadResolver{
-					error: errors.Wrap(
-						err,
-						"Failed to refresh previously associated Episode")}
-			}
-			r.env.MetadataManager.GarbageCollectEpisodeIfRequired(oldEpisode)
-
+		oldEpisode, err := db.FindEpisodeByID(oldEpisodeID)
+		if err != nil {
+			return &UpdateEpisodeFileMetadataPayloadResolver{
+				error: errors.Wrap(
+					err,
+					"Failed to refresh previously associated Episode")}
 		}
+		if err := r.env.MetadataManager.GarbageCollectEpisodeIfRequired(oldEpisode); err != nil {
+			log.Errorln("Failed to garbage collect old episode: ", err.Error())
+		}
+
 	}
 
 	return &UpdateEpisodeFileMetadataPayloadResolver{}

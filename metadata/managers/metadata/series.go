@@ -45,16 +45,26 @@ func (m *MetadataManager) UpdateSeriesMD(series *db.Series) error {
 
 // UpdateEpisodeMD updates the database record with the latest data from the agent
 func (m *MetadataManager) UpdateEpisodeMD(ep *db.Episode) error {
-	m.agent.UpdateEpisodeMD(ep,
-		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum)
-	db.SaveEpisode(ep)
+	if err := m.agent.UpdateEpisodeMD(ep,
+		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum); err != nil {
+		return err
+	}
+	if err := db.SaveEpisode(ep); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // UpdateSeasonMD updates the database record with the latest data from the agent
 func (m *MetadataManager) UpdateSeasonMD(season *db.Season) error {
-	m.agent.UpdateSeasonMD(season, season.GetSeries().TmdbID, season.SeasonNumber)
-	db.SaveSeason(season)
+	if err := m.agent.UpdateSeasonMD(
+		season, season.GetSeries().TmdbID, season.SeasonNumber); err != nil {
+		return err
+	}
+	if err := db.SaveSeason(season); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -208,6 +218,7 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 // GarbageCollectEpisodeIfRequired deletes an Episode and its associated Season/Series objects if
 // required if no more EpisodeFiles associated with them remain.
 func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episode *db.Episode) error {
+	log.Infoln("Garbage collecting episode", episode.ID)
 	if len(episode.EpisodeFiles) > 0 {
 		return nil
 	}
