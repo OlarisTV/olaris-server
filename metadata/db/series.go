@@ -364,6 +364,16 @@ func findEpisode(where ...interface{}) (*Episode, error) {
 	return &episode, nil
 }
 
+func FindAllEpisodes() ([]*Episode, error) {
+	var episodes []*Episode
+	if err := db.
+		Preload("EpisodeFiles.Streams").
+		Find(&episodes).Error; err != nil {
+		return nil, err
+	}
+	return episodes, nil
+}
+
 // FindAllEpisodeFiles retrieves all episodefiles from the db.
 func FindAllEpisodeFiles() (files []EpisodeFile) {
 	db.Preload("Library").Find(&files)

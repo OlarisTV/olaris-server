@@ -85,5 +85,11 @@ func NewMDContext(
 		}
 	}()
 
+	// This is just to be sure we don't have leftover metadata from programming errors
+	// TODO(Leon Handreke): Have some reporting so that we can fix the bugs that lead to this and
+	//  still reduce user pain.
+	// TODO(Leon Handreke): Actually enable this, it breaks tests
+	//go env.MetadataManager.GarbageCollectAllEpisodes()
+
 	return env
 }

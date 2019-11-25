@@ -3,6 +3,7 @@ package metadata
 import (
 	"errors"
 	"fmt"
+	errors2 "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -11,11 +12,27 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
+func (m *MetadataManager) getEpisodeLock(episodeID uint) *sync.RWMutex {
+	v, _ := m.episodeLock.LoadOrStore(episodeID, &sync.RWMutex{})
+	return v.(*sync.RWMutex)
+}
+
+func (m *MetadataManager) getSeasonLock(seasonID uint) *sync.RWMutex {
+	v, _ := m.seasonLock.LoadOrStore(seasonID, &sync.RWMutex{})
+	return v.(*sync.RWMutex)
+}
+
+func (m *MetadataManager) getSeriesLock(seriesID uint) *sync.RWMutex {
+	v, _ := m.seriesLock.LoadOrStore(seriesID, &sync.RWMutex{})
+	return v.(*sync.RWMutex)
+}
+
+// ForceSeriesMetadataUpdate refreshes all data from the agent and updates the database record.
 // TODO(Leon Handreke): Use a pool here and make it explicit in the documentation and function
 //  name that we're only queueing these updates.
-// ForceSeriesMetadataUpdate refreshes all data from the agent and updates the database record.
 func (m *MetadataManager) ForceSeriesMetadataUpdate() {
 	series, err := db.FindAllSeries(nil)
 	if err != nil {
@@ -142,8 +159,9 @@ func (m *MetadataManager) GetOrCreateEpisodeByTmdbID(
 	}
 
 	// Lock so that we don't create the same episode twice
-	m.seriesMutex.Lock()
-	defer m.seriesMutex.Unlock()
+	// TODO(Leon Handreke): More fine-grained locking
+	m.seriesCreationMutex.Lock()
+	defer m.seriesCreationMutex.Unlock()
 
 	episode, err := db.FindEpisodeByNumber(season, episodeNum)
 	if err == nil {
@@ -166,8 +184,8 @@ func (m *MetadataManager) getOrCreateSeriesByTmdbID(
 	seriesTmdbID int) (*db.Series, error) {
 
 	// Lock so that we don't create the same series twice
-	m.seriesMutex.Lock()
-	defer m.seriesMutex.Unlock()
+	m.seriesCreationMutex.Lock()
+	defer m.seriesCreationMutex.Unlock()
 
 	series, err := db.FindSeriesByTmdbID(seriesTmdbID)
 	if err == nil {
@@ -195,8 +213,8 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 	}
 
 	// Lock so that we don't create the same series twice
-	m.seriesMutex.Lock()
-	defer m.seriesMutex.Unlock()
+	m.seriesCreationMutex.Lock()
+	defer m.seriesCreationMutex.Unlock()
 
 	season, err := db.FindSeasonBySeasonNumber(series, seasonNum)
 	if err == nil {
@@ -215,16 +233,41 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 	return season, nil
 }
 
+func (m *MetadataManager) GarbageCollectAllEpisodes() error {
+	// TODO(Leon Handreke): We actually only need the ID here.
+	episodes, err := db.FindAllEpisodes()
+	if err != nil {
+		return errors2.Wrap(err, "Failed to get all Episodes")
+	}
+	for _, episode := range episodes {
+		m.GarbageCollectEpisodeIfRequired(episode.ID)
+	}
+	return nil
+}
+
 // GarbageCollectEpisodeIfRequired deletes an Episode and its associated Season/Series objects if
 // required if no more EpisodeFiles associated with them remain.
-func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episode *db.Episode) error {
-	log.Infoln("Garbage collecting episode", episode.ID)
+func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error {
+	log.Debugln("Garbage collecting episode", episodeID)
+
+	m.getEpisodeLock(episodeID).Lock()
+	defer m.getEpisodeLock(episodeID).Unlock()
+
+	episode, err := db.FindEpisodeByID(episodeID)
+	if err != nil {
+		return errors2.Wrap(err, "Failed to refresh episode")
+	}
+
 	if len(episode.EpisodeFiles) > 0 {
 		return nil
 	}
 
-	db.DeleteEpisode(episode.ID)
+	if err := db.DeleteEpisode(episode.ID); err != nil {
+		return errors2.Wrap(err, "Failed to delete Episode")
+	}
 
+	m.getSeasonLock(episode.SeasonID).Lock()
+	defer m.getSeasonLock(episode.SeasonID).Unlock()
 	// Garbage collect season
 	season, err := db.FindSeason(episode.SeasonID)
 	if err != nil {
@@ -233,11 +276,12 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episode *db.Episode) e
 	if len(season.Episodes) > 0 {
 		return nil
 	}
-	err = db.DeleteSeason(season.ID)
-	if err != nil {
-		return err
+	if err := db.DeleteSeason(season.ID); err != nil {
+		return errors2.Wrap(err, "Failed to delete Season")
 	}
 
+	m.getSeriesLock(season.SeriesID).Lock()
+	defer m.getSeriesLock(season.SeriesID).Unlock()
 	// Garbage collect series
 	series, err := db.FindSeries(season.SeriesID)
 	if err != nil {
@@ -246,9 +290,8 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episode *db.Episode) e
 	if len(series.Seasons) > 0 {
 		return nil
 	}
-	err = db.DeleteSeries(series.ID)
-	if err != nil {
-		return err
+	if err := db.DeleteSeries(series.ID); err != nil {
+		return errors2.Wrap(err, "Failed to delete Series")
 	}
 
 	return nil

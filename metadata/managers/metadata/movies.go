@@ -94,8 +94,8 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 func (m *MetadataManager) GetOrCreateMovieByTmdbID(tmdbID int) (*db.Movie, error) {
 
 	// Lock so that we don't create the same movie twice
-	m.moviesMutex.Lock()
-	defer m.moviesMutex.Unlock()
+	m.moviesCreationMutex.Lock()
+	defer m.moviesCreationMutex.Unlock()
 
 	movie, err := db.FindMovieByTmdbID(tmdbID)
 	if err == nil {

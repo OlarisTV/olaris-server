@@ -11,8 +11,15 @@ import (
 // MetadataManager manages the metadata repository that is referenced by the files in the various
 // libraries.
 type MetadataManager struct {
-	seriesMutex sync.Mutex
-	moviesMutex sync.Mutex
+	seriesCreationMutex sync.Mutex
+	moviesCreationMutex sync.Mutex
+
+	// Read/write lock for episode manipulation
+	// TODO(Leon Handreke): Use proper locking,
+	//  everywhere. This is a quickfix for the garbage collection routine.
+	episodeLock sync.Map
+	seasonLock  sync.Map
+	seriesLock  sync.Map
 
 	Subscriber LibrarySubscriber
 	agent      agents.MetadataRetrievalAgent

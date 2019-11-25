@@ -8,6 +8,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // UpdateEpisodeFileMetadataInput is a request
@@ -49,46 +50,45 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		}
 	}
 
-	for _, episodeFile := range episodeFiles {
-		name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
-		parsedInfo := parsers.ParseSerieName(name)
+	updateEpisodeFileMetadataGroup := sync.WaitGroup{}
+	updateEpisodeFileMetadataGroup.Add(len(episodeFiles))
 
-		if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
-			log.Warnln(
-				"Failed to parse Episode/Season number from filename:",
-				episodeFile.FileName)
-			continue
-		}
+	for _, v := range episodeFiles {
+		go func(episodeFile *db.EpisodeFile) {
+			defer updateEpisodeFileMetadataGroup.Done()
 
-		// TODO(Leon Handreke): Make the handling for figure out whether the episode
-		// actually exists more explicit. Right now, it's in the err clause + continue.
-		episode, err := r.env.MetadataManager.GetOrCreateEpisodeByTmdbID(
-			int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
-		if err != nil {
-			log.Warnln("Failed to create episode: ", err.Error())
-			continue
-		}
+			name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
+			parsedInfo := parsers.ParseSerieName(name)
 
-		// Remember previous episode ID so we can maybe garbage collect it.
-		oldEpisodeID := episodeFile.EpisodeID
+			if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
+				log.Warnln(
+					"Failed to parse Episode/Season number from filename:",
+					episodeFile.FileName)
+				return
+			}
 
-		episodeFile.Episode = episode
-		episodeFile.EpisodeID = episode.ID
-		db.SaveEpisodeFile(episodeFile)
+			// TODO(Leon Handreke): Make the handling for figuring out whether the episode
+			// actually exists more explicit. Right now, it's in the err clause + continue.
+			episode, err := r.env.MetadataManager.GetOrCreateEpisodeByTmdbID(
+				int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
+			if err != nil {
+				log.Warnln("Failed to create episode: ", err.Error())
+				return
+			}
 
-		// Garbage collect previously associated Episode objects from DB
-		oldEpisode, err := db.FindEpisodeByID(oldEpisodeID)
-		if err != nil {
-			return &UpdateEpisodeFileMetadataPayloadResolver{
-				error: errors.Wrap(
-					err,
-					"Failed to refresh previously associated Episode")}
-		}
-		if err := r.env.MetadataManager.GarbageCollectEpisodeIfRequired(oldEpisode); err != nil {
-			log.Errorln("Failed to garbage collect old episode: ", err.Error())
-		}
+			// Remember previous episode ID so we can maybe garbage collect it.
+			oldEpisodeID := episodeFile.EpisodeID
 
+			episodeFile.Episode = episode
+			episodeFile.EpisodeID = episode.ID
+			db.SaveEpisodeFile(episodeFile)
+
+			go r.env.MetadataManager.GarbageCollectEpisodeIfRequired(oldEpisodeID)
+		}(v)
 	}
+	// TODO(Leon Handreke): Have at least a spinner, better proper progress reporting.
+	//  See https://gitlab.com/olaris/olaris-react/issues/33
+	// updateEpisodeFileMetadataGroup.Wait()
 
 	return &UpdateEpisodeFileMetadataPayloadResolver{}
 }
