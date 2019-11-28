@@ -1,3 +1,11 @@
+### 0.3.0 - 2019-11-18
+
+* Chromecast support
+* Retagging mistagged TV Shows and Movies as well as untagged movies
+* Improved user administration page
+* Many style fixes and smaller visual improvements here and there
+* Fixed lots of little race conditions, refactorings here and there
+
 ### 0.2.0 - 21th of June 2019
 
 * Multiple library backend support
