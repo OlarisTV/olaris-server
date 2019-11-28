@@ -1,0 +1,22 @@
+{
+    "app-id": "tv.olaris.Olaris",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "18.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "olaris",
+    "modules": [
+        {
+            "name": "olaris",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -D olaris /app/bin/olaris"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "path": "../build/olaris"
+                }
+            ]
+        }
+    ]
+}
