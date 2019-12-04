@@ -1,6 +1,6 @@
 package agents
 
-//go:generate counterfeiter . MetadataRetrievalAgent
+//go:generate go run -mod vendor github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
 	"github.com/ryanbradynd05/go-tmdb"
@@ -8,6 +8,7 @@ import (
 )
 
 // MetadataRetrievalAgent can retrieve metadata for media items.
+//counterfeiter:generate . MetadataRetrievalAgent
 type MetadataRetrievalAgent interface {
 	UpdateMovieMD(movie *db.Movie, tmdbID int) error
 	UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNum int) error

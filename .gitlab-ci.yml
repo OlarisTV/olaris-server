@@ -3,23 +3,10 @@ image: golang:1.12-stretch
 variables:
   REPO_NAME: gitlab.com/olaris/olaris-server
 
-# The problem is that to be able to use go get, one needs to put
-# the repository in the $GOPATH. So for example if your gitlab domain
-# is gitlab.com, and that your repository is namespace/project, and
-# the default GOPATH being /go, then you'd need to have your
-# repository in /go/src/gitlab.com/namespace/project
-# Thus, making a symbolic link corrects this.
 before_script:
   - apt-get update
   - apt-get install zip unzip
-  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
-  - cp -r $CI_PROJECT_DIR/ $GOPATH/src/$REPO_NAME
-  - cd $GOPATH/src/$REPO_NAME
-  - go get github.com/jteeuwen/go-bindata/...
-  - go get github.com/elazarl/go-bindata-assetfs/...
-  - go get github.com/maxbrunsfeld/counterfeiter
   - make ready-ci
-  - make generate
 
 stages:
     - format
@@ -30,14 +17,13 @@ stages:
 format:
     stage: format
     script:
-      - go fmt $(go list ./... | grep -v /vendor/)
-      - go vet $(go list ./... | grep -v /vendor/)
+      - make fmt
+      - make vet
 
 build:
     stage: build
     script:
       - make build-linux
-      - cp -r build $CI_PROJECT_DIR/
     artifacts:
       paths:
         - build/olaris-linux-386
@@ -61,4 +47,4 @@ dist-linux-amd64:
 test:
     stage: test
     script:
-      - go test -race $(go list ./... | grep -v /vendor/)
+      - make test

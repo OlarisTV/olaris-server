@@ -12,3 +12,4 @@ react/build
 yarn.lock
 build
 dist
+olaris-server
