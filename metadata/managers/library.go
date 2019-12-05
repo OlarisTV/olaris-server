@@ -242,6 +242,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).
 			Debugln("Received error while opening file for stream inspection")
+		return nil
 	}
 
 	// TODO(Leon Handreke): Ideally, to not have to scan the file at every startup,
