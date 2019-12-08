@@ -19,7 +19,7 @@ loop:
 		case event := <-man.Watcher.Events:
 			log.WithFields(log.Fields{"filename": event.Name, "event": event.Op}).Debugln("Got filesystem notification event.")
 
-			if event.Op&fsnotify.Remove == fsnotify.Remove {
+			if event.Op&fsnotify.Remove == fsnotify.Remove || event.Op&fsnotify.Rename == fsnotify.Rename {
 				man.Watcher.Remove(event.Name)
 				man.CheckRemovedFiles() // Make this faster by only scanning the changed file
 				return
@@ -37,11 +37,6 @@ loop:
 			} else if ValidFile(n) {
 				// We are sleeping 2 seconds here in case it's a creation event and the file is 0kb but growing.
 				time.Sleep(2 * time.Second)
-
-				if event.Op&fsnotify.Rename == fsnotify.Rename {
-					log.Debugln("File is renamed, forcing removed files scan.")
-					man.CheckRemovedFiles() // Make this faster by only scanning the changed file
-				}
 
 				if event.Op&fsnotify.Create == fsnotify.Create {
 					log.Debugln("File added was added adding watcher and requesting library rescan.")
