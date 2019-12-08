@@ -25,7 +25,7 @@ func (th *TestHandler) Called() bool {
 }
 
 func TestMiddleWare_InvalidToken(t *testing.T) {
-	// TOOD(Leon Handreke): We need this to fill the database singleton
+	// TODO(Leon Handreke): We need this to fill the database singleton
 	app.NewTestingMDContext(nil)
 	db.CreateUser("test", "testtest", false)
 
@@ -43,7 +43,7 @@ func TestMiddleWare_InvalidToken(t *testing.T) {
 }
 
 func TestMiddleWare_NoUsers(t *testing.T) {
-	// TOOD(Leon Handreke): We need this to fill the database singleton
+	// TODO(Leon Handreke): We need this to fill the database singleton
 	app.NewTestingMDContext(nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -60,7 +60,7 @@ func TestMiddleWare_NoUsers(t *testing.T) {
 }
 
 func TestMiddleWare_UserDeleted(t *testing.T) {
-	// TOOD(Leon Handreke): We need this to fill the database singleton
+	// TODO(Leon Handreke): We need this to fill the database singleton
 	app.NewTestingMDContext(nil)
 	user, _ := db.CreateUser("test", "testtest", false)
 
@@ -82,7 +82,7 @@ func TestMiddleWare_UserDeleted(t *testing.T) {
 }
 
 func TestMiddleWare(t *testing.T) {
-	// TOOD(Leon Handreke): We need this to fill the database singleton
+	// TODO(Leon Handreke): We need this to fill the database singleton
 	app.NewTestingMDContext(nil)
 	user, _ := db.CreateUser("test", "testtest", false)
 

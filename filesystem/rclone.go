@@ -50,7 +50,7 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}
-		// Ensuring the latest default options modified for our usecase is probaly safer
+		// Ensuring the latest default options modified for our usecase is probably safer
 		opts := vfs.DefaultOpt
 		opts.CacheMode = vfs.CacheModeMinimal
 		opts.ChunkSize = 32 * fs.MebiByte
