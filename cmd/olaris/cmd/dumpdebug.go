@@ -31,7 +31,7 @@ var dumpdebugCmd = &cobra.Command{
 		fw, _ := w.Create("metadata.db.sqlite")
 		// TODO(Leon Handreke): Don't hardcode-copypaste this path from metadata/db/database.go
 		content, _ := ioutil.ReadFile(filepath.Join(helpers.MetadataConfigPath(), "metadata.db"))
-		_, err = fw.Write(content)
+		fw.Write(content)
 
 		err = w.Close()
 		if err != nil {

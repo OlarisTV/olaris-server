@@ -191,14 +191,11 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 	err = db.AddLibrary(&library)
 
 	if err == nil {
-		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
-		if err != nil {
-			libRes = LibraryResponse{Error: CreateErrResolver(err)}
-		} else {
-			r.AddLibraryManager(&library)
-		}
+		r.AddLibraryManager(&library)
 		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
 	} else {
+		// TODO(Maran): We probably want to not do this in the resolver but in the database layer so that it gets scanned no matter how you add it.
+		// libRes = LibraryResponse{Error: CreateErrResolver(err)}
 		return errResponse(err)
 	}
 	return &LibResResolv{libRes}
