@@ -1,20 +1,16 @@
 package ffmpeg
 
 import (
-	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"io"
 	"os"
 	"path"
 	"time"
-)
 
-var writeTranscoderLog = flag.Bool(
-	"write_transcoder_log",
-	true,
-	"Whether to write transcoder output to logfile")
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/helpers"
+)
 
 func reverseMap(m map[string]string) map[string]string {
 	n := make(map[string]string)
@@ -142,7 +138,7 @@ func timestampToDuration(ts DtsTimestamp, timeBase int64) time.Duration {
 }
 
 func getTranscodingLogSink(prefix string) io.WriteCloser {
-	if !(*writeTranscoderLog) {
+	if !viper.GetBool("debug.transcoderLog") {
 		f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0600)
 		return f
 	}

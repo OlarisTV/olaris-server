@@ -23,7 +23,7 @@ We don't want to collect metadata, we don't want to sell metadata your data is y
 Our sole focus is on video and video alone, anything that does not meet this requirement will not be considered. This means for example we will never add music support due to different approach that would be required throughout the application. 
 
 ### Open-source
-Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why were are aiming to be and to remain open-source instead of open-core where certain features are locked behind a paywall.
+Everything we build should be open-source. We feel strongly that more can be achieved with free open-source software. That's why we are aiming to be and to remain open-source instead of open-core where certain features are locked behind a paywall.
 
 ## How to run olaris
 
@@ -34,6 +34,24 @@ Everything we build should be open-source. We feel strongly that more can be ach
     sudo unzip olaris-linux-amd64-v0.3.0.zip -d /opt/olaris
 
 Replace the name of the zipfile with the name of the file you downloaded.
+
+### Configuration
+
+Olaris can be configured via configuration file, environment variables, or command-line flags. An `olaris.toml.sample` configuration file is included in the `docs/` folder; rename it to `olaris.toml` and place in `$HOME/.config/olaris`. You can also override the configuration directory location with the `OLARIS_CONFIG_DIR` environment variable or the `--config_dir` command-line flag.
+
+If you want to configure Olaris using environment variables, the variables currently supported are listed below.
+
+- `OLARIS_CONFIG_DIR`: default configuration file directory (including database files)
+- `OLARIS_DEBUG_STREAMINGPAGES`: whether to enable debug pages in the streaming server (default false, overrides the `debug.streamingPages` configuration value)
+- `OLARIS_DEBUG_TRANSCODERLOG`: whether to write transcoder output to logfile (default true, overrides the `debug.streamingPages` value from configuration file)
+- `OLARIS_SERVER_PORT`: http port (default 8080, overrides the `server.port` configuration value)
+- `OLARIS_SERVER_VERBOSE`: verbose logging (default true, overrides the `server.verbose` configuration value)
+- `OLARIS_SERVER_DIRECTFILEACCESS`: whether accessing files directly by path (without a valid JWT) is allowed (default false, overrides the `server.directFileAccess` configuration value)
+- `OLARIS_SERVER_SYSTEMFFMPEG`: whether to use system FFmpeg instead of binary builtin (default false, overrides the `server.systemFFmpeg` configuration value)
+
+Configuration file settings override the defaults in the code.
+Environment variable settings override the settings found in the configuration file.
+Command-line arguments override everything; run `olaris help` to see the command-line documentation.
 
 #### Run as daemon using systemd
 

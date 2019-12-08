@@ -1,16 +1,12 @@
 package streaming
 
 import (
-	"flag"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"html/template"
 	"net/http"
-)
 
-var enableDebugPagesFlag = flag.Bool(
-	"enable_streaming_debug_pages",
-	false,
-	"Whether to enable debug pages in the streaming server")
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+)
 
 const transcodingSessionsDebugPageTemplate = `
 <html>
@@ -55,7 +51,7 @@ const transcodingSessionsDebugPageTemplate = `
 `
 
 func servePlaybackSessionDebugPage(w http.ResponseWriter, r *http.Request) {
-	if !*enableDebugPagesFlag {
+	if !viper.GetBool("debug.streamingPages") {
 		http.Error(w, "Debug pages not enabled", http.StatusForbidden)
 		return
 	}
