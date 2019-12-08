@@ -4,16 +4,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/viper"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/cmd/olaris/cmd"
 )
 
 func main() {
 	viper.SetConfigName("olaris")
-
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("olaris")
 	viper.AutomaticEnv()
 
