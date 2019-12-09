@@ -69,14 +69,11 @@ The command below mounts `~/Videos` to `/var/media` in the container --- please 
 
 ### Build dependencies
   * Install the [Go toolchain](https://golang.org)
-  * Install some third party tools
-	  * go get github.com/jteeuwen/go-bindata/...
-	  * go get github.com/elazarl/go-bindata-assetfs/...
-	  * go get github.com/maxbrunsfeld/counterfeiter
   * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
 
 ### Download other Olaris components
 
+  * Run `make deps` to install some third party tools
   * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
   * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to build it yourself.
 

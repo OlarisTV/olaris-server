@@ -1,18 +1,19 @@
 .DEFAULT_GOAL := build-local
 
-GOCMD=go
+GOCMD=GO111MODULE=on GOFLAGS="-mod=vendor" go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
+GOFMT=$(GOCMD) fmt
+GOMOD=$(GOCMD) mod
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
-GOGET=$(GOCMD) get
+GOGET=go get
 GOGENERATE=$(GOCMD) generate
 BIN_LOC=build
 DIST_DIR=dist
 FFMPEG_LOC=ffmpeg/executable/build
 BINARY_NAME=olaris
-GODEP=dep
-CMD_SERVER_PATH=cmd/olaris/main.go
+CMD_SERVER_PATH=main.go
 REACT_REPO=https://gitlab.com/olaris/olaris-react.git
 SRC_PATH=gitlab.com/olaris/olaris-server
 LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
@@ -24,7 +25,7 @@ RELEASE_IDENTIFIER=$(shell git describe --tags)
 all: generate
 
 .PHONY: ready-ci
-ready-ci: download-olaris-react download-ffmpeg generate
+ready-ci: deps download-olaris-react download-ffmpeg generate
 
 .PHONY: download-ffmpeg
 download-ffmpeg:
@@ -83,9 +84,18 @@ dist: build
 	cd builds/dist && zip -r ../../$(DIST_DIR)/$(IDENTIFIER)-$(RELEASE_IDENTIFIER).zip ./* && cd ../..
 	rm -r builds/dist
 
+.PHONY: fmt
+fmt:
+	$(GOFMT) ./...
+
 .PHONY: test
 test:
 	$(GOTEST) -v ./...
+
+.PHONY: vendor
+vendor:
+	$(GOMOD) tidy
+	$(GOMOD) vendor
 
 .PHONY: vet
 vet:
@@ -98,11 +108,12 @@ clean:
 
 .PHONY: deps
 deps:
-	$(GODEP) ensure
+	$(GOGET) github.com/go-bindata/go-bindata/...
+	$(GOGET) github.com/elazarl/go-bindata-assetfs/...
 
 .PHONY: generate
 generate:
-	$(GOGENERATE) -x -v ./...
+	GOOS= GOARCH= $(GOGENERATE) -x -v ./...
 
 .PHONY: run
 run: all

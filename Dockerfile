@@ -3,14 +3,10 @@ FROM golang:1.12-stretch as build
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends git unzip
 
-RUN go get github.com/jteeuwen/go-bindata/...
-RUN go get github.com/elazarl/go-bindata-assetfs/...
-RUN go get github.com/maxbrunsfeld/counterfeiter
-
 COPY . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
-RUN make download-olaris-react download-ffmpeg generate build-local
+RUN make deps download-olaris-react download-ffmpeg generate build-local
 
 FROM debian:stretch AS release
 
