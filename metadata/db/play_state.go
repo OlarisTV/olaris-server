@@ -32,7 +32,7 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 	db.Select("movies.*, play_states.*").
 		Order("play_states.updated_at DESC").
 		Joins("JOIN play_states ON play_states.media_uuid = movies.uuid").
-		Where("play_states.finished = 0").
+		Where("play_states.finished = false").
 		Where("play_states.user_id = ?", userID).
 		Find(&movies)
 	for i := range movies {

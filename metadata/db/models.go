@@ -2,8 +2,9 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/jinzhu/gorm"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Defines various mediatypes, only Movie and Series support atm.
@@ -85,12 +86,12 @@ func FindContentByUUID(uuid string) MediaFile {
 
 // RecentlyAddedMovies returns a list of the latest 10 movies added to the database.
 func RecentlyAddedMovies(userID uint) (movies []*Movie) {
-	db.Select("movies.*,play_states.*").Preload("MovieFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = movies.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&movies)
+	db.Select("movies.*,play_states.*").Preload("MovieFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = movies.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("movies.created_at DESC").Limit(10).Find(&movies)
 	return movies
 }
 
 // RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
 func RecentlyAddedEpisodes(userID uint) (eps []*Episode) {
-	db.Select("episodes.*, play_states.*").Preload("EpisodeFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = episodes.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("created_at DESC").Limit(10).Find(&eps)
+	db.Select("episodes.*, play_states.*").Preload("EpisodeFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = episodes.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("episodes.created_at DESC").Limit(10).Find(&eps)
 	return eps
 }
