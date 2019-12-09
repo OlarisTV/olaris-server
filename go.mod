@@ -26,7 +26,6 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.7.2
-	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20190513003547-158e7b876106
 	github.com/graph-gophers/graphql-transport-ws v0.0.0-20190611222414-40c048432299
 	github.com/jinzhu/gorm v1.9.9-0.20190611093255-321c636b9da5
@@ -36,7 +35,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2
 	github.com/ncw/rclone v1.48.1-0.20190619134754-ba72e62b41cb
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
-	github.com/peak6/envflag v0.0.0-20150722122143-39b5f0b7ebaa
+	github.com/peak6/envflag v0.0.0-20150722122143-39b5f0b7ebaa // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rs/cors v1.6.0
 	github.com/ryanbradynd05/go-tmdb v0.0.0-20181220020137-291a20d25ffd
@@ -45,12 +44,12 @@ require (
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/pflag v1.0.3
+	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.3.0
 	github.com/t3rm1n4l/go-mega v0.0.0-20190528125457-55e675378686 // indirect
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
 	google.golang.org/appengine v1.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69 // indirect
-	google.golang.org/grpc v1.21.0 // indirect
 	gopkg.in/gormigrate.v1 v1.5.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3 // indirect
 )
