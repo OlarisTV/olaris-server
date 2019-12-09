@@ -64,7 +64,7 @@ func NewMDContext(
 
 	helpers.InitLoggers(log.InfoLevel)
 
-	log.Printf("Olaris Metadata Server - v%s", helpers.Version())
+	log.Printf("Olaris Metadata Server - Version \"%s\"", helpers.Version)
 
 	db := db.NewDb(dbPath, false)
 	db.SetLogger(&GormLogger{})

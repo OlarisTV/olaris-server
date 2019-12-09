@@ -16,11 +16,11 @@ BINARY_NAME=olaris
 CMD_SERVER_PATH=main.go
 REACT_REPO=https://gitlab.com/olaris/olaris-react.git
 SRC_PATH=gitlab.com/olaris/olaris-server
-LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.GitCommit=$(GIT_REV)"
 GIT_REV := $(shell git rev-list -1 HEAD)
 REACT_BUILD_DIR=./app/build
 IDENTIFIER=$(BINARY_NAME)-$(GOOS)-$(GOARCH)
 RELEASE_IDENTIFIER=$(shell git describe --tags)
+LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.Version=$(RELEASE_IDENTIFIER)"
 
 all: generate
 
