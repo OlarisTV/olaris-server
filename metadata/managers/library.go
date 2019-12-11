@@ -220,9 +220,9 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 	// Since there is no way to get a list of current watchers we are just going to remove a watcher just in case.
 	man.Watcher.Remove(filePath)
 
-	err := man.Watcher.Add(filePath)
-	if err != nil {
-		log.Warnln("Could not add filesystem notification watcher:", err)
+	if err := man.Watcher.Add(filePath); err != nil {
+		log.WithError(err).
+			Warnln("could not add filesystem watcher; try increasing the sysctl fs.inotify.max_user_watches")
 	}
 }
 
