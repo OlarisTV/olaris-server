@@ -4,6 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 )
 
 // BaseItem holds information that is shared between various mediatypes.
@@ -275,6 +276,18 @@ func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 	db.Where("library_id = ?", libraryID).Find(&episodes)
 
 	return episodes
+}
+
+// FindEpisodeFileByPath Returns the first EpisodeFile matching the provided filePath,
+// regardless of whether the EpisodeFile is local or remote.
+func FindEpisodeFileByPath(filePath filesystem.Node) (*EpisodeFile, error) {
+	var episodeFile EpisodeFile
+
+	if err := db.Where("file_path = ?", filePath.FileLocator().Path).
+		First(&episodeFile).Error; err != nil {
+		return nil, err
+	}
+	return &episodeFile, nil
 }
 
 // FindEpisodesInLibrary returns all episodes in the given library.

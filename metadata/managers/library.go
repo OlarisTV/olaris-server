@@ -40,7 +40,7 @@ type LibraryManager struct {
 	Pool            *WorkerPool
 	Library         *db.Library
 	exitChan        chan bool
-	isShutingDown   bool
+	isShuttingDown  bool
 }
 
 // NewLibraryManager creates a new LibraryManager
@@ -67,7 +67,7 @@ func NewLibraryManager(lib *db.Library, metadataManager *metadata.MetadataManage
 // Shutdown shuts down the LibraryManager, right now it's just about cleaning up the fsnotify watcher.
 func (man *LibraryManager) Shutdown() {
 	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Debugln("Closing down LibraryManager")
-	man.isShutingDown = true
+	man.isShuttingDown = true
 	man.exitChan <- true
 	man.Pool.Shutdown()
 }
@@ -85,9 +85,7 @@ func (man *LibraryManager) IdentifyUnidentifiedFiles() {
 	}
 
 	if err != nil {
-		log.
-			WithField("error", err).
-			WithFields(man.Library.LogFields()).
+		log.WithError(err).WithFields(man.Library.LogFields()).
 			Warn("Failed to identify unidentified files in library")
 	}
 }
@@ -102,9 +100,7 @@ func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 	for _, episodeFile := range episodeFiles {
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(episodeFile)
 		if err != nil {
-			log.
-				WithField("error", err).
-				WithField("episodeFile", episodeFile).
+			log.WithError(err).WithField("episodeFile", episodeFile).
 				Warn("Failed to identify EpisodeFile")
 		}
 	}
@@ -121,9 +117,7 @@ func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
 	for _, movieFile := range movieFiles {
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(movieFile)
 		if err != nil {
-			log.
-				WithField("error", err).
-				WithField("movieFile", movieFile.FilePath).
+			log.WithError(err).WithField("movieFile", movieFile.FilePath).
 				Warn("Failed to identify EpisodeFile")
 		}
 	}
@@ -171,12 +165,12 @@ func (man *LibraryManager) RescanFilesystem() {
 	}
 
 	if err != nil {
-		log.
+		log.WithError(err).
 			WithFields(log.Fields{
 				"backend":    man.Library.Backend,
 				"rcloneName": man.Library.RcloneName,
 				"path":       man.Library.FilePath,
-				"error":      err.Error()}).
+			}).
 			Errorln("Failed to access library filesystem root node")
 		man.Library.Healthy = false
 		db.SaveLibrary(man.Library)
@@ -186,21 +180,7 @@ func (man *LibraryManager) RescanFilesystem() {
 	man.Library.Healthy = true
 	db.SaveLibrary(man.Library)
 
-	// We don't need to handle the error here because we already handle it in walkFn
-	_ = rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).
-				Warnf("Received an error while walking %s", walkPath)
-		} else if ValidFile(n) {
-			man.checkAndAddProbeJob(n)
-		}
-		// Watchers are only supported for the local backend
-		if n.BackendType() == filesystem.BackendLocal {
-			man.AddWatcher(walkPath)
-		}
-
-		return nil
-	}, true)
+	man.RecursiveProbe(rootNode)
 
 	dur := time.Since(stime)
 	log.Printf("Probing library '%s' took %f seconds", man.Library.FilePath, dur.Seconds())
@@ -208,9 +188,29 @@ func (man *LibraryManager) RescanFilesystem() {
 	db.SaveLibrary(man.Library)
 
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Warnln("Error while probing some files.")
-		return
+		log.WithError(err).Warnln("error while probing files")
 	}
+}
+
+// RecursiveProbe does what it says on the tin: recursively walks through a filesystem,
+// starting from the given rootNode, adds watchers for all local subdirectories found,
+// and probes any interesting files it finds along the way.
+func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
+	log.WithField("path", rootNode.Path()).Debugf("RecursiveProbe called")
+	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
+		if err != nil {
+			log.WithError(err).Warnf("received an error while walking %s", walkPath)
+		} else if ValidFile(n) {
+			man.checkAndAddProbeJob(n)
+		}
+
+		// Watchers are only supported for the local backend
+		if n.BackendType() == filesystem.BackendLocal && n.IsDir() {
+			man.AddWatcher(walkPath)
+		}
+
+		return nil
+	}, true)
 }
 
 // AddWatcher adds a fsnotify watcher to the given path.
@@ -240,7 +240,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 	streams, err := ffmpeg.GetStreams(n.FileLocator())
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).
+		log.WithError(err).
 			Debugln("Received error while opening file for stream inspection")
 		return nil
 	}
@@ -271,9 +271,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(&episodeFile)
 		if err != nil {
-			log.
-				WithField("error", err.Error()).
-				WithField("episodeFile", episodeFile).
+			log.WithError(err).WithField("episodeFile", episodeFile).
 				Warn("Failed to to identify and create episode for EpisodeFile")
 		}
 
@@ -291,9 +289,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(&movieFile)
 		if err != nil {
-			log.
-				WithField("error", err.Error()).
-				WithField("movieFile", movieFile).
+			log.WithError(err).WithField("movieFile", movieFile).
 				Warn("Failed to to identify and create Movie for MovieFile")
 		}
 
@@ -338,7 +334,7 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
+			log.WithError(err).Warnln("Received error while statting file")
 			m.DeleteSelfAndMD()
 		}
 	case db.BackendRclone:
@@ -346,7 +342,7 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		//		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
 		_, err = filesystem.RcloneNodeFromPath(p.Path)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Warnln("Received error while statting file")
+			log.WithError(err).Warnln("Received error while statting file")
 			// We only delete on the file does not exist error. Any other errors are not enough reason to wipe the content.
 			if err == vfs.ENOENT {
 				m.DeleteSelfAndMD()
@@ -382,7 +378,7 @@ func (man *LibraryManager) RefreshAll() {
 
 func checkPanic() {
 	if r := recover(); r != nil {
-		log.WithFields(log.Fields{"error": r}).Debugln("Recovered from panic in pool processing.")
+		log.WithFields(log.Fields{"recover": r}).Debugln("Recovered from panic in pool processing.")
 	}
 }
 

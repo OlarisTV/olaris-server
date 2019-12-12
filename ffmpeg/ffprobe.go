@@ -20,9 +20,6 @@ import (
 
 var extraDataRegex = regexp.MustCompile(`0{8}: \d{2}(.{2})\s(.{4})`)
 
-// TODO(Leon Handreke): Really hacky way to just cache stdout in memory
-var probeCache = map[filesystem.FileLocator][]byte{}
-
 type ProbeContainer struct {
 	Streams []ProbeStream `json:"streams"`
 	Format  ProbeFormat   `json:"format"`
@@ -99,50 +96,59 @@ type ProbeData struct {
 	Format *ProbeFormat `json:"format,omitempty"`
 }
 
+// TODO: limit size of cache, possibly user-configurable?
+var probeCache = map[filesystem.FileLocator]ProbeContainer{}
 var probeMutex = &sync.Mutex{}
 
+// Probe analyzes the given file, attempting to parse the container's metadata
+// and discover the number and types of streams contained within. Metadata from probed
+// files is cached in a global probeCache, with access restricted by the probeMutex.
 func Probe(fileLocator filesystem.FileLocator) (*ProbeContainer, error) {
 	log.WithFields(log.Fields{"fileLocator": fileLocator}).Debugln("Probing file")
 
-	cmdOut, inCache := probeCache[fileLocator]
+	// TODO: add per-file mutex lock to try to avoid double-scanning things
+	probeMutex.Lock()
+	probedFile, inCache := probeCache[fileLocator]
+	probeMutex.Unlock()
 
-	if !inCache {
-		log.WithFields(log.Fields{"fileLocator": fileLocator}).
-			Debugln("File not in cache, probing it.")
-		ffmpegUrl := buildFfmpegUrlFromFileLocator(fileLocator)
-		cmd := exec.Command(
-			executable.GetFFprobeExecutablePath(),
-			"-show_data",
-			"-show_format",
-			"-show_streams", ffmpegUrl, "-print_format", "json", "-v", "quiet")
-		cmd.Stderr = os.Stderr
+	if inCache {
+		return &probedFile, nil
+	}
 
-		log.Infof("Starting %s with args %s", cmd.Path, cmd.Args)
+	log.WithFields(log.Fields{"fileLocator": fileLocator}).
+		Debugln("File not in cache, probing it.")
+	ffmpegUrl := buildFfmpegUrlFromFileLocator(fileLocator)
+	cmd := exec.Command(
+		executable.GetFFprobeExecutablePath(),
+		"-show_data",
+		"-show_format",
+		"-show_streams", ffmpegUrl, "-print_format", "json", "-v", "quiet")
+	cmd.Stderr = os.Stderr
 
-		r, err := cmd.StdoutPipe()
-		if err != nil {
-			return nil, err
-		}
+	log.Infof("Starting %s with args %s", cmd.Path, cmd.Args)
 
-		err = cmd.Start()
-		if err != nil {
-			return nil, err
-		}
+	r, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
 
-		cmdOut, err = ioutil.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
-		// TODO(Maran): I'm a bit afraid what happens if for some reason the output of the probe is a GB of data. Can/should we check size?
-		probeMutex.Lock()
-		probeCache[fileLocator] = cmdOut
-		probeMutex.Unlock()
+	err = cmd.Start()
+	if err != nil {
+		return nil, err
+	}
 
-		err = cmd.Wait()
+	cmdOut, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	var v ProbeContainer
-	err := json.Unmarshal(cmdOut, &v)
+	err = json.Unmarshal(cmdOut, &v)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +156,10 @@ func Probe(fileLocator filesystem.FileLocator) (*ProbeContainer, error) {
 	if len(v.Streams) == 0 {
 		return nil, fmt.Errorf("no streams found, is this an actual media file")
 	}
+
+	probeMutex.Lock()
+	probeCache[fileLocator] = v
+	probeMutex.Unlock()
 
 	return &v, nil
 }
