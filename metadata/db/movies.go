@@ -124,7 +124,7 @@ func FindAllMovieFiles() (movies []MovieFile) {
 // regardless of whether the MovieFile is local or remote.
 func FindMovieFileByPath(filePath filesystem.Node) (*MovieFile, error) {
 	var movieFile MovieFile
-	if err := db.Where("file_path = ?", filePath.FileLocator().Path).
+	if err := db.Where("file_path = ?", filePath.FileLocator().String()).
 		First(&movieFile).Error; err != nil {
 		return nil, err
 	}

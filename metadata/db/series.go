@@ -283,7 +283,7 @@ func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 func FindEpisodeFileByPath(filePath filesystem.Node) (*EpisodeFile, error) {
 	var episodeFile EpisodeFile
 
-	if err := db.Where("file_path = ?", filePath.FileLocator().Path).
+	if err := db.Where("file_path = ?", filePath.FileLocator().String()).
 		First(&episodeFile).Error; err != nil {
 		return nil, err
 	}
