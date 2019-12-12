@@ -1,22 +1,18 @@
 package streaming
 
 import (
-	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
-	"gitlab.com/olaris/olaris-server/filesystem"
-	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"net/http"
 	"strconv"
 	"strings"
-)
 
-var allowDirectFileAccessFlag = flag.Bool(
-	"allow_direct_file_access",
-	false,
-	"Whether accessing files directly by their path (without presenting a valid JWT) is allowed")
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
+)
 
 // getNode parses the file that the client is trying to access from a string.
 // The passed string may either be in the form of "jwt/<streaming JWT>
@@ -69,9 +65,9 @@ func _getFileLocator(urlFileLocator string, allowDirectFileAccess bool) (filesys
 		return _getFileLocator(claims.FilePath, true)
 	}
 
-	if !(allowDirectFileAccess || *allowDirectFileAccessFlag) {
+	if !(allowDirectFileAccess || viper.GetBool("server.directFileAccess")) {
 		return filesystem.FileLocator{},
-			errors.New("Direct file access is not allowed!")
+			errors.New("direct file access is not allowed")
 	}
 
 	fileLocator, err := filesystem.ParseFileLocator(urlFileLocator)

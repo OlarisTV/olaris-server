@@ -6,9 +6,11 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	// Backend for Rclone
+	"github.com/fsnotify/fsnotify"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata"
 	"gitlab.com/olaris/olaris-server/metadata/app"
@@ -21,15 +23,10 @@ import (
 	"time"
 )
 
-var port int
-var dbLog bool
-var verbose bool
-
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the olaris server",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		mainRouter := mux.NewRouter()
 
 		r := mainRouter.PathPrefix("/olaris")
@@ -38,10 +35,21 @@ var serveCmd = &cobra.Command{
 
 		mctx := app.NewDefaultMDContext()
 
-		mctx.Db.LogMode(dbLog)
-		if verbose {
+		mctx.Db.LogMode(viper.GetBool("server.DBLog"))
+		if viper.GetBool("server.verbose") {
 			log.SetLevel(log.DebugLevel)
 		}
+		viper.WatchConfig()
+		updateConfig := func(in fsnotify.Event) {
+			log.Infoln("configuration file change detected")
+			if viper.GetBool("server.verbose") {
+				log.SetLevel(log.DebugLevel)
+			} else {
+				log.SetLevel(log.InfoLevel)
+			}
+			mctx.Db.LogMode(viper.GetBool("server.DBLog"))
+		}
+		viper.OnConfigChange(updateConfig)
 
 		metaRouter := r.PathPrefix("/m").Subrouter()
 		metadata.RegisterRoutes(mctx, metaRouter)
@@ -56,6 +64,7 @@ var serveCmd = &cobra.Command{
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
 		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
+		port := viper.GetInt("server.port")
 		streaming.FfmpegUrlPort = port
 		ffmpeg.FfmpegUrlPort = port
 
@@ -94,11 +103,4 @@ var serveCmd = &cobra.Command{
 		srv.Shutdown(ctx)
 		log.Println("Shut down complete, exiting.")
 	},
-}
-
-func init() {
-	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "http port")
-	serveCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "verbose logging")
-	serveCmd.Flags().BoolVar(&dbLog, "db-log", false, "sets whether the database should log queries")
-	rootCmd.AddCommand(serveCmd)
 }

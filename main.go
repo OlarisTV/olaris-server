@@ -1,20 +1,24 @@
 package main
 
 import (
-	goflag "flag"
-	"github.com/peak6/envflag"
-	"github.com/spf13/pflag"
-	"gitlab.com/olaris/olaris-server/cmd/olaris/cmd"
 	"os"
+	"strings"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/cmd/olaris/cmd"
 )
 
 func main() {
-	envflag.Parse()
+	viper.SetConfigName("olaris")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.SetEnvPrefix("olaris")
+	viper.AutomaticEnv()
 
-	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	// hack to get rid of the unwanted extra pflags from rclone/fs/log
+	pflag.CommandLine = pflag.NewFlagSet("olaris", pflag.ExitOnError)
 
 	cmd.Execute()
 
 	os.Exit(0)
-
 }

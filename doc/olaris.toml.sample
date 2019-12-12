@@ -1,0 +1,10 @@
+[server]
+#port = 8080
+#verbose = true
+#dblog = false
+#directFileAccess = false
+#systemFFmpeg = false
+
+[debug]
+#streamingPages = false
+#transcoderLog = true

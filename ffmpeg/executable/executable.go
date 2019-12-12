@@ -1,8 +1,8 @@
 package executable
 
 import (
-	"flag"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io/ioutil"
 	"os"
@@ -13,17 +13,12 @@ import (
 //go:generate mkdir -p build/$GOOS-$GOARCH
 //go:generate go-bindata -pkg $GOPACKAGE -prefix "build/$GOOS-$GOARCH" build/$GOOS-$GOARCH/...
 
-var useSystemFFmpeg = flag.Bool(
-	"use_system_ffmpeg",
-	false,
-	"Whether to use system FFmpeg instead of binary builtin")
-
 // To ensure that the executable isn't trying to be installed by multiple callers at the
 // same time, leading to crashes.
 var installExecutableMutex = &sync.Mutex{}
 
 func getExecutablePath(name string) string {
-	if *useSystemFFmpeg {
+	if viper.GetBool("server.systemFFmpeg") {
 		return name
 	}
 	binaryDir := path.Join(helpers.CacheDir(), "ffmpeg")
