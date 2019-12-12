@@ -13,7 +13,7 @@ type LocalNode struct {
 func LocalNodeFromPath(path string) (*LocalNode, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return &LocalNode{path: path}, err
 	}
 	return &LocalNode{fileInfo: fileInfo, path: path}, nil
 }

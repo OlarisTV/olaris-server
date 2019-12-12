@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 	"strconv"
 )
 
@@ -117,6 +118,17 @@ func FindAllMovieFiles() (movies []MovieFile) {
 	db.Preload("Library").Find(&movies)
 
 	return movies
+}
+
+// FindMovieFileByPath Returns the first MovieFile matching the provided filePath,
+// regardless of whether the MovieFile is local or remote.
+func FindMovieFileByPath(filePath filesystem.Node) (*MovieFile, error) {
+	var movieFile MovieFile
+	if err := db.Where("file_path = ?", filePath.FileLocator().Path).
+		First(&movieFile).Error; err != nil {
+		return nil, err
+	}
+	return &movieFile, nil
 }
 
 // QueryDetails specify arguments for media queries
