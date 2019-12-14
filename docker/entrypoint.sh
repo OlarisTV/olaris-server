@@ -16,5 +16,5 @@ fi
 
 args=( "$@" )
 # Login shell to properly set env vars
-exec sudo -u olaris "$@"
+exec sudo -E -H -u olaris "$@"
 
