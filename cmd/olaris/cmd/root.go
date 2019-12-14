@@ -70,6 +70,8 @@ func init() {
 		if err := viper.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 				// the user has no config file
+			} else {
+				log.WithError(err).WithField("configFile", viper.ConfigFileUsed()).Warnln("An error occurred while reading config file, contents are being ignored.")
 			}
 		}
 
