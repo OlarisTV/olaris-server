@@ -10,6 +10,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -197,6 +198,10 @@ func (man *LibraryManager) RescanFilesystem() {
 // and probes any interesting files it finds along the way.
 func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 	log.WithField("path", rootNode.Path()).Debugf("RecursiveProbe called")
+	if !strings.Contains(rootNode.Path(), man.Library.FilePath) {
+		log.Warnf("refusing to scan outside of library root %s", man.Library.FilePath)
+		return
+	}
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
 		if err != nil {
 			log.WithError(err).Warnf("received an error while walking %s", walkPath)
@@ -206,7 +211,7 @@ func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 
 		// Watchers are only supported for the local backend
 		if n.BackendType() == filesystem.BackendLocal && n.IsDir() {
-			man.AddWatcher(walkPath)
+			man.AddWatcher(n.FileLocator().Path)
 		}
 
 		return nil

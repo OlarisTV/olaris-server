@@ -133,10 +133,12 @@ loop:
 				if movieFile, err := db.FindMovieFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting movie")
 					movieFile.DeleteSelfAndMD()
-				}
-				if episodeFile, err := db.FindEpisodeFileByPath(n); err == nil {
+				} else if episodeFile, err := db.FindEpisodeFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting episode")
 					episodeFile.DeleteSelfAndMD()
+				} else {
+					// if there was no movie or episode in the database, no need to rescan
+					continue
 				}
 
 				dir, _ := path.Split(event.Name)
