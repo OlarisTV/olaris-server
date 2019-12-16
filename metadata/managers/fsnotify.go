@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"path"
 	"sync"
 	"time"
 
