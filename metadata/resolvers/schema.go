@@ -67,7 +67,7 @@ var SchemaTxt = `
 		# Delete a user from the database, please note that the user will be able to keep using the account until the JWT expires.
 		deleteUser(id: Int!): UserResponse!
 
-		# Rescans the mediaFile with the given ID (or all if ID ommited) and updates the stream information in the database.
+		# Rescans the mediaFile with the given ID (or all, if ID omitted) and updates the stream information in the database.
 		updateStreams(uuid: String): Boolean!
 
 		# Refreshes all external agent information (poster/overviews etc.) for the given library or season/series/episode.

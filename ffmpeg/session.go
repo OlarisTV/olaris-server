@@ -10,10 +10,10 @@ import (
 	"syscall"
 )
 
-// Magic segment index value to denote the inital segment
+// InitialSegmentIdx is a magic segment index value to denote the initial segment
 var InitialSegmentIdx int = -1
 
-// Many attributes in this struct are only public because they are displayed on a the debug page.
+// TranscodingSession contains many attributes which are only public because they are displayed on the debug page.
 type TranscodingSession struct {
 	cmd             *exec.Cmd
 	Stream          StreamRepresentation
@@ -68,7 +68,7 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 
 	r := regexp.MustCompile("stream0_(?P<number>\\d+).m4s$")
 
-	maxSegmentId := 0
+	maxSegmentID := 0
 
 	for _, f := range files {
 		match := r.FindString(f.Name())
@@ -76,15 +76,15 @@ func (s *TranscodingSession) AvailableSegments() (map[int]string, error) {
 			segmentFsNumber, _ := strconv.Atoi(match[len("stream0_") : len(match)-len(".m4s")])
 			res[segmentFsNumber] = filepath.Join(s.OutputDir, f.Name())
 
-			if segmentFsNumber > maxSegmentId {
-				maxSegmentId = segmentFsNumber
+			if segmentFsNumber > maxSegmentID {
+				maxSegmentID = segmentFsNumber
 			}
 		}
 	}
 
 	// We delete the "newest" segment because it may still be written to to avoid races.
 	if len(res) > 0 && !s.Terminated {
-		delete(res, maxSegmentId)
+		delete(res, maxSegmentID)
 	}
 
 	return res, nil

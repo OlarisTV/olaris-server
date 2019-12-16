@@ -330,7 +330,10 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 	switch m.GetLibrary().Backend {
 	case db.BackendLocal:
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
-		//		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on local")
+		if err != nil {
+			log.WithError(err).Warnln("Received error while parsing local file locator")
+			m.DeleteSelfAndMD()
+		}
 		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
@@ -339,7 +342,10 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		}
 	case db.BackendRclone:
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
-		//		log.WithFields(log.Fields{"path": p.Path}).Debugln("Checking on Rclone")
+		if err != nil {
+			log.WithError(err).Warnln("Received error while parsing rclone file locator")
+			m.DeleteSelfAndMD()
+		}
 		_, err = filesystem.RcloneNodeFromPath(p.Path)
 		if err != nil {
 			log.WithError(err).Warnln("Received error while statting file")

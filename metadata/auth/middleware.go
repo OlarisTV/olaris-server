@@ -3,15 +3,16 @@ package auth
 import (
 	"context"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/helpers"
-	"gitlab.com/olaris/olaris-server/metadata/db"
 	"io/ioutil"
 	"net/http"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
 type contextKey string
@@ -94,7 +95,7 @@ func MiddleWare(h http.Handler) http.Handler {
 						"userID":    claims.UserID,
 						"expiresAt": claims.StandardClaims.ExpiresAt,
 					},
-				).Debugln("Authenicated with valid JWT")
+				).Debugln("Authenticated with valid JWT")
 				ctx := r.Context()
 				ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
 				ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
@@ -102,7 +103,7 @@ func MiddleWare(h http.Handler) http.Handler {
 				return
 			}
 		}
-		log.Warnln("No authorisation header presented.")
+		log.Warnln("No authorization header presented.")
 		writeError("Unauthorized", w, http.StatusUnauthorized)
 		return
 	})

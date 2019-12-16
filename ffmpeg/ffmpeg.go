@@ -35,13 +35,13 @@ type StreamRepresentation struct {
 	Representation Representation
 }
 
-// MinSegDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
+// SegmentDuration defines the duration of segments that ffmpeg will generate. In the transmuxing case this is really
 // just a minimum time, the actual segments will be longer because they are cut at keyframes. For transcoding, we can
-// force keyframes to occur exactly every MinSegDuration, so MinSegDuration will be the actualy duration of the
+// force keyframes to occur exactly every SegmentDuration, so SegmentDuration will be the actual duration of the
 // segments.
 const SegmentDuration = 5000 * time.Millisecond
 
-// fragmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
+// segmentsPerSession defines the number of segments to encode per launch of ffmpeg. This constant should strike a
 // balance between minimizing the overhead cause by launching new ffmpeg processes and minimizing the minutes of video
 // transcoded but never watched by the user. Note that this constant is currently only used for the transcoding case.
 const segmentsPerSession = 12
@@ -63,7 +63,7 @@ func GetTransmuxedOrTranscodedRepresentation(
 	capabilities ClientCodecCapabilities) (StreamRepresentation, error) {
 
 	transmuxed := GetTransmuxedRepresentation(stream)
-	// We interpret emtpy PlayableCodecs as no preference
+	// We interpret empty PlayableCodecs as no preference
 	if len(capabilities.PlayableCodecs) == 0 || capabilities.CanPlay(transmuxed) {
 		return transmuxed, nil
 	}

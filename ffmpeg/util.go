@@ -29,7 +29,7 @@ var langTagToHumanized = map[string]string{
 	"fre": "French",
 	"spa": "Spanish",
 	"dut": "Dutch",
-	"por": "Portugese",
+	"por": "Portuguese",
 	"pol": "Polish",
 	"rus": "Russian",
 	"vie": "Vietnamese",
