@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"path"
 	"sync"
 	"time"
 
@@ -139,13 +138,6 @@ loop:
 				} else {
 					// if there was no movie or episode in the database, no need to rescan
 					continue
-				}
-
-				dir, _ := path.Split(event.Name)
-				if n, err = filesystem.LocalNodeFromPath(dir); err == nil {
-					man.RecursiveProbe(n)
-				} else {
-					log.WithError(err).WithField("path", dir).Debugf("error looking up path for RecursiveProbe")
 				}
 			}
 
