@@ -41,6 +41,8 @@ loop:
 
 		case event := <-man.Watcher.Events:
 			switch {
+			case event.Name == "":
+				continue
 			case event.Op&fsnotify.Create == fsnotify.Create:
 				var n *filesystem.LocalNode
 				var err error
@@ -136,8 +138,12 @@ loop:
 					log.WithField("path", event.Name).Debugf("deleting episode")
 					episodeFile.DeleteSelfAndMD()
 				} else {
-					// if there was no movie or episode in the database, no need to rescan
-					continue
+					// if there was no movie or episode in the database,
+					// maybe a parent folder was renamed or moved? best
+					// check for removed files.
+					log.WithField("path", event.Name).
+						Debugf("path does not match any movie or episode; likely parent folder renamed")
+					man.CheckRemovedFiles(n.FileLocator())
 				}
 			}
 

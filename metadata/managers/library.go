@@ -222,9 +222,6 @@ func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 func (man *LibraryManager) AddWatcher(filePath string) {
 	log.WithFields(log.Fields{"filepath": filePath}).Debugln("Adding path to fsnotify.")
 
-	// Since there is no way to get a list of current watchers we are just going to remove a watcher just in case.
-	man.Watcher.Remove(filePath)
-
 	if err := man.Watcher.Add(filePath); err != nil {
 		log.WithError(err).
 			Warnln("could not add filesystem watcher; try increasing the sysctl fs.inotify.max_user_watches")
@@ -357,21 +354,25 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 }
 
 // CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.
-func (man *LibraryManager) CheckRemovedFiles() {
-	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Infoln("Checking for removed files.")
+func (man *LibraryManager) CheckRemovedFiles(locator filesystem.FileLocator) {
+	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Infof("Checking for removed files under %s", locator.Path)
 
-	for _, movieFile := range db.FindMovieFilesInLibrary(man.Library.ID) {
+	for _, movieFile := range db.FindMovieFilesInLibraryByLocator(man.Library.ID, locator) {
 		CheckFileAndDeleteIfMissing(movieFile)
 	}
 
-	for _, file := range db.FindEpisodeFilesInLibrary(man.Library.ID) {
+	for _, file := range db.FindEpisodeFilesInLibraryByLocator(man.Library.ID, locator) {
 		CheckFileAndDeleteIfMissing(file)
 	}
 }
 
 // RefreshAll rescans all files and attempts to find missing metadata information.
 func (man *LibraryManager) RefreshAll() {
-	man.CheckRemovedFiles()
+	locator := filesystem.FileLocator{
+		Backend: filesystem.BackendType(man.Library.Backend),
+		Path:    man.Library.FilePath,
+	}
+	man.CheckRemovedFiles(locator)
 
 	if man.Library.IsLocal() {
 		man.AddWatcher(man.Library.FilePath)

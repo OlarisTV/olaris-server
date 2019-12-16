@@ -252,6 +252,16 @@ func FindMovieFilesInLibrary(libraryID uint) (movies []MovieFile) {
 	return movies
 }
 
+// FindMovieFilesInLibraryByLocator finds all movie files in the
+// provided library under the locator's path
+func FindMovieFilesInLibraryByLocator(libraryID uint, locator filesystem.FileLocator) (movies []MovieFile) {
+	db.Where("library_id =?", libraryID).
+		Where("file_path LIKE ?", fmt.Sprintf("%s%%", locator)).
+		Find(&movies)
+
+	return movies
+}
+
 // CreateMovieFile persists a moviefile in the database.
 func CreateMovieFile(movie *MovieFile) {
 	db.Create(movie)
