@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"path"
 	"sync"
 	"time"
 
@@ -42,6 +41,9 @@ loop:
 
 		case event := <-man.Watcher.Events:
 			switch {
+			case event.Name == "":
+				// can't do anything useful with an empty path; just ignore this event
+				continue
 			case event.Op&fsnotify.Create == fsnotify.Create:
 				var n *filesystem.LocalNode
 				var err error
@@ -133,17 +135,16 @@ loop:
 				if movieFile, err := db.FindMovieFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting movie")
 					movieFile.DeleteSelfAndMD()
-				}
-				if episodeFile, err := db.FindEpisodeFileByPath(n); err == nil {
+				} else if episodeFile, err := db.FindEpisodeFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting episode")
 					episodeFile.DeleteSelfAndMD()
-				}
-
-				dir, _ := path.Split(event.Name)
-				if n, err = filesystem.LocalNodeFromPath(dir); err == nil {
-					man.RecursiveProbe(n)
 				} else {
-					log.WithError(err).WithField("path", dir).Debugf("error looking up path for RecursiveProbe")
+					// if there was no movie or episode in the database,
+					// maybe a parent folder was renamed or moved? best
+					// check for removed files.
+					log.WithField("path", event.Name).
+						Debugf("path does not match any movie or episode; likely parent folder renamed")
+					man.CheckRemovedFiles(n.FileLocator())
 				}
 			}
 

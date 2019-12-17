@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -275,6 +277,15 @@ func FindSeriesInLibrary(libraryID uint) (series []Series) {
 func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
 	db.Where("library_id = ?", libraryID).Find(&episodes)
 
+	return episodes
+}
+
+// FindEpisodeFilesInLibraryByLocator finds all episode files in the given library
+// under the given locator's path
+func FindEpisodeFilesInLibraryByLocator(libraryID uint, locator filesystem.FileLocator) (episodes []EpisodeFile) {
+	db.Where("library_id =?", libraryID).
+		Where("file_path LIKE ?", fmt.Sprintf("%s%%", locator)).
+		Find(&episodes)
 	return episodes
 }
 
