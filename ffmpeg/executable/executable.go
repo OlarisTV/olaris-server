@@ -26,9 +26,10 @@ func getExecutablePath(name string) string {
 
 	info, err := AssetInfo(name)
 	if err != nil {
-		log.Warnf("No %s compiled in, using system system version instead", name)
+		log.Warnf("No compiled version of Olaris %s found. Falling back to the system's version. Please ensure you use https://gitlab.com/olaris/ffmpeg/ or this will fail.", name)
 		return name
 	}
+
 	if stat, err := os.Stat(binaryPath); err == nil && stat.Size() == info.Size() {
 		return binaryPath
 	}
@@ -57,10 +58,12 @@ func getExecutablePath(name string) string {
 	return binaryPath
 }
 
+// GetFFmpegExecutablePath gets the path to either a compiled-in or system version of ffmpeg
 func GetFFmpegExecutablePath() string {
 	return getExecutablePath("ffmpeg")
 }
 
+// GetFFprobeExecutablePath gets the path to either a compiled-in or system version of ffprobe
 func GetFFprobeExecutablePath() string {
 	return getExecutablePath("ffprobe")
 }
