@@ -55,10 +55,11 @@ type MovieResolver struct {
 
 // Files return files for movie.
 func (r *MovieResolver) Files() (res []*MovieFileResolver) {
-	for _, file := range r.r.MovieFiles {
-		resolver := MovieFileResolver{r: file}
+	for _, file := range db.FindFilesForMovieUUID(r.r.UUID) {
+		resolver := MovieFileResolver{r: *file}
 		res = append(res, &resolver)
 	}
+
 	return res
 }
 
@@ -160,7 +161,7 @@ func (r *MovieFileResolver) UUID() string {
 
 // TotalDuration returns the total duration in seconds based on the first encountered videostream.
 func (r *MovieFileResolver) TotalDuration() *float64 {
-	for _, stream := range r.r.Streams {
+	for _, stream := range db.FindStreamsForMovieFileUUID(r.r.UUID) {
 		if stream.StreamType == "video" {
 			seconds := stream.TotalDuration.Seconds()
 			return &seconds
@@ -171,8 +172,8 @@ func (r *MovieFileResolver) TotalDuration() *float64 {
 
 // Streams return all streams
 func (r *MovieFileResolver) Streams() (streams []*StreamResolver) {
-	for _, stream := range r.r.Streams {
-		streams = append(streams, &StreamResolver{r: stream})
+	for _, stream := range db.FindStreamsForMovieFileUUID(r.r.UUID) {
+		streams = append(streams, &StreamResolver{r: *stream})
 	}
 	return streams
 }
