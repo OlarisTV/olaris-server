@@ -10,7 +10,6 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"math"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -95,7 +94,7 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 		return db.FindEpisodeByID(episodeFile.EpisodeID)
 	}
 
-	name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
+	name := strings.TrimSuffix(episodeFile.FilePath, filepath.Ext(episodeFile.FileName))
 	parsedInfo := parsers.ParseSerieName(name)
 
 	if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
@@ -105,8 +104,8 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 
 	// Find a series for this Episode
 	var options = make(map[string]string)
-	if parsedInfo.Year != 0 {
-		options["first_air_date_year"] = strconv.FormatUint(parsedInfo.Year, 10)
+	if parsedInfo.Year != "" {
+		options["first_air_date_year"] = parsedInfo.Year
 	}
 	searchRes, err := m.agent.TmdbSearchTv(parsedInfo.Title, options)
 	if err != nil {

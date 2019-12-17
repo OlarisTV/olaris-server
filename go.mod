@@ -20,6 +20,7 @@ require (
 	github.com/aws/aws-sdk-go v1.20.4 // indirect
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/dgrijalva/jwt-go v3.2.1-0.20180921172315-3af4c746e1c2+incompatible
+	github.com/elazarl/go-bindata v3.0.5+incompatible // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -30,6 +31,7 @@ require (
 	github.com/graph-gophers/graphql-transport-ws v0.0.0-20190611222414-40c048432299
 	github.com/jinzhu/gorm v1.9.9-0.20190611093255-321c636b9da5
 	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536 // indirect
+	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2
