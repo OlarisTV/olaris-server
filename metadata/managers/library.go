@@ -199,7 +199,8 @@ func (man *LibraryManager) RescanFilesystem() {
 func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 	log.WithField("path", rootNode.Path()).Debugf("RecursiveProbe called")
 	if !strings.Contains(rootNode.Path(), man.Library.FilePath) {
-		log.Warnf("refusing to scan outside of library root %s", man.Library.FilePath)
+		log.WithField("libraryRoot", man.Library.FilePath).
+			Warnf("refusing to scan outside of library root")
 		return
 	}
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
@@ -222,15 +223,15 @@ func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 func (man *LibraryManager) AddWatcher(filePath string) {
 	log.WithFields(log.Fields{"filepath": filePath}).Debugln("Adding path to fsnotify.")
 
+	// we always call man.Watcher.Add because it won't create redundant watchers if the filePath already exists.
 	if err := man.Watcher.Add(filePath); err != nil {
 		log.WithError(err).
 			Warnln("could not add filesystem watcher; try increasing the sysctl fs.inotify.max_user_watches")
 	}
 }
 
-// ProbeFile goes over the given file,
-// creates a new entry in the database if required and tries to associate the file with a
-// with metadata based on the filename.
+// ProbeFile goes over the given file, creates a new entry in the database if required,
+// and tries to associate the file with metadata based on the filename.
 func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	library := man.Library
 	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
@@ -353,16 +354,20 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 	}
 }
 
-// CheckRemovedFiles checks all files in the database to ensure they still exist, if not it attempts to remove the MD information from the db.
+// CheckRemovedFiles checks all files in the database to ensure they still exist;
+// if not, it attempts to remove the MD information from the db.
 func (man *LibraryManager) CheckRemovedFiles(locator filesystem.FileLocator) {
-	log.WithFields(log.Fields{"libraryID": man.Library.ID}).Infof("Checking for removed files under %s", locator.Path)
+	log.WithFields(log.Fields{
+		"libraryID": man.Library.ID,
+		"locator":   locator,
+	}).Infof("Checking for removed files under locator path")
 
 	for _, movieFile := range db.FindMovieFilesInLibraryByLocator(man.Library.ID, locator) {
 		CheckFileAndDeleteIfMissing(movieFile)
 	}
 
-	for _, file := range db.FindEpisodeFilesInLibraryByLocator(man.Library.ID, locator) {
-		CheckFileAndDeleteIfMissing(file)
+	for _, episodeFile := range db.FindEpisodeFilesInLibraryByLocator(man.Library.ID, locator) {
+		CheckFileAndDeleteIfMissing(episodeFile)
 	}
 }
 

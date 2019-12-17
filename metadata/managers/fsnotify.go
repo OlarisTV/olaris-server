@@ -42,6 +42,7 @@ loop:
 		case event := <-man.Watcher.Events:
 			switch {
 			case event.Name == "":
+				// can't do anything useful with an empty path; just ignore this event
 				continue
 			case event.Op&fsnotify.Create == fsnotify.Create:
 				var n *filesystem.LocalNode
