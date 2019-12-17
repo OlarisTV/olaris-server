@@ -147,7 +147,7 @@ func CollectMovieInfo(movie *Movie) {
 		Find(&movie.MovieFiles)
 }
 
-// FindAllUnidentifiedMoviesInLibrary retrieves all movies without an tmdb_id in the database.
+// FindAllUnidentifiedMovieFilesInLibrary retrieves all movies without an tmdb_id in the database.
 func FindAllUnidentifiedMovieFilesInLibrary(libraryID uint) ([]*MovieFile, error) {
 	var files []*MovieFile
 	if err := db.
@@ -306,6 +306,7 @@ func MovieFileExists(filePath string) bool {
 	return true
 }
 
+// FindMovieFileByUUID finds a specific movie based on it's UUID
 func FindMovieFileByUUID(uuid string) (*MovieFile, error) {
 	var movieFile MovieFile
 	if err := db.First(&movieFile, "uuid = ?", uuid).Error; err != nil {
@@ -314,6 +315,7 @@ func FindMovieFileByUUID(uuid string) (*MovieFile, error) {
 	return &movieFile, nil
 }
 
+// FindMovieForMovieFile accepts a movieFile and returns the movie
 func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
 	var movie Movie
 	if err := db.Model(movieFile).Related(&movie).Error; err != nil {
@@ -321,4 +323,16 @@ func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
 	}
 	CollectMovieInfo(&movie)
 	return &movie, nil
+}
+
+// FindFilesForMovieUUID finds all movieFiles for the associated movie UUIDs
+func FindFilesForMovieUUID(uuid string) (movieFiles []*MovieFile) {
+	db.Joins("JOIN movies ON movies.id = movie_files.movie_id").Where("movies.uuid = ?", uuid).Find(&movieFiles)
+	return movieFiles
+}
+
+// FindStreamsForMovieFileUUID finds all movieStreams for the associated movieFile UUIDs
+func FindStreamsForMovieFileUUID(uuid string) (streams []*Stream) {
+	db.Joins("JOIN movie_files ON movie_files.id = streams.owner_id AND owner_type = 'movie_files'").Where("movie_files.uuid = ?", uuid).Find(&streams)
+	return streams
 }
