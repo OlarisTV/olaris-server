@@ -6,12 +6,12 @@ import (
 
 func TestParseSeriesName(t *testing.T) {
 	tests := make(map[string]ParsedSeriesInfo)
-	tests["Battlestar Galactica - S01E04 (1978)"] = ParsedSeriesInfo{Year: 1978, Title: "Battlestar Galactica", EpisodeNum: 4, SeasonNum: 1}
-	tests["Battlestar Galactica - S02E03"] = ParsedSeriesInfo{Year: 0, Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
-	tests["Battlestar Galactica - S2E3"] = ParsedSeriesInfo{Year: 0, Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
-	tests["This does not Exist"] = ParsedSeriesInfo{Year: 0, Title: "This does not Exist", EpisodeNum: 0, SeasonNum: 0}
-	tests["Battlestar.Galactica.-.S02E03.mkv"] = ParsedSeriesInfo{Year: 0, Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
-	tests["Angel.3x2"] = ParsedSeriesInfo{Year: 0, Title: "Angel", EpisodeNum: 2, SeasonNum: 3}
+	tests["Battlestar Galactica - S01E04 (1978)"] = ParsedSeriesInfo{Year: "1978", Title: "Battlestar Galactica", EpisodeNum: 4, SeasonNum: 1}
+	tests["Battlestar Galactica - S02E03"] = ParsedSeriesInfo{Year: "", Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
+	tests["Battlestar Galactica - S2E3"] = ParsedSeriesInfo{Year: "", Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
+	tests["This does not Exist"] = ParsedSeriesInfo{Year: "", Title: "This does not Exist", EpisodeNum: 0, SeasonNum: 0}
+	tests["Battlestar.Galactica.-.S02E03.mkv"] = ParsedSeriesInfo{Year: "", Title: "Battlestar Galactica", EpisodeNum: 3, SeasonNum: 2}
+	tests["Angel.3x2"] = ParsedSeriesInfo{Year: "", Title: "Angel", EpisodeNum: 2, SeasonNum: 3}
 
 	for name, mi := range tests {
 		t.Log("running test on:", name)
