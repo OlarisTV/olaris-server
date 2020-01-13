@@ -41,7 +41,7 @@ func (n *LocalNode) Walk(walkFn WalkFunc, followFileSymlinks bool) error {
 		// NOTE(Leon Handreke): This behaviour breaks with what filepath.Walk usually does
 		// and is a bit weird in general. We should figure out a good strategy here and how
 		// to properly abstract it out
-		if followFileSymlinks && info.Mode()&os.ModeSymlink != 0 {
+		if followFileSymlinks && err == nil && info.Mode()&os.ModeSymlink != 0 {
 			statInfo, err := os.Stat(walkPath)
 			if err == nil {
 				if !statInfo.IsDir() {
