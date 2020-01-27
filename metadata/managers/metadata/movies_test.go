@@ -12,9 +12,7 @@ func TestGetOrCreateMovieForMovieFile_SearchByStringDistance(t *testing.T) {
 	// TODO(Leon Handreke): Dependency inject instead of relying on global singletons
 	db.NewInMemoryDBForTests(false)
 	agent := agentsfakes.FakeMetadataRetrievalAgent{}
-	m := MetadataManager{
-		agent: &agent,
-	}
+	m := NewMetadataManager(&agent)
 
 	movieFile := db.MovieFile{
 		MediaItem: db.MediaItem{

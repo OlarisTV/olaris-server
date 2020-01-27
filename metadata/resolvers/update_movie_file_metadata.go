@@ -41,7 +41,9 @@ func (r *Resolver) UpdateMovieFileMetadata(
 	movieFile.Movie = *movie
 	db.SaveMovieFile(movieFile)
 
-	r.env.MetadataManager.GarbageCollectMovieIfRequired(oldMovie.ID)
+	if oldMovie != nil {
+		r.env.MetadataManager.GarbageCollectMovieIfRequired(oldMovie.ID)
+	}
 
 	return &UpdateMovieFileMetadataPayloadResolver{mediaItem: movie}
 }

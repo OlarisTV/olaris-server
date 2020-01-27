@@ -392,17 +392,26 @@ func CreateSeries(series *Series) {
 
 // SaveSeries updates a series in the database.
 func SaveSeries(series *Series) error {
-	return db.Save(series).Error
+	if err := db.Save(series).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Series %s", series.UUID)
+	}
+	return nil
 }
 
 // SaveSeason updates a season in the database.
 func SaveSeason(season *Season) error {
-	return db.Save(season).Error
+	if err := db.Save(season).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Season %s", season.UUID)
+	}
+	return nil
 }
 
 // SaveEpisode updates an episode in the database.
 func SaveEpisode(episode *Episode) error {
-	return db.Save(episode).Error
+	if err := db.Save(episode).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Episode %s", episode.UUID)
+	}
+	return nil
 }
 
 // DeleteEpisode deletes an Episode

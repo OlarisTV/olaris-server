@@ -39,10 +39,9 @@ func (m *MetadataManager) getSeriesLock(seriesID uint) *sync.RWMutex {
 	return v.(*sync.RWMutex)
 }
 
-// ForceSeriesMetadataUpdate refreshes all data from the agent and updates the database record.
-// TODO(Leon Handreke): Use a pool here and make it explicit in the documentation and function
-//  name that we're only queueing these updates.
-func (m *MetadataManager) ForceSeriesMetadataUpdate() {
+// RefreshAllSeriesMetadata refreshes all data from the agent and updates the database record.
+// TODO(Leon Handreke): Queue these updates async
+func (m *MetadataManager) RefreshAllSeriesMetadata() {
 	series, err := db.FindAllSeries(nil)
 	if err != nil {
 
@@ -50,46 +49,78 @@ func (m *MetadataManager) ForceSeriesMetadataUpdate() {
 			Error("Failed to get series for forced metadata update")
 	}
 	for _, series := range series {
-		m.UpdateSeriesMD(series)
+		m.RefreshSeriesMetadata(series)
 		for _, season := range db.FindSeasonsForSeries(series.ID) {
-			m.UpdateSeasonMD(&season)
+			m.RefreshSeasonMetadata(&season)
 			for _, episode := range db.FindEpisodesForSeason(season.ID) {
-				m.UpdateEpisodeMD(&episode)
+				m.RefreshEpisodeMetadata(&episode)
 			}
 		}
 	}
 }
 
-// UpdateSeriesMD loops over all series with no tmdb information yet and attempts to retrieve the metadata.
-func (m *MetadataManager) UpdateSeriesMD(series *db.Series) error {
+// RefreshSeriesMetadata refreshes the database record and saves it
+func (m *MetadataManager) RefreshSeriesMetadata(series *db.Series) error {
 	log.WithFields(log.Fields{"name": series.Name}).
 		Println("Refreshing metadata for series.")
-	m.agent.UpdateSeriesMD(series, series.TmdbID)
-	db.SaveSeries(series)
+
+	if err := m.refreshSeriesMetadataFromAgent(series); err != nil {
+		return err
+	}
+	if err := db.SaveSeries(series); err != nil {
+		return err
+	}
+
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeSeriesUpdated,
+		Payload:   series,
+	})
 	return nil
 }
 
-// UpdateEpisodeMD updates the database record with the latest data from the agent
-func (m *MetadataManager) UpdateEpisodeMD(ep *db.Episode) error {
-	if err := m.agent.UpdateEpisodeMD(ep,
-		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum); err != nil {
+// refreshSeriesMetadataFromAgent refreshes metadata but does not save.
+func (m *MetadataManager) refreshSeriesMetadataFromAgent(series *db.Series) error {
+	return m.agent.UpdateSeriesMD(series, series.TmdbID)
+}
+
+func (m *MetadataManager) RefreshEpisodeMetadata(ep *db.Episode) error {
+	if err := m.refreshEpisodeMetadataFromAgent(ep); err != nil {
 		return err
 	}
 	if err := db.SaveEpisode(ep); err != nil {
 		return err
 	}
 
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeEpisodeUpdated,
+		Payload:   ep,
+	})
 	return nil
 }
 
-// UpdateSeasonMD updates the database record with the latest data from the agent
-func (m *MetadataManager) UpdateSeasonMD(season *db.Season) error {
-	if err := m.agent.UpdateSeasonMD(
-		season, season.GetSeries().TmdbID, season.SeasonNumber); err != nil {
+// refreshEpisodeMetadataFromAgent updates the database record with the latest data from the agent
+func (m *MetadataManager) refreshEpisodeMetadataFromAgent(ep *db.Episode) error {
+	return m.agent.UpdateEpisodeMD(ep,
+		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum)
+}
+
+// RefreshSeasonMetadata refreshes and saves season metadata
+func (m *MetadataManager) RefreshSeasonMetadata(season *db.Season) error {
+	if err := m.refreshSeasonMetadataFromAgent(season); err != nil {
 		return err
 	}
 	if err := db.SaveSeason(season); err != nil {
 		return err
+	}
+	return nil
+}
+
+// refreshSeasonMetadataFromAgent refreshes metadata from the agent but does not save
+func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) error {
+	if err := m.agent.UpdateSeasonMD(
+		season, season.GetSeries().TmdbID, season.SeasonNumber); err != nil {
+		return errors.Wrapf(err,
+			"Failed to refresh metadata from agent for Season %s", season.UUID)
 	}
 	return nil
 }
@@ -229,13 +260,17 @@ func (m *MetadataManager) GetOrCreateEpisodeByTmdbID(
 	}
 
 	episode = &db.Episode{Season: season, SeasonID: season.ID, EpisodeNum: episodeNum}
-	if err := m.UpdateEpisodeMD(episode); err != nil {
+	if err := m.refreshEpisodeMetadataFromAgent(episode); err != nil {
+		return nil, err
+	}
+	if err := db.SaveEpisode(episode); err != nil {
 		return nil, err
 	}
 
-	if m.Subscriber != nil {
-		m.Subscriber.EpisodeAdded(episode)
-	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeEpisodeAdded,
+		Payload:   episode,
+	})
 
 	return episode, nil
 }
@@ -253,13 +288,17 @@ func (m *MetadataManager) getOrCreateSeriesByTmdbID(
 	}
 
 	series = &db.Series{BaseItem: db.BaseItem{TmdbID: seriesTmdbID}}
-	if err := m.UpdateSeriesMD(series); err != nil {
+	if err := m.refreshSeriesMetadataFromAgent(series); err != nil {
+		return nil, err
+	}
+	if err := db.SaveSeries(series); err != nil {
 		return nil, err
 	}
 
-	if m.Subscriber != nil {
-		m.Subscriber.SeriesAdded(series)
-	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeSeriesAdded,
+		Payload:   series,
+	})
 
 	return series, nil
 }
@@ -282,13 +321,17 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 	}
 
 	season = &db.Season{Series: series, SeriesID: series.ID, SeasonNumber: seasonNum}
-	if err := m.UpdateSeasonMD(season); err != nil {
+	if err := m.refreshSeasonMetadataFromAgent(season); err != nil {
+		return nil, err
+	}
+	if err := db.SaveSeason(season); err != nil {
 		return nil, err
 	}
 
-	if m.Subscriber != nil {
-		m.Subscriber.SeasonAdded(season)
-	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeSeasonAdded,
+		Payload:   season,
+	})
 
 	return season, nil
 }
@@ -325,6 +368,10 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 	if err := db.DeleteEpisode(episode.ID); err != nil {
 		return errors.Wrap(err, "Failed to delete Episode")
 	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeEpisodeDeleted,
+		Payload:   episode,
+	})
 	// TODO(Leon Handreke): Also garbage collect play states
 
 	m.getSeasonLock(episode.SeasonID).Lock()
@@ -340,6 +387,10 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 	if err := db.DeleteSeason(season.ID); err != nil {
 		return errors.Wrap(err, "Failed to delete Season")
 	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeSeasonDeleted,
+		Payload:   season,
+	})
 
 	m.getSeriesLock(season.SeriesID).Lock()
 	defer m.getSeriesLock(season.SeriesID).Unlock()
@@ -354,6 +405,10 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 	if err := db.DeleteSeries(series.ID); err != nil {
 		return errors.Wrap(err, "Failed to delete Series")
 	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeSeriesDeleted,
+		Payload:   series,
+	})
 
 	return nil
 }

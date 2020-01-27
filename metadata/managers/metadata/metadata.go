@@ -23,14 +23,16 @@ type MetadataManager struct {
 	seasonLock  sync.Map
 	seriesLock  sync.Map
 
-	Subscriber LibrarySubscriber
-	agent      agents.MetadataRetrievalAgent
+	agent agents.MetadataRetrievalAgent
+
+	eventBroker *metadataEventBroker
 }
 
 // NewMetadataManager creates a new MetadataManager
 func NewMetadataManager(agent agents.MetadataRetrievalAgent) *MetadataManager {
 	return &MetadataManager{
-		agent: agent,
+		agent:       agent,
+		eventBroker: newMetadataEventBroker(),
 	}
 }
 
@@ -63,8 +65,10 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 		Debugln("Looking to refresh metadata agent data.")
 	movie, err := db.FindMovieByUUID(UUID)
 	if err == nil {
+		// TODO(Leon Handreke): Pull these locks into the methods that actually touch the DB
+		//  structures
 		mhelpers.WithLock(func() {
-			m.refreshAndSaveMovieMetadata(movie)
+			m.RefreshMovieMetadata(movie)
 		}, movie.UUID)
 		return true
 	}
@@ -72,7 +76,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	series, err := db.FindSeriesByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.UpdateSeriesMD(series)
+			m.refreshSeriesMetadataFromAgent(series)
 		}, series.UUID)
 		return true
 	}
@@ -80,7 +84,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	season, err := db.FindSeasonByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.UpdateSeasonMD(season)
+			m.refreshSeasonMetadataFromAgent(season)
 		}, season.UUID)
 		return true
 	}
@@ -88,7 +92,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	episode, err := db.FindEpisodeByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.UpdateEpisodeMD(episode)
+			m.refreshEpisodeMetadataFromAgent(episode)
 		}, episode.UUID)
 		return true
 	}

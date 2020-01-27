@@ -78,20 +78,23 @@ func (man *LibraryManager) Shutdown() {
 // Shutdown() must be called before calling this function! After that, the LibraryManager object
 // must be discarded, it is no longer valid.
 func (man *LibraryManager) DeleteLibrary() error {
-	if man.Library.Kind == db.MediaTypeMovie {
+	switch man.Library.Kind {
+	case db.MediaTypeMovie:
 		movieFiles, _ := db.FindMovieFilesInLibrary(man.Library.ID)
 		for _, movieFile := range movieFiles {
 			movieID := movieFile.MovieID
 			movieFile.DeleteWithStreams()
 			man.metadataManager.GarbageCollectMovieIfRequired(movieID)
 		}
-	} else if man.Library.Kind == db.MediaTypeSeries {
+	case db.MediaTypeSeries:
 		episodeFiles, _ := db.FindEpisodeFilesInLibrary(man.Library.ID)
 		for _, episodeFile := range episodeFiles {
 			episodeID := episodeFile.EpisodeID
 			episodeFile.DeleteWithStreams()
 			man.metadataManager.GarbageCollectEpisodeIfRequired(episodeID)
 		}
+	default:
+		log.Error("Failed to delete library of kind", man.Library.Kind)
 	}
 
 	if err := db.DeleteLibraryByID(man.Library.ID); err != nil {

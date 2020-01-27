@@ -115,9 +115,9 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 			if lm.Library.ID == libID {
 				go mhelpers.WithLock(func() {
 					if lm.Library.Kind == db.MediaTypeMovie {
-						r.env.MetadataManager.ForceMovieMetadataUpdate()
+						r.env.MetadataManager.RefreshAllMovieMetadata()
 					} else if lm.Library.Kind == db.MediaTypeSeries {
-						r.env.MetadataManager.ForceSeriesMetadataUpdate()
+						r.env.MetadataManager.RefreshAllSeriesMetadata()
 					}
 				}, "libid"+strconv.FormatUint(uint64(lm.Library.ID), 10))
 			}
@@ -154,7 +154,7 @@ func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *
 		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
 
-	libraryManager := r.findLibraryManager(uint(args.ID))
+	libraryManager := r.libs[uint(args.ID)]
 	library := *libraryManager.Library
 	// TODO(Leon Handreke): Ideally, it would be more explicit what is happening here.
 	// We are stopping the watcher to then remove the library manager

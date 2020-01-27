@@ -224,10 +224,8 @@ func FindMoviesInLibrary(libraryID uint) (movies []Movie) {
 
 func FindMovieFilesByMovieID(movieID uint) ([]*MovieFile, error) {
 	var movieFiles []*MovieFile
-	if err := db.Where("movie_id = ?", movieID).Find(&movieFiles).Error; err != nil {
-		return nil, err
-	}
-	return movieFiles, nil
+	err := db.Where("movie_id = ?", movieID).Find(&movieFiles).Error
+	return movieFiles, err
 }
 
 // FindMovieFilesInLibraryByLocator finds all movie files in the
@@ -250,7 +248,10 @@ func FindMovieFilesInLibrary(libraryID uint) ([]MovieFile, error) {
 // SaveMovie updates a movie in the database.
 func SaveMovie(movie *Movie) error {
 	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
-	return db.Save(movie).Error
+	if err := db.Save(movie).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save movie %s", movie.UUID)
+	}
+	return nil
 }
 
 // DeleteMovieByID deletes the movie from the database
@@ -283,10 +284,8 @@ func MovieFileExists(filePath string) bool {
 // FindMovieFileByUUID finds a specific movie based on it's UUID
 func FindMovieFileByUUID(uuid string) (*MovieFile, error) {
 	var movieFile MovieFile
-	if err := db.First(&movieFile, "uuid = ?", uuid).Error; err != nil {
-		return nil, err
-	}
-	return &movieFile, nil
+	err := db.First(&movieFile, "uuid = ?", uuid).Error
+	return &movieFile, err
 }
 
 // FindMovieForMovieFile accepts a movieFile and returns the movie
@@ -301,12 +300,16 @@ func FindMovieForMovieFile(movieFile *MovieFile) (*Movie, error) {
 
 // FindFilesForMovieUUID finds all movieFiles for the associated movie UUIDs
 func FindFilesForMovieUUID(uuid string) (movieFiles []*MovieFile) {
-	db.Joins("JOIN movies ON movies.id = movie_files.movie_id").Where("movies.uuid = ?", uuid).Find(&movieFiles)
+	db.Joins("JOIN movies ON movies.id = movie_files.movie_id").
+		Where("movies.uuid = ?", uuid).
+		Find(&movieFiles)
 	return movieFiles
 }
 
 // FindStreamsForMovieFileUUID finds all movieStreams for the associated movieFile UUIDs
 func FindStreamsForMovieFileUUID(uuid string) (streams []*Stream) {
-	db.Joins("JOIN movie_files ON movie_files.id = streams.owner_id AND owner_type = 'movie_files'").Where("movie_files.uuid = ?", uuid).Find(&streams)
+	db.Joins("JOIN movie_files ON movie_files.id = streams.owner_id AND owner_type = 'movie_files'").
+		Where("movie_files.uuid = ?", uuid).
+		Find(&streams)
 	return streams
 }
