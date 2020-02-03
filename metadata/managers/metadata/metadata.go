@@ -64,7 +64,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	movie, err := db.FindMovieByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.UpdateMovieMD(movie)
+			m.refreshAndSaveMovieMetadata(movie)
 		}, movie.UUID)
 		return true
 	}

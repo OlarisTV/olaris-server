@@ -16,21 +16,19 @@ import (
 // ForceMovieMetadataUpdate refreshes all metadata for all movies
 func (m *MetadataManager) ForceMovieMetadataUpdate() {
 	for _, movie := range db.FindAllMovies(nil) {
-		m.UpdateMovieMD(&movie)
+		m.refreshAndSaveMovieMetadata(&movie)
 	}
 }
 
-// UpdateMovieMD updates the database record with the latest data from the agent
-func (m *MetadataManager) UpdateMovieMD(movie *db.Movie) error {
+// refreshAndSaveMovieMetadata updates the database record with the latest data from the agent
+func (m *MetadataManager) refreshAndSaveMovieMetadata(movie *db.Movie) error {
 	log.WithFields(log.Fields{"title": movie.Title}).
 		Println("Refreshing metadata for movie.")
 
 	if err := m.agent.UpdateMovieMD(movie, movie.TmdbID); err != nil {
 		return err
 	}
-	// TODO(Leon Handreke): return an error here.
-	db.SaveMovie(movie)
-	return nil
+	return db.SaveMovie(movie)
 }
 
 // GetOrCreateMovieForMovieFile tries to create a Movie object by parsing the filename of the
@@ -103,7 +101,7 @@ func (m *MetadataManager) GetOrCreateMovieByTmdbID(tmdbID int) (*db.Movie, error
 	}
 
 	movie = &db.Movie{BaseItem: db.BaseItem{TmdbID: tmdbID}}
-	if err := m.UpdateMovieMD(movie); err != nil {
+	if err := m.refreshAndSaveMovieMetadata(movie); err != nil {
 		return nil, err
 	}
 

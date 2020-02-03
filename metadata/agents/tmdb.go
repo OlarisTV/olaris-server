@@ -102,7 +102,7 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 	return nil
 }
 
-// UpdateMovieMD updates
+// refreshAndSaveMovieMetadata updates
 func (a *TmdbAgent) UpdateMovieMD(movie *db.Movie, tmdbID int) error {
 	r, err := a.Tmdb.GetMovieInfo(tmdbID, nil)
 
