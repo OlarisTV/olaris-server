@@ -144,7 +144,7 @@ loop:
 					// check for removed files.
 					log.WithField("path", event.Name).
 						Debugf("path does not match any movie or episode; likely parent folder renamed")
-					man.CheckRemovedFiles(n.FileLocator())
+					man.RemoveMissingFiles(n.FileLocator())
 				}
 			}
 

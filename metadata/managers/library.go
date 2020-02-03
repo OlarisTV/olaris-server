@@ -323,8 +323,8 @@ func ValidFile(node filesystem.Node) bool {
 	return true
 }
 
-// CheckFileAndDeleteIfMissing checks the given media file and if it's no longer present removes it from the database
-func CheckFileAndDeleteIfMissing(m db.MediaFile) {
+// FileMissing checks if the given media file is missing
+func FileMissing(m db.MediaFile) bool {
 	log.WithFields(log.Fields{
 		"path":    m.GetFilePath(),
 		"library": m.GetLibrary().Name,
@@ -335,45 +335,51 @@ func CheckFileAndDeleteIfMissing(m db.MediaFile) {
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
 		if err != nil {
 			log.WithError(err).Warnln("Received error while parsing local file locator")
-			m.DeleteSelfAndMD()
+			return true
 		}
 		_, err = filesystem.LocalNodeFromPath(p.Path)
 		// TODO(Leon Handreke): Check if the error is actually not found
 		if err != nil {
 			log.WithError(err).Warnln("Received error while statting file")
-			m.DeleteSelfAndMD()
+			return true
 		}
 	case db.BackendRclone:
 		p, err := filesystem.ParseFileLocator(m.GetFilePath())
 		if err != nil {
 			log.WithError(err).Warnln("Received error while parsing rclone file locator")
-			m.DeleteSelfAndMD()
+			return true
 		}
 		_, err = filesystem.RcloneNodeFromPath(p.Path)
 		if err != nil {
 			log.WithError(err).Warnln("Received error while statting file")
-			// We only delete on the file does not exist error. Any other errors are not enough reason to wipe the content.
+			// We only delete on the file does not exist error. Any other errors are not enough
+			// reason to wipe the content.
 			if err == vfs.ENOENT {
-				m.DeleteSelfAndMD()
+				return true
 			}
 		}
 	}
+	return false
 }
 
-// CheckRemovedFiles checks all files in the database to ensure they still exist;
+// RemoveMissingFiles checks all files in the database to ensure they still exist;
 // if not, it attempts to remove the MD information from the db.
-func (man *LibraryManager) CheckRemovedFiles(locator filesystem.FileLocator) {
+func (man *LibraryManager) RemoveMissingFiles(locator filesystem.FileLocator) {
 	log.WithFields(log.Fields{
 		"libraryID": man.Library.ID,
 		"locator":   locator,
 	}).Infof("Checking for removed files under locator path")
 
 	for _, movieFile := range db.FindMovieFilesInLibraryByLocator(man.Library.ID, locator) {
-		CheckFileAndDeleteIfMissing(movieFile)
+		if FileMissing(movieFile) {
+			movieFile.DeleteSelfAndMD()
+		}
 	}
 
 	for _, episodeFile := range db.FindEpisodeFilesInLibraryByLocator(man.Library.ID, locator) {
-		CheckFileAndDeleteIfMissing(episodeFile)
+		if FileMissing(episodeFile) {
+			episodeFile.DeleteSelfAndMD()
+		}
 	}
 }
 
@@ -383,7 +389,7 @@ func (man *LibraryManager) RefreshAll() {
 		Backend: filesystem.BackendType(man.Library.Backend),
 		Path:    man.Library.FilePath,
 	}
-	man.CheckRemovedFiles(locator)
+	man.RemoveMissingFiles(locator)
 
 	if man.Library.IsLocal() {
 		man.AddWatcher(man.Library.FilePath)
