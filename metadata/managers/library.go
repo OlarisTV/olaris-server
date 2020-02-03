@@ -288,7 +288,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			},
 			Streams: collectStreams(streams),
 		}
-		db.CreateMovieFile(&movieFile)
+		db.SaveMovieFile(&movieFile)
 
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(&movieFile)
 		if err != nil {
