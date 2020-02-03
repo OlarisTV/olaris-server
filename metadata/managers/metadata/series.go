@@ -325,6 +325,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 	if err := db.DeleteEpisode(episode.ID); err != nil {
 		return errors.Wrap(err, "Failed to delete Episode")
 	}
+	// TODO(Leon Handreke): Also garbage collect play states
 
 	m.getSeasonLock(episode.SeasonID).Lock()
 	defer m.getSeasonLock(episode.SeasonID).Unlock()

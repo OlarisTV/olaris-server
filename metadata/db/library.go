@@ -68,23 +68,8 @@ func FindLibrary(id int) Library {
 }
 
 // DeleteLibrary deletes a library from the database.
-func DeleteLibrary(id int) (Library, error) {
-	library := Library{}
-	db.Find(&library, id)
-
-	if library.ID != 0 {
-		obj := db.Unscoped().Delete(&library)
-		if obj.Error == nil {
-			if library.Kind == MediaTypeMovie {
-				DeleteMoviesFromLibrary(library.ID)
-			} else if library.Kind == MediaTypeSeries {
-				DeleteEpisodesFromLibrary(library.ID)
-			}
-		}
-		return library, obj.Error
-	}
-
-	return library, fmt.Errorf("library not found, could not be deleted")
+func DeleteLibraryByID(libraryID uint) error {
+	return db.Unscoped().Delete(Library{}, "id = ?", libraryID).Error
 }
 
 // AddLibrary adds a filesystem folder and starts tracking media inside the folders.

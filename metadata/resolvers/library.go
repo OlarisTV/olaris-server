@@ -154,13 +154,19 @@ func (r *Resolver) DeleteLibrary(ctx context.Context, args struct{ ID int32 }) *
 		return &LibResResolv{LibraryResponse{Error: CreateErrResolver(err)}}
 	}
 
-	r.StopLibraryManager(uint(args.ID))
+	libraryManager := r.findLibraryManager(uint(args.ID))
+	library := *libraryManager.Library
+	// TODO(Leon Handreke): Ideally, it would be more explicit what is happening here.
+	// We are stopping the watcher to then remove the library manager
+	libraryManager.Shutdown()
+	libraryManager.DeleteLibrary()
 
-	library, err := db.DeleteLibrary(int(args.ID))
 	var libRes LibraryResponse
 	// TODO(Maran): Dry up resolver creation here and in CreateLibrary
 	if err == nil {
-		libRes = LibraryResponse{Library: &LibraryResolver{Library{library, nil, nil}}}
+		// TODO(Leon Handreke): Why are returning a deleted library?
+		libRes = LibraryResponse{Library: &LibraryResolver{
+			Library{library, nil, nil}}}
 	} else {
 		libRes = LibraryResponse{Error: CreateErrResolver(err)}
 	}

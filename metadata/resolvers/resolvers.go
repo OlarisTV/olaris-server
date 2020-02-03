@@ -1,6 +1,7 @@
 package resolvers
 
 import (
+	"fmt"
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
 	"gitlab.com/olaris/olaris-server/metadata/app"
@@ -47,20 +48,20 @@ func NewResolver(env *app.MetadataContext) *Resolver {
 	return r
 }
 
+func (r *Resolver) findLibraryManager(libraryID uint) *managers.LibraryManager {
+	for _, lm := range r.libs {
+		if lm.Library.ID == libraryID {
+			return lm
+		}
+	}
+	panic(fmt.Sprintf("No library manager found for library %d", libraryID))
+}
+
 // AddLibraryManager adds a new manager
 func (r *Resolver) AddLibraryManager(lib *db.Library) {
 	man := managers.NewLibraryManager(lib, r.env.MetadataManager)
 	r.libs = append(r.libs, man)
 	go man.RefreshAll()
-}
-
-// StopLibraryManager stops a given library based on the supplied Library
-func (r *Resolver) StopLibraryManager(id uint) {
-	for _, lm := range r.libs {
-		if lm.Library.ID == id {
-			lm.Shutdown()
-		}
-	}
 }
 
 // ErrorResolver holds error information.

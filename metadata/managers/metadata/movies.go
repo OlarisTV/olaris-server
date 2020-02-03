@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	errors "github.com/pkg/errors"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -173,4 +174,37 @@ func (m *MetadataManager) GetOrCreateMovieByTmdbID(tmdbID int) (*db.Movie, error
 	}
 
 	return movie, nil
+}
+
+// GarbageCollectMovieIfRequired deletes a Movie if
+// required if no more MovieFiles associated with it remain.
+func (m *MetadataManager) GarbageCollectMovieIfRequired(movieID uint) error {
+	log.Debugln("Garbage collecting movie", movieID)
+
+	// We get the movie here so we can send the event with the UUID later
+	movie, err := db.FindMovieByID(movieID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find movie movie")
+	}
+
+	movieFiles, err := db.FindMovieFilesByMovieID(movieID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to refresh movie")
+	}
+
+	if len(movieFiles) > 0 {
+		return nil
+	}
+
+	if err := db.DeleteMovieByID(movieID); err != nil {
+		return errors.Wrap(err, "Failed to delete Movie")
+	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeMovieDeleted,
+		Payload:   movie.UUID,
+	})
+
+	// TODO(Leon Handreke): Also garbage collect play states
+
+	return nil
 }
