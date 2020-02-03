@@ -1,9 +1,8 @@
 package metadata
 
 import (
-	"errors"
 	"fmt"
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -236,7 +235,7 @@ func (m *MetadataManager) GarbageCollectAllEpisodes() error {
 	// TODO(Leon Handreke): We actually only need the ID here.
 	episodes, err := db.FindAllEpisodes()
 	if err != nil {
-		return errors2.Wrap(err, "Failed to get all Episodes")
+		return errors.Wrap(err, "Failed to get all Episodes")
 	}
 	for _, episode := range episodes {
 		m.GarbageCollectEpisodeIfRequired(episode.ID)
@@ -254,7 +253,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 
 	episode, err := db.FindEpisodeByID(episodeID)
 	if err != nil {
-		return errors2.Wrap(err, "Failed to refresh episode")
+		return errors.Wrap(err, "Failed to refresh episode")
 	}
 
 	if len(episode.EpisodeFiles) > 0 {
@@ -262,7 +261,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 	}
 
 	if err := db.DeleteEpisode(episode.ID); err != nil {
-		return errors2.Wrap(err, "Failed to delete Episode")
+		return errors.Wrap(err, "Failed to delete Episode")
 	}
 
 	m.getSeasonLock(episode.SeasonID).Lock()
@@ -276,7 +275,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 		return nil
 	}
 	if err := db.DeleteSeason(season.ID); err != nil {
-		return errors2.Wrap(err, "Failed to delete Season")
+		return errors.Wrap(err, "Failed to delete Season")
 	}
 
 	m.getSeriesLock(season.SeriesID).Lock()
@@ -290,7 +289,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 		return nil
 	}
 	if err := db.DeleteSeries(series.ID); err != nil {
-		return errors2.Wrap(err, "Failed to delete Series")
+		return errors.Wrap(err, "Failed to delete Series")
 	}
 
 	return nil
