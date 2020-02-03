@@ -47,7 +47,7 @@ func (r *Resolver) UpdateMovieFileMetadata(
 	db.SaveMovieFile(movieFile)
 
 	if shouldPurgeOldMovie {
-		db.DeleteMovie(oldMovie)
+		db.DeleteMovieByID(oldMovie.ID)
 	}
 
 	return &UpdateMovieFileMetadataPayloadResolver{mediaItem: movie}
