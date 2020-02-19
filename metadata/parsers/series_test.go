@@ -15,7 +15,7 @@ func TestParseSeriesName(t *testing.T) {
 
 	for name, mi := range tests {
 		t.Log("running test on:", name)
-		newMi := ParseSerieName(name)
+		newMi := ParseSeriesName(name)
 		if newMi.Year != mi.Year {
 			t.Errorf("Year %v did not match expected year %v\n", newMi.Year, mi.Year)
 		}

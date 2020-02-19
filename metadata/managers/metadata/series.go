@@ -5,6 +5,8 @@ import (
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
@@ -13,6 +15,16 @@ import (
 	"strings"
 	"sync"
 )
+
+type TmdbEpisodeKey struct {
+	TmdbSeriesID  int
+	SeasonNumber  int
+	EpisodeNumber int
+}
+
+const TmdbTvSeriesXattrName = "user.olaris.v1.tv.tmdb.series.id"
+const TmdbTvSeasonXattrName = "user.olaris.v1.tv.tmdb.season.number"
+const TmdbTvEpisodeXattrName = "user.olaris.v1.tv.tmdb.episode.number"
 
 func (m *MetadataManager) getEpisodeLock(episodeID uint) *sync.RWMutex {
 	v, _ := m.episodeLock.LoadOrStore(episodeID, &sync.RWMutex{})
@@ -84,18 +96,13 @@ func (m *MetadataManager) UpdateSeasonMD(season *db.Season) error {
 	return nil
 }
 
-// GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
-// given EpisodeFile and looking it up in TMDB. It associates the EpisodeFile with the new Model.
-// If no matching episode can be found in TMDB, it returns an error.
-func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
-	episodeFile *db.EpisodeFile) (*db.Episode, error) {
-
-	if episodeFile.EpisodeID != 0 {
-		return db.FindEpisodeByID(episodeFile.EpisodeID)
-	}
+// Attempt to parse a filename and determine the three values
+// that uniquely identify the episode (on TMDB)
+func (m *MetadataManager) GetEpisodeDetailsByParsing(
+	episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
 
 	name := strings.TrimSuffix(episodeFile.FilePath, filepath.Ext(episodeFile.FileName))
-	parsedInfo := parsers.ParseSerieName(name)
+	parsedInfo := parsers.ParseSeriesName(name)
 
 	if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
 		// We can't do anything if we don't know the season/episode number
@@ -132,8 +139,55 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 	}
 	seriesInfo := searchRes.Results[bestResultIdx]
 
+	return &TmdbEpisodeKey{TmdbSeriesID: seriesInfo.ID, SeasonNumber: parsedInfo.SeasonNum, EpisodeNumber: parsedInfo.EpisodeNum}, nil
+
+}
+
+// Attempt to read three values from file extended attributes before
+// resorting to parsing the filename
+func (m *MetadataManager) GetEpisodeDetailsByXattr(episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
+	// Need the file path
+	p, err := filesystem.ParseFileLocator(episodeFile.GetFilePath())
+	if err != nil {
+		return nil, err
+	}
+
+	xattrNames := []string{TmdbTvSeriesXattrName, TmdbTvSeasonXattrName, TmdbTvEpisodeXattrName}
+	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, xattrNames)
+	if err != nil {
+		log.Debugln("No Xattr data found for ", p.Path, err)
+		return nil, err
+	}
+
+	return &TmdbEpisodeKey{
+		TmdbSeriesID:  xattrTmdbIDs[TmdbTvSeriesXattrName],
+		SeasonNumber:  xattrTmdbIDs[TmdbTvSeasonXattrName],
+		EpisodeNumber: xattrTmdbIDs[TmdbTvEpisodeXattrName],
+	}, nil
+}
+
+// GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
+// given EpisodeFile and looking it up in TMDB. It associates the EpisodeFile with the new Model.
+// If no matching episode can be found in TMDB, it returns an error.
+func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
+	episodeFile *db.EpisodeFile) (*db.Episode, error) {
+
+	if episodeFile.EpisodeID != 0 {
+		return db.FindEpisodeByID(episodeFile.EpisodeID)
+	}
+
+	key, err := m.GetEpisodeDetailsByXattr(episodeFile)
+	if err != nil {
+		key, err = m.GetEpisodeDetailsByParsing(episodeFile)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+        log.Debugln("Found xattr TMDB episode: series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "filename", episodeFile.FileName)
+	}
+
 	episode, err := m.GetOrCreateEpisodeByTmdbID(
-		seriesInfo.ID, parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
+		key.TmdbSeriesID, key.SeasonNumber, key.EpisodeNumber)
 	if err != nil {
 		return nil, err
 	}

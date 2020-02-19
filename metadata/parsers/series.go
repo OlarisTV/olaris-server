@@ -3,9 +3,9 @@ package parsers
 import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/helpers"
+	"path/filepath"
 	"regexp"
 	"strconv"
-        "path/filepath"
 	"strings"
 )
 
@@ -28,9 +28,9 @@ func (psi *ParsedSeriesInfo) logFields() log.Fields {
 	return log.Fields{"year": psi.Year, "title": psi.Title, "episodeNum": psi.EpisodeNum, "seasonNum": psi.SeasonNum}
 }
 
-// ParseSerieName attempts to parse a filename looking for episode/season information.
-func ParseSerieName(filePath string) *ParsedSeriesInfo {
-        fileName := filepath.Base(filePath)
+// ParseSeriesName attempts to parse a filename looking for episode/season information.
+func ParseSeriesName(filePath string) *ParsedSeriesInfo {
+	fileName := filepath.Base(filePath)
 	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing filename for episode information.")
 	var err error
 	var psi = ParsedSeriesInfo{}
@@ -67,32 +67,32 @@ func ParseSerieName(filePath string) *ParsedSeriesInfo {
 		}
 		psi.Title = helpers.Sanitize(res[1])
 	} else {
-                //We expect a folder structure of Series/Season/Episode.file
-                fileParent := filepath.Base(filepath.Dir(filePath))
-                seasonResult := seasonRegex.MatchString(strings.ToLower(fileParent))
-                if seasonResult {
+		//We expect a folder structure of Series/Season/Episode.file
+		fileParent := filepath.Base(filepath.Dir(filePath))
+		seasonResult := seasonRegex.MatchString(strings.ToLower(fileParent))
+		if seasonResult {
 
-                    seasonNumber := firstNumberRegex.FindAllString(fileParent, -1)
-                    psi.SeasonNum, err = strconv.Atoi(seasonNumber[0])
-                    if err != nil {
-                        log.WithError(err).
-				Debugln("Could not convert season to uint: ")
-                    }
+			seasonNumber := firstNumberRegex.FindAllString(fileParent, -1)
+			psi.SeasonNum, err = strconv.Atoi(seasonNumber[0])
+			if err != nil {
+				log.WithError(err).
+					Debugln("Could not convert season to uint: ")
+			}
 
-                    episodeNumber := firstNumberRegex.FindAllString(filepath.Base(filePath), -1)
-                    psi.EpisodeNum, err = strconv.Atoi(episodeNumber[0])
-                    if err != nil {
-                        log.WithError(err).
-				Debugln("Could not convert episode to uint: ")
-                    }
+			episodeNumber := firstNumberRegex.FindAllString(filepath.Base(filePath), -1)
+			psi.EpisodeNum, err = strconv.Atoi(episodeNumber[0])
+			if err != nil {
+				log.WithError(err).
+					Debugln("Could not convert episode to uint: ")
+			}
 
-		    psi.Year = ""
+			psi.Year = ""
 
-                    seriesName := filepath.Base(filepath.Dir(filepath.Dir(filePath)))
-                    psi.Title = helpers.Sanitize(seriesName)
-                } else {
-                    psi.Title = helpers.Sanitize(fileName)
-                }
+			seriesName := filepath.Base(filepath.Dir(filepath.Dir(filePath)))
+			psi.Title = helpers.Sanitize(seriesName)
+		} else {
+			psi.Title = helpers.Sanitize(fileName)
+		}
 
 	}
 	log.WithFields(psi.logFields()).Debugln("Done parsing episode.")
