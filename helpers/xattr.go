@@ -11,7 +11,7 @@ func GetXattrInts(FileName string, XattrNames []string) (XattrMap map[string]int
 	for _, XattrName := range XattrNames {
 		sz, err := syscall.Getxattr(FileName, XattrName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't access xattr", XattrName)
+			return nil, fmt.Errorf("couldn't access xattr %s", XattrName)
 		}
 
 		// Arbitrary limit
