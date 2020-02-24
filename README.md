@@ -84,18 +84,4 @@ The command below mounts `~/Videos` to `/var/media` in the container --- please 
       olaristv/olaris-server
 
 ## How to build
-
-### Build dependencies
-  * Install the [Go toolchain](https://golang.org)
-  * Build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
-
-### Download other Olaris components
-
-  * Run `make deps` to install some third party tools
-  * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
-  * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to build it yourself.
-
-  Once this is done you can use some of the following commands:
-
-  * `make run` to run a build on your local platform.
-  * `make build-local` to build a binary for your local platform. The binary will be placed in `build/olaris`.
+See the [hacking](HACKING.md) document for instructions on how to build Olaris yourself
