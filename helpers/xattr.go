@@ -6,8 +6,11 @@ import (
 	"syscall"
 )
 
+// GetXattrInts reads multiple extended attribute values from a filename,
+// one for each extended attribute name passed in the input array, and
+// returns the values in a map so they can be easily correlated with their names.
 func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int, err error) {
-	xattrMap = make(map[string]int)
+	xattrMap = map[string]int{}
 	for _, xattrName := range xattrNames {
 		sz, err := syscall.Getxattr(fileName, xattrName, nil)
 		if err != nil {
@@ -29,7 +32,7 @@ func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int
 		if err != nil {
 			return nil, err
 		}
-		xattrMap[XattrName] = i
+		xattrMap[xattrName] = i
 	}
 	return xattrMap, nil
 }
