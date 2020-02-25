@@ -6,12 +6,12 @@ import (
 	"syscall"
 )
 
-func GetXattrInts(FileName string, XattrNames []string) (XattrMap map[string]int, err error) {
-	XattrMap = make(map[string]int)
-	for _, XattrName := range XattrNames {
-		sz, err := syscall.Getxattr(FileName, XattrName, nil)
+func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int, err error) {
+	xattrMap = make(map[string]int)
+	for _, xattrName := range xattrNames {
+		sz, err := syscall.Getxattr(fileName, xattrName, nil)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't access xattr %s", XattrName)
+			return nil, fmt.Errorf("couldn't access xattr %s", xattrName)
 		}
 
 		// Arbitrary limit
@@ -20,7 +20,7 @@ func GetXattrInts(FileName string, XattrNames []string) (XattrMap map[string]int
 		}
 
 		dest := make([]byte, sz)
-		_, err = syscall.Getxattr(FileName, XattrName, dest)
+		_, err = syscall.Getxattr(fileName, xattrName, dest)
 		if err != nil {
 			return nil, err
 		}
@@ -29,7 +29,7 @@ func GetXattrInts(FileName string, XattrNames []string) (XattrMap map[string]int
 		if err != nil {
 			return nil, err
 		}
-		XattrMap[XattrName] = i
+		xattrMap[XattrName] = i
 	}
-	return XattrMap, nil
+	return xattrMap, nil
 }
