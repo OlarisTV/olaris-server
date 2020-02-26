@@ -3,7 +3,7 @@ package helpers
 import (
 	"fmt"
 	"strconv"
-	"syscall"
+	"golang.org/x/sys/unix"
 )
 
 // GetXattrInts reads multiple extended attribute values from a filename,
@@ -12,7 +12,7 @@ import (
 func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int, err error) {
 	xattrMap = map[string]int{}
 	for _, xattrName := range xattrNames {
-		sz, err := syscall.Getxattr(fileName, xattrName, nil)
+		sz, err := unix.Getxattr(fileName, xattrName, nil)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't access xattr %s", xattrName)
 		}
@@ -23,7 +23,7 @@ func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int
 		}
 
 		dest := make([]byte, sz)
-		_, err = syscall.Getxattr(fileName, xattrName, dest)
+		_, err = unix.Getxattr(fileName, xattrName, dest)
 		if err != nil {
 			return nil, err
 		}
