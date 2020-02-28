@@ -156,7 +156,7 @@ func (m *MetadataManager) GetEpisodeDetailsByXattr(episodeFile *db.EpisodeFile) 
 	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, xattrNames)
 	if err != nil {
 		log.Debugln("No Xattr data found for ", p.Path, err)
-		return nil, err
+		return &TmdbEpisodeKey{TmdbSeriesID: 0, SeasonNumber: 0, EpisodeNumber: 0}, nil
 	}
 
 	return &TmdbEpisodeKey{
@@ -178,13 +178,14 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 
 	key, err := m.GetEpisodeDetailsByXattr(episodeFile)
 	if err != nil {
+		return nil, err
+	} else if key.TmdbSeriesID <= 0 || key.SeasonNumber <= 0 || key.EpisodeNumber <= 0 {
 		key, err = m.GetEpisodeDetailsByParsing(episodeFile)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-        log.Debugln("Found xattr TMDB episode: series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "filename", episodeFile.FileName)
 	}
+	log.Debugln("Matched TMDB series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "filename", episodeFile.FileName)
 
 	episode, err := m.GetOrCreateEpisodeByTmdbID(
 		key.TmdbSeriesID, key.SeasonNumber, key.EpisodeNumber)

@@ -48,8 +48,10 @@ func (m *MetadataManager) GetMovieTmdbIDFromXattr(
 
 	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, []string{TmdbMovieXattrName})
 	if err != nil {
-		log.Debugln("No Xattr data found for ", p.Path, err)
-		return 0, err
+		log.WithFields(log.Fields{
+			"filename": movieFile.GetFilePath(),
+		}).Warnln("Could not find match based on extended file attributes")
+		return 0, nil
 	}
 
 	return xattrTmdbIDs[TmdbMovieXattrName], nil
@@ -78,7 +80,7 @@ func (m *MetadataManager) GetTmdbIDByParsing(
 			"year":  parsedInfo.Year,
 		}).Warnln("Could not find match based on parsed title and given year.")
 
-		return 0, errors.New("Could not find match in TMDB ID for given filename")
+		return 0, nil
 	}
 
 	log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
@@ -110,9 +112,13 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 
 	tmdbID, err := m.GetMovieTmdbIDFromXattr(movieFile)
 	if err != nil {
+		return nil, err
+	} else if tmdbID <= 0 {
 		tmdbID, err = m.GetTmdbIDByParsing(movieFile.FileName)
 		if err != nil {
 			return nil, err
+		} else if tmdbID == 0 {
+			return nil, errors.New("Could not find match in TMDB ID for given filename")
 		}
 	} else {
 		log.Debugln("Read TMDB ID", tmdbID, "from xattr for", movieFile.FileName, "- skipping filename parse")
