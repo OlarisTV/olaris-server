@@ -50,7 +50,7 @@ func (m *MetadataManager) GetMovieTmdbIDFromXattr(
 	if err != nil {
 		log.WithFields(log.Fields{
 			"filename": movieFile.GetFilePath(),
-		}).Warnln("Could not find match based on extended file attributes")
+		}).Debugln("Could not find match based on extended file attributes")
 		return 0, nil
 	}
 
@@ -110,6 +110,8 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 		return db.FindMovieByID(movieFile.MovieID)
 	}
 
+	// Convoluted error handling logic here: the goal is to differentiate between
+	// hitting an error when reading the xattr and merely not finding a match
 	tmdbID, err := m.GetMovieTmdbIDFromXattr(movieFile)
 	if err != nil {
 		return nil, err

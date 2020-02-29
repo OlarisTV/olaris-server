@@ -156,7 +156,7 @@ func (m *MetadataManager) GetEpisodeDetailsByXattr(episodeFile *db.EpisodeFile) 
 	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, xattrNames)
 	if err != nil {
 		log.Debugln("No Xattr data found for ", p.Path, err)
-		return &TmdbEpisodeKey{TmdbSeriesID: 0, SeasonNumber: 0, EpisodeNumber: 0}, nil
+		return &TmdbEpisodeKey{}, nil
 	}
 
 	return &TmdbEpisodeKey{
@@ -176,6 +176,8 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 		return db.FindEpisodeByID(episodeFile.EpisodeID)
 	}
 
+	// Convoluted error handling logic here: the goal is to differentiate between
+	// hitting an error when reading the xattr and merely not finding a match
 	key, err := m.GetEpisodeDetailsByXattr(episodeFile)
 	if err != nil {
 		return nil, err
