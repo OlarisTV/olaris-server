@@ -2,8 +2,8 @@ package helpers
 
 import (
 	"fmt"
-	"strconv"
 	"golang.org/x/sys/unix"
+	"strconv"
 )
 
 // GetXattrInts reads multiple extended attribute values from a filename,
@@ -28,11 +28,12 @@ func GetXattrInts(fileName string, xattrNames []string) (xattrMap map[string]int
 			return nil, err
 		}
 
-		i, err := strconv.Atoi(string(dest))
+		i, err := strconv.ParseUint(string(dest), 10, 32)
 		if err != nil {
 			return nil, err
 		}
-		xattrMap[xattrName] = i
+
+		xattrMap[xattrName] = int(i)
 	}
 	return xattrMap, nil
 }

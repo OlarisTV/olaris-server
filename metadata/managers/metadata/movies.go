@@ -37,7 +37,7 @@ func (m *MetadataManager) refreshAndSaveMovieMetadata(movie *db.Movie) error {
 
 // Take a MovieFile object and try to read the TMDB ID
 // from the extended file attributes
-func (m *MetadataManager) GetMovieTmdbIDFromXattr(
+func (m *MetadataManager) GetMovieDetailsFromXattr(
 	movieFile *db.MovieFile) (tmdbID int, err error) {
 
 	// Need the file path
@@ -59,7 +59,7 @@ func (m *MetadataManager) GetMovieTmdbIDFromXattr(
 
 // Take a MovieFile object and try to determine the best
 // TMDB ID by parsing the filename
-func (m *MetadataManager) GetTmdbIDByParsing(
+func (m *MetadataManager) GetMovieDetailsByParsing(
 	fileName string) (tmdbID int, err error) {
 	name := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 	parsedInfo := parsers.ParseMovieName(name)
@@ -110,13 +110,13 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 		return db.FindMovieByID(movieFile.MovieID)
 	}
 
-	// Convoluted error handling logic here: the goal is to differentiate between
+	// Nonstandard error handling logic here: the goal is to differentiate between
 	// hitting an error when reading the xattr and merely not finding a match
-	tmdbID, err := m.GetMovieTmdbIDFromXattr(movieFile)
+	tmdbID, err := m.GetMovieDetailsFromXattr(movieFile)
 	if err != nil {
 		return nil, err
-	} else if tmdbID <= 0 {
-		tmdbID, err = m.GetTmdbIDByParsing(movieFile.FileName)
+	} else if tmdbID == 0 {
+		tmdbID, err = m.GetMovieDetailsByParsing(movieFile.FileName)
 		if err != nil {
 			return nil, err
 		} else if tmdbID == 0 {

@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"errors"
-	"fmt"
 	errors2 "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -104,11 +103,6 @@ func (m *MetadataManager) GetEpisodeDetailsByParsing(
 	name := strings.TrimSuffix(episodeFile.FilePath, filepath.Ext(episodeFile.FileName))
 	parsedInfo := parsers.ParseSeriesName(name)
 
-	if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
-		// We can't do anything if we don't know the season/episode number
-		return nil, fmt.Errorf("Can't parse Season/Episode number from filename %s", name)
-	}
-
 	// Find a series for this Episode
 	var options = make(map[string]string)
 	if parsedInfo.Year != "" {
@@ -176,18 +170,20 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 		return db.FindEpisodeByID(episodeFile.EpisodeID)
 	}
 
-	// Convoluted error handling logic here: the goal is to differentiate between
+	// Nonstandard error handling logic here: the goal is to differentiate between
 	// hitting an error when reading the xattr and merely not finding a match
 	key, err := m.GetEpisodeDetailsByXattr(episodeFile)
 	if err != nil {
 		return nil, err
-	} else if key.TmdbSeriesID <= 0 || key.SeasonNumber <= 0 || key.EpisodeNumber <= 0 {
+		// 0 is a valid season/episode number
+	} else if key.TmdbSeriesID == 0 {
 		key, err = m.GetEpisodeDetailsByParsing(episodeFile)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		log.Debugln("read xattr for TMDB series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "from filename", episodeFile.FileName)
 	}
-	log.Debugln("Matched TMDB series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "filename", episodeFile.FileName)
 
 	episode, err := m.GetOrCreateEpisodeByTmdbID(
 		key.TmdbSeriesID, key.SeasonNumber, key.EpisodeNumber)
