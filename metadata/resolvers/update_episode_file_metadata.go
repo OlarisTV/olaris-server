@@ -58,7 +58,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 			defer updateEpisodeFileMetadataGroup.Done()
 
 			name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
-			parsedInfo := parsers.ParseSerieName(name)
+			parsedInfo := parsers.ParseSeriesName(name)
 
 			if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
 				log.Warnln(

@@ -101,7 +101,7 @@ func (man *LibraryManager) IdentifyUnidentifiedEpisodeFiles() error {
 	for _, episodeFile := range episodeFiles {
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(episodeFile)
 		if err != nil {
-			log.WithError(err).WithField("episodeFile", episodeFile).
+			log.WithError(err).WithField("episodeFile", episodeFile.FileName).
 				Warn("Failed to identify EpisodeFile")
 		}
 	}
@@ -274,7 +274,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(&episodeFile)
 		if err != nil {
-			log.WithError(err).WithField("episodeFile", episodeFile).
+			log.WithError(err).WithField("episodeFile", episodeFile.FileName).
 				Warn("Failed to to identify and create episode for EpisodeFile")
 		}
 
@@ -292,7 +292,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(&movieFile)
 		if err != nil {
-			log.WithError(err).WithField("movieFile", movieFile).
+			log.WithError(err).WithField("movieFile", movieFile.FileName).
 				Warn("Failed to to identify and create Movie for MovieFile")
 		}
 
