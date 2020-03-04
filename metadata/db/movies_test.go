@@ -18,7 +18,7 @@ func createMovieData() {
 		OriginalTitle: "Mad Max: Road Fury",
 		MovieFiles:    []db.MovieFile{mf},
 	}
-	db.CreateMovie(&movie)
+	db.SaveMovie(&movie)
 	ps := db.PlayState{
 		MediaUUID: movie.UUID,
 		Finished:  false, Playtime: 33, UserID: 1}

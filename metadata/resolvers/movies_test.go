@@ -27,7 +27,7 @@ func TestPlayState(t *testing.T) {
 		OriginalTitle: "Mad Max: Road Fury",
 		MovieFiles:    []db.MovieFile{mf},
 	}
-	db.CreateMovie(&movie)
+	db.SaveMovie(&movie)
 	db.SavePlayState(&db.PlayState{
 		Finished: false, Playtime: 33,
 		MediaUUID: movie.UUID, UserID: testUserID})

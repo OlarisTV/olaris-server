@@ -262,16 +262,6 @@ func FindMovieFilesInLibraryByLocator(libraryID uint, locator filesystem.FileLoc
 	return movies
 }
 
-// CreateMovieFile persists a moviefile in the database.
-func CreateMovieFile(movie *MovieFile) {
-	db.Create(movie)
-}
-
-// CreateMovie persists a movie in the database.
-func CreateMovie(movie *Movie) {
-	db.Create(movie)
-}
-
 // SaveMovie updates a movie in the database.
 func SaveMovie(movie *Movie) error {
 	//TODO: This is persisting everything including files and streams, perhaps we can do it more selectively to lower db activity.
