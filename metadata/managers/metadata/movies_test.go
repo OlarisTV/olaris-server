@@ -20,12 +20,11 @@ func TestGetOrCreateMovieForMovieFile_SearchByStringDistance(t *testing.T) {
 	movieFile := db.MovieFile{
 		MediaItem: db.MediaItem{
 			FileName: "The Walking Dead S01E01.mkv",
-			FilePath: "local#/The Walking Dead S01E01.mkv",
 		},
 	}
 	// This is what TMDB really does and why we have the string distance search feature
-		*tmdb.MovieSearchResults, error) {
 	agent.TmdbSearchMovieStub = func(name string, options map[string]string) (
+		*tmdb.MovieSearchResults, error) {
 		return &tmdb.MovieSearchResults{
 			Results: []tmdb.MovieShort{
 				{Title: "Fear the Walking Dead", ID: 1},
