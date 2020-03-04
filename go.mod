@@ -50,6 +50,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/t3rm1n4l/go-mega v0.0.0-20190528125457-55e675378686 // indirect
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
+	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
 	google.golang.org/appengine v1.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69 // indirect
 	gopkg.in/gormigrate.v1 v1.5.0
