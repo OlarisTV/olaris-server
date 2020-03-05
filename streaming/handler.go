@@ -8,10 +8,10 @@ import (
 
 // For Apple devices to handle HLS properly, the m3u8 playlists must be sent with the correct Content-Type
 func AddM3U8Header(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/x-mpegURL")
-        next.ServeHTTP(w, r)
-    })
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-mpegURL")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // RegisterRoutes registers streaming routes to an existing router

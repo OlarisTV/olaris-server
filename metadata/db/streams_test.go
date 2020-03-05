@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"fmt"
 	"testing"
 
 	"gitlab.com/olaris/olaris-server/metadata/app"
@@ -8,7 +9,9 @@ import (
 )
 
 func TestBeforeCreate(t *testing.T) {
-	app.NewMDContext(db.InMemory, nil)
+	app.NewMDContext(db.DatabaseOptions{
+		Connection: fmt.Sprintf("sqlite3://%s", db.Memory),
+	}, nil)
 	stream := db.Stream{Codecs: "test"}
 	db.CreateStream(&stream)
 	if stream.UUID == "" {

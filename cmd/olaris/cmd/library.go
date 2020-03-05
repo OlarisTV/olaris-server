@@ -5,7 +5,10 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.com/olaris/olaris-server/metadata/app"
 	"gitlab.com/olaris/olaris-server/metadata/db"
+	"time"
 )
+
+const defaultTimeOffset = -24 * time.Hour
 
 var libraryCmd = &cobra.Command{
 	Use:   "library",
@@ -28,7 +31,13 @@ var libraryCreateCmd = &cobra.Command{
 		mctx := app.NewDefaultMDContext()
 		defer mctx.Db.Close()
 
-		err := db.AddLibrary(&db.Library{Name: name, FilePath: filePath, Kind: db.MediaType(mediaType), Backend: backendType, RcloneName: rcloneName})
+		lib := &db.Library{Name: name, FilePath: filePath, Kind: db.MediaType(mediaType), Backend: backendType, RcloneName: rcloneName}
+
+		// Make sure we don't initialize the library with zero time (issue with strict mode in MySQL)
+		lib.RefreshStartedAt = time.Now().Add(defaultTimeOffset)
+		lib.RefreshCompletedAt = time.Now().Add(defaultTimeOffset)
+
+		err := db.AddLibrary(lib)
 		return err
 	},
 }

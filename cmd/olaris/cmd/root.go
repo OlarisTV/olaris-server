@@ -54,6 +54,9 @@ func init() {
 	serveCmd.Flags().Bool("db-log", false, "sets whether the database should log queries")
 	viper.BindPFlag("server.DBLog", serveCmd.Flags().Lookup("db-log"))
 
+	serveCmd.Flags().String("db-conn", "", "sets the database connection string")
+	viper.BindPFlag("database.connection", serveCmd.Flags().Lookup("db-conn"))
+
 	rootCmd.AddCommand(serveCmd)
 
 	defaultConfigDir := path.Join(helpers.GetHome(), ".config", "olaris")

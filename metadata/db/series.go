@@ -13,7 +13,7 @@ import (
 type BaseItem struct {
 	UUIDable
 	TmdbID       int
-	Overview     string
+	Overview     string `gorm:"type:text"`
 	BackdropPath string
 	PosterPath   string
 }
@@ -180,7 +180,7 @@ type countResult struct {
 // UnwatchedEpisodesInSeriesCount retrieves the amount of unwatched episodes in a given series.
 func UnwatchedEpisodesInSeriesCount(seriesID uint, userID uint) uint {
 	var res countResult
-	db.Raw("SELECT COUNT(*) as count FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?) AND uuid NOT IN(SELECT media_uuid FROM play_states WHERE finished = 1 AND user_id = ? AND media_uuid IN(SELECT uuid FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?)))", seriesID, userID, seriesID).Scan(&res)
+	db.Raw("SELECT COUNT(*) as count FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?) AND uuid NOT IN(SELECT media_uuid FROM play_states WHERE finished = true AND user_id = ? AND media_uuid IN(SELECT uuid FROM episodes WHERE season_id IN(SELECT id FROM seasons WHERE series_id = ?)))", seriesID, userID, seriesID).Scan(&res)
 	return res.Count
 }
 
@@ -188,7 +188,7 @@ func UnwatchedEpisodesInSeriesCount(seriesID uint, userID uint) uint {
 func UnwatchedEpisodesInSeasonCount(seasonID uint, userID uint) uint {
 	var res countResult
 	db.Raw("select count(*) as count from episodes where season_id = ? "+
-		"AND uuid NOT IN (SELECT media_uuid FROM play_states WHERE finished = 1 "+
+		"AND uuid NOT IN (SELECT media_uuid FROM play_states WHERE finished = true "+
 		"AND user_id = ? AND media_uuid IN( SELECT uuid FROM episodes WHERE season_id = ?))", seasonID, userID,
 		seasonID).Scan(&res)
 	return res.Count

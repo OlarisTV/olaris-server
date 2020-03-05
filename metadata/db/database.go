@@ -3,45 +3,91 @@ package db
 
 import (
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/metadata/db/dialects/mysql"
+	"gitlab.com/olaris/olaris-server/metadata/db/dialects/postgres"
+	"gitlab.com/olaris/olaris-server/metadata/db/dialects/sqlite"
 	"gopkg.in/gormigrate.v1"
-	// Import sqlite dialect
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 var db *gorm.DB
 
-// InMemory can be passed as a database path to NewDb to create an in-memory database
-const InMemory string = ":memory:"
+const (
+	Memory      = ":memory:"
+	SQLite      = "sqlite3"
+	MySQL       = "mysql"
+	PostgresSQL = "postgres"
+	CockroachDB = "cockroachdb"
+)
 
-// NewDb initializes a new database instance.
-func NewDb(dbPath string, dbLogMode bool) *gorm.DB {
-	var err error
+// DatabaseOptions holds information about how the database instance should be initialized
+type DatabaseOptions struct {
+	Connection string
+	LogMode    bool
+}
 
-	db, err = gorm.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=1000")
-	db.LogMode(dbLogMode)
+func getDefaultDbPath() (string, error) {
+	dbDir := helpers.MetadataConfigPath()
+	if err := helpers.EnsurePath(dbDir); err != nil {
+		return "", err
+	}
+
+	return path.Join(dbDir, "metadata.db"), nil
+}
+
+func defaultDb(logMode bool) *gorm.DB {
+	dbPath, err := getDefaultDbPath()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get default database path: %s\n", err))
+	}
+	db, err = sqlite.NewSQLiteDatabase(dbPath, logMode)
 	//db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}
+	return db
+}
 
-	// NOTE(Leon Handreke): We do this here because some databases were initialized and
-	// used before we introduced gormigrate. This code can be removed once we are
-	// sure that no users with v0.1.x databases remain.
-	migrationsTableExists := 0
-	db.Table("sqlite_master").
-		Where("type = 'table'").
-		Where("name = 'migrations'").
-		Count(&migrationsTableExists)
-	usersTableExists := 0
-	db.Table("sqlite_master").
-		Where("type = 'table'").
-		Where("name = 'users'").
-		Count(&usersTableExists)
-	if migrationsTableExists == 0 && usersTableExists == 1 {
-		db.Exec("CREATE TABLE migrations (id VARCHAR(255) PRIMARY KEY)")
-		db.Exec("INSERT INTO migrations (id) VALUES ('SCHEMA_INIT')")
+// NewDb initializes a new database instance.
+func NewDb(options DatabaseOptions) *gorm.DB {
+	var err error
+
+	databaseTokens := strings.Split(options.Connection, "://")
+	if len(databaseTokens) == 0 {
+		db = defaultDb(options.LogMode)
+	} else if len(databaseTokens) == 2 {
+		engine := databaseTokens[0]
+		connection := databaseTokens[1]
+		switch engine {
+		case SQLite:
+			db, err = sqlite.NewSQLiteDatabase(connection, options.LogMode)
+			//db.Exec("PRAGMA journal_mode=WAL;")
+			if err != nil {
+				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+			}
+		case MySQL:
+			db, err = mysql.NewMySQLDatabase(connection, options.LogMode)
+			if err != nil {
+				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+			}
+		case CockroachDB, PostgresSQL:
+			// CockroachDB uses the Postgres driver
+			// https://www.cockroachlabs.com/docs/stable/build-a-go-app-with-cockroachdb-gorm.html
+			db, err = postgres.NewPostgresDatabase(connection, options.LogMode)
+			if err != nil {
+				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+			}
+		default:
+			panic(fmt.Sprintf("unknown database engine: %s", engine))
+		}
+	} else {
+		log.Warnf("unable to parse database connection string: %s, defaulting to sqlite3", options.Connection)
+		db = defaultDb(options.LogMode)
 	}
 
 	err = migrateSchema(db)

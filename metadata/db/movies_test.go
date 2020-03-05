@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"testing"
@@ -26,7 +27,10 @@ func createMovieData() {
 }
 
 func setupTest(t *testing.T) func() {
-	dbc := db.NewDb(db.InMemory, false)
+	dbc := db.NewDb(db.DatabaseOptions{
+		Connection: fmt.Sprintf("sqlite3://%s", db.Memory),
+		LogMode:    false,
+	})
 
 	// Test teardown - return a closure for use by 'defer'
 	return func() {

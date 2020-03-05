@@ -19,6 +19,7 @@ type ServerConfig struct {
 	Port             int
 	Verbose          bool
 	DBLog            bool
+	DBConn           string
 	DirectFileAccess bool
 	SystemFFMPEG     bool
 }
