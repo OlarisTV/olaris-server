@@ -86,7 +86,7 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 			panic(fmt.Sprintf("unknown database engine: %s", engine))
 		}
 	} else {
-		log.Warnf("unable to parse database connection string: %s, defaulting to sqlite3", options.Connection)
+		log.Debugln("unable to parse database connection string: %s, defaulting to sqlite3", options.Connection)
 		db = defaultDb(options.LogMode)
 	}
 
