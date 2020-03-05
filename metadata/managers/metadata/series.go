@@ -96,7 +96,7 @@ func (m *MetadataManager) UpdateSeasonMD(season *db.Season) error {
 
 // Attempt to parse a filename and determine the three values
 // that uniquely identify the episode (on TMDB)
-func (m *MetadataManager) GetEpisodeDetailsByParsing(
+func (m *MetadataManager) getEpisodeKeyFromFilename(
 	episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
 
 	name := strings.TrimSuffix(episodeFile.FilePath, filepath.Ext(episodeFile.FileName))
@@ -136,27 +136,45 @@ func (m *MetadataManager) GetEpisodeDetailsByParsing(
 
 }
 
-// Attempt to read three values from file extended attributes before
-// resorting to parsing the filename
-func (m *MetadataManager) GetEpisodeDetailsByXattr(episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
-	// Need the file path
+// Attempt to read the season/episode information from the file's xattrs
+// The bool return value indicates whether xattr information was present on the file
+func (m *MetadataManager) getEpisodeKeyFromXattr(
+	episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, bool, error) {
+
 	p, err := filesystem.ParseFileLocator(episodeFile.GetFilePath())
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	xattrNames := []string{TmdbTvSeriesXattrName, TmdbTvSeasonXattrName, TmdbTvEpisodeXattrName}
 	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, xattrNames)
 	if err != nil {
 		log.Debugln("No Xattr data found for ", p.Path, err)
-		return &TmdbEpisodeKey{}, nil
+		return &TmdbEpisodeKey{}, false, nil
 	}
 
 	return &TmdbEpisodeKey{
 		TmdbSeriesID:  xattrTmdbIDs[TmdbTvSeriesXattrName],
 		SeasonNumber:  xattrTmdbIDs[TmdbTvSeasonXattrName],
 		EpisodeNumber: xattrTmdbIDs[TmdbTvEpisodeXattrName],
-	}, nil
+	}, true, nil
+}
+
+func (m *MetadataManager) getEpisodeKey(episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
+	episodeKey, xattrInfoFound, err := m.getEpisodeKeyFromXattr(episodeFile)
+	if err != nil {
+		return nil, err
+	}
+	if xattrInfoFound {
+		log.Debugln(
+			"read xattr for TMDB series ID", episodeKey.TmdbSeriesID,
+			"season", episodeKey.SeasonNumber,
+			"episode", episodeKey.EpisodeNumber,
+			"from filename", episodeFile.FileName)
+		return episodeKey, nil
+	}
+
+	return m.getEpisodeKeyFromFilename(episodeFile)
 }
 
 // GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
@@ -169,23 +187,14 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 		return db.FindEpisodeByID(episodeFile.EpisodeID)
 	}
 
-	// Nonstandard error handling logic here: the goal is to differentiate between
-	// hitting an error when reading the xattr and merely not finding a match
-	key, err := m.GetEpisodeDetailsByXattr(episodeFile)
+	episodeKey, err := m.getEpisodeKey(episodeFile)
 	if err != nil {
-		return nil, err
-		// 0 is a valid season/episode number
-	} else if key.TmdbSeriesID == 0 {
-		key, err = m.GetEpisodeDetailsByParsing(episodeFile)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		log.Debugln("read xattr for TMDB series ID", key.TmdbSeriesID, "season", key.SeasonNumber, "episode", key.EpisodeNumber, "from filename", episodeFile.FileName)
+		return nil, errors.Wrapf(err,
+			"Failed to get episode key from file %s", episodeFile.FilePath)
 	}
 
 	episode, err := m.GetOrCreateEpisodeByTmdbID(
-		key.TmdbSeriesID, key.SeasonNumber, key.EpisodeNumber)
+		episodeKey.TmdbSeriesID, episodeKey.SeasonNumber, episodeKey.EpisodeNumber)
 	if err != nil {
 		return nil, err
 	}
