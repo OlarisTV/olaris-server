@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"fmt"
 	"github.com/ryanbradynd05/go-tmdb"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/agents/agentsfakes"
@@ -11,10 +10,7 @@ import (
 
 func TestGetOrCreateMovieForMovieFile_SearchByStringDistance(t *testing.T) {
 	// TODO(Leon Handreke): Dependency inject instead of relying on global singletons
-	db.NewDb(db.DatabaseOptions{
-		Connection: fmt.Sprintf("sqlite3://%s", db.Memory),
-		LogMode:    false,
-	})
+	db.NewInMemoryDBForTests(false)
 	agent := agentsfakes.FakeMetadataRetrievalAgent{}
 	m := MetadataManager{
 		agent: &agent,

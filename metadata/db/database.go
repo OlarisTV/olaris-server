@@ -18,7 +18,6 @@ import (
 var db *gorm.DB
 
 const (
-	Memory      = ":memory:"
 	SQLite      = "sqlite3"
 	MySQL       = "mysql"
 	PostgresSQL = "postgres"

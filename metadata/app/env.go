@@ -56,7 +56,7 @@ func NewTestingMDContext(agent agents.MetadataRetrievalAgent) *MetadataContext {
 		a = agent
 	}
 	return NewMDContext(db.DatabaseOptions{
-		Connection: fmt.Sprintf("sqlite3://%s", db.Memory),
+		Connection: db.InMemory,
 		LogMode:    false,
 	}, a)
 }
