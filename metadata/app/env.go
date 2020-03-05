@@ -2,18 +2,17 @@
 package app
 
 import (
+	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
 	"math/rand"
 	"path"
 	"time"
-	// Import sqlite dialect
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/helpers"
-	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
 // MetadataContext is a container for all important vars.
@@ -42,7 +41,10 @@ func NewDefaultMDContext() *MetadataContext {
 	helpers.EnsurePath(dbDir)
 
 	dbPath := path.Join(dbDir, "metadata.db")
-	return NewMDContext(dbPath, agents.NewTmdbAgent())
+	return NewMDContext(db.DatabaseOptions{
+		Connection: fmt.Sprintf("sqlite3://%s", dbPath),
+		LogMode:    false,
+	}, agents.NewTmdbAgent())
 }
 
 // NewTestingMDContext creates a new MetadataContext for testing
@@ -53,12 +55,15 @@ func NewTestingMDContext(agent agents.MetadataRetrievalAgent) *MetadataContext {
 	} else {
 		a = agent
 	}
-	return NewMDContext(db.InMemory, a)
+	return NewMDContext(db.DatabaseOptions{
+		Connection: fmt.Sprintf("sqlite3://%s", db.Memory),
+		LogMode:    false,
+	}, a)
 }
 
 // NewMDContext lets you create a more custom environment.
 func NewMDContext(
-	dbPath string,
+	databaseOptions db.DatabaseOptions,
 	agent agents.MetadataRetrievalAgent) *MetadataContext {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -66,13 +71,13 @@ func NewMDContext(
 
 	log.Printf("Olaris Metadata Server - Version \"%s\"", helpers.Version)
 
-	db := db.NewDb(dbPath, false)
-	db.SetLogger(&GormLogger{})
+	database := db.NewDb(databaseOptions)
+	database.SetLogger(&GormLogger{})
 
 	exitChan := make(chan bool)
 
 	env = &MetadataContext{
-		Db:                     db,
+		Db:                     database,
 		ExitChan:               exitChan,
 		MetadataRetrievalAgent: agent,
 		MetadataManager:        metadata.NewMetadataManager(agent),

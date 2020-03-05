@@ -7,7 +7,10 @@ import (
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"path/filepath"
 	"strconv"
+	"time"
 )
+
+const defaultTimeOffset = -24 * time.Hour
 
 var rescanningLibraries bool
 
@@ -187,6 +190,10 @@ func (r *Resolver) CreateLibrary(ctx context.Context, args *createLibraryArgs) *
 	}
 
 	library = db.Library{Name: args.Name, FilePath: args.FilePath, Kind: db.MediaType(args.Kind), Backend: int(args.Backend), RcloneName: rcloneName}
+
+	// Make sure we don't initialize the library with zero time (issue with strict mode in MySQL)
+	library.RefreshStartedAt = time.Now().Add(defaultTimeOffset)
+	library.RefreshCompletedAt = time.Now().Add(defaultTimeOffset)
 
 	err = db.AddLibrary(&library)
 

@@ -48,6 +48,8 @@ If you want to configure Olaris using environment variables, the variables curre
 - `OLARIS_SERVER_VERBOSE`: verbose logging (default true, overrides the `server.verbose` configuration value)
 - `OLARIS_SERVER_DIRECTFILEACCESS`: whether accessing files directly by path (without a valid JWT) is allowed (default false, overrides the `server.directFileAccess` configuration value)
 - `OLARIS_SERVER_SYSTEMFFMPEG`: whether to use system FFmpeg instead of binary builtin (default false, overrides the `server.systemFFmpeg` configuration value)
+- `OLARIS_DATABASE_CONNECTION`: the database connection string Olaris should use to store metadata for the libraries (default to the default SQLite file path, overrides the `database.connection` configuration value). The connection string has to be in the following format: `engine://<connection string data>`. The connection string data can be different for each database, please refer to [GORM's documentation](https://gorm.io/docs/connecting_to_the_database.html) for more information about compatible databases.
+    - For example, `mysql://user:password@/dbname?charset=utf8&parseTime=True&loc=Local`
 
 Configuration file settings override the defaults in the code.
 Environment variable settings override the settings found in the configuration file.

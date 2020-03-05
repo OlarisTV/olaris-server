@@ -3,24 +3,26 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof" // For Profiling
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	// Backend for Rclone
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata"
+	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/app"
+	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/react"
 	"gitlab.com/olaris/olaris-server/streaming"
-	"net/http"
-	_ "net/http/pprof" // For Profiling
-	"os"
-	"os/signal"
-	"time"
 )
 
 var serveCmd = &cobra.Command{
@@ -33,9 +35,12 @@ var serveCmd = &cobra.Command{
 		rr := mainRouter.PathPrefix("/olaris")
 		rrr := mainRouter.PathPrefix("/olaris")
 
-		mctx := app.NewDefaultMDContext()
+		dbOptions := db.DatabaseOptions{
+			Connection: viper.GetString("database.connection"),
+			LogMode:    viper.GetBool("server.DBLog"),
+		}
 
-		mctx.Db.LogMode(viper.GetBool("server.DBLog"))
+		mctx := app.NewMDContext(dbOptions, agents.NewTmdbAgent())
 		if viper.GetBool("server.verbose") {
 			log.SetLevel(log.DebugLevel)
 		}

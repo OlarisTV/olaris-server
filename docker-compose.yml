@@ -1,0 +1,22 @@
+# Please modify the file before using it
+version: '3'
+services:
+  olaris:
+    restart: always
+    build: .
+    ports:
+      - "7777:8080"
+    command: ["serve", "--verbose", "--db-conn", "mysql://gorm:gorm@(db)/gorm?charset=utf8&parseTime=True&loc=Local"]
+    links:
+      - db
+    depends_on:
+      - db
+  db:
+    image: mysql
+    environment:
+      MYSQL_USER: "gorm"
+      MYSQL_PASSWORD: "gorm"
+      MYSQL_DATABASE: "gorm"
+      MYSQL_ROOT_PASSWORD: "gorm"
+    ports:
+      - "3306:3306"
