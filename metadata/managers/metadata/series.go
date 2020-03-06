@@ -20,9 +20,9 @@ type TmdbEpisodeKey struct {
 	EpisodeNumber int
 }
 
-const TmdbTvSeriesXattrName = "user.olaris.v1.tv.tmdb.series.id"
-const TmdbTvSeasonXattrName = "user.olaris.v1.tv.tmdb.season.number"
-const TmdbTvEpisodeXattrName = "user.olaris.v1.tv.tmdb.episode.number"
+const xattrNameTVSeriesTMDBID = "user.olaris.v1.tv.tmdb.series.id"
+const xattrNameTVSeasonNumber = "user.olaris.v1.tv.tmdb.season.number"
+const xattrNameTVEpisodeNumber = "user.olaris.v1.tv.tmdb.episode.number"
 
 func (m *MetadataManager) getEpisodeLock(episodeID uint) *sync.RWMutex {
 	v, _ := m.episodeLock.LoadOrStore(episodeID, &sync.RWMutex{})
@@ -146,7 +146,7 @@ func (m *MetadataManager) getEpisodeKeyFromXattr(
 		return nil, false, err
 	}
 
-	xattrNames := []string{TmdbTvSeriesXattrName, TmdbTvSeasonXattrName, TmdbTvEpisodeXattrName}
+	xattrNames := []string{xattrNameTVSeriesTMDBID, xattrNameTVSeasonNumber, xattrNameTVEpisodeNumber}
 	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, xattrNames)
 	if err != nil {
 		log.Debugln("No Xattr data found for ", p.Path, err)
@@ -154,9 +154,9 @@ func (m *MetadataManager) getEpisodeKeyFromXattr(
 	}
 
 	return &TmdbEpisodeKey{
-		TmdbSeriesID:  xattrTmdbIDs[TmdbTvSeriesXattrName],
-		SeasonNumber:  xattrTmdbIDs[TmdbTvSeasonXattrName],
-		EpisodeNumber: xattrTmdbIDs[TmdbTvEpisodeXattrName],
+		TmdbSeriesID:  xattrTmdbIDs[xattrNameTVSeriesTMDBID],
+		SeasonNumber:  xattrTmdbIDs[xattrNameTVSeasonNumber],
+		EpisodeNumber: xattrTmdbIDs[xattrNameTVEpisodeNumber],
 	}, true, nil
 }
 
