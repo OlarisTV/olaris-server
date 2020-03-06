@@ -1,7 +1,7 @@
 package metadata
 
 import (
-	"errors"
+	"fmt"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const TmdbMovieXattrName = "user.olaris.v1.movies.tmdb.id"
+const xattrNameMovieTMDBID = "user.olaris.v1.movies.tmdb.id"
 
 // ForceMovieMetadataUpdate refreshes all metadata for all movies
 func (m *MetadataManager) ForceMovieMetadataUpdate() {
@@ -35,33 +35,33 @@ func (m *MetadataManager) refreshAndSaveMovieMetadata(movie *db.Movie) error {
 	return db.SaveMovie(movie)
 }
 
-// Take a MovieFile object and try to read the TMDB ID
-// from the extended file attributes
-func (m *MetadataManager) GetMovieDetailsFromXattr(
-	movieFile *db.MovieFile) (tmdbID int, err error) {
+// Take a MovieFile object and try to read the TMDB ID from the extended file attributes
+func (m *MetadataManager) getMovieTMDBIDFromXattr(
+	movieFile *db.MovieFile) (tmdbID int, xattrInfoFound bool, err error) {
 
 	// Need the file path
 	p, err := filesystem.ParseFileLocator(movieFile.GetFilePath())
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
-	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, []string{TmdbMovieXattrName})
+	xattrTmdbIDs, err := helpers.GetXattrInts(p.Path, []string{xattrNameMovieTMDBID})
+	// TODO(Leon Handreke): Distinguish between fs read fail and no xattrs being found on the file
 	if err != nil {
 		log.WithFields(log.Fields{
 			"filename": movieFile.GetFilePath(),
-		}).Debugln("Could not find match based on extended file attributes")
-		return 0, nil
+		}).Debugln("Failed to read xattrs")
+		return 0, false, nil
 	}
 
-	return xattrTmdbIDs[TmdbMovieXattrName], nil
+	return xattrTmdbIDs[xattrNameMovieTMDBID], true, nil
 }
 
 // Take a MovieFile object and try to determine the best
 // TMDB ID by parsing the filename
-func (m *MetadataManager) GetMovieDetailsByParsing(
-	fileName string) (tmdbID int, err error) {
-	name := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+func (m *MetadataManager) getMovieTMDBIDFromFilename(
+	movieFile *db.MovieFile) (tmdbID int, found bool, err error) {
+	name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
 	parsedInfo := parsers.ParseMovieName(name)
 
 	var options = make(map[string]string)
@@ -71,7 +71,7 @@ func (m *MetadataManager) GetMovieDetailsByParsing(
 
 	searchRes, err := m.agent.TmdbSearchMovie(parsedInfo.Title, options)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
 	if len(searchRes.Results) == 0 {
@@ -80,7 +80,7 @@ func (m *MetadataManager) GetMovieDetailsByParsing(
 			"year":  parsedInfo.Year,
 		}).Warnln("Could not find match based on parsed title and given year.")
 
-		return 0, nil
+		return 0, false, nil
 	}
 
 	log.Debugln("Found movie that matches, using first result from search and requesting more movie details.")
@@ -95,7 +95,24 @@ func (m *MetadataManager) GetMovieDetailsByParsing(
 		}
 	}
 
-	return bestResult.ID, nil
+	return bestResult.ID, true, nil
+}
+
+func (m *MetadataManager) getMovieTMDBID(movieFile *db.MovieFile) (int, bool, error) {
+	tmdbID, xattrInfoFound, err := m.getMovieTMDBIDFromXattr(movieFile)
+	if err != nil {
+		return 0, false, err
+	}
+	if xattrInfoFound {
+		log.Debugln(
+			"Read TMDB ID", tmdbID,
+			"from xattr for", movieFile.FileName,
+			"- skipping filename parse")
+		return tmdbID, xattrInfoFound, nil
+	}
+
+	return m.getMovieTMDBIDFromFilename(movieFile)
+
 }
 
 // GetOrCreateMovieForMovieFile tries to create a Movie object by reading the TMDB ID stored
@@ -112,18 +129,13 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 
 	// Nonstandard error handling logic here: the goal is to differentiate between
 	// hitting an error when reading the xattr and merely not finding a match
-	tmdbID, err := m.GetMovieDetailsFromXattr(movieFile)
+	tmdbID, found, err := m.getMovieTMDBID(movieFile)
 	if err != nil {
 		return nil, err
-	} else if tmdbID == 0 {
-		tmdbID, err = m.GetMovieDetailsByParsing(movieFile.FileName)
-		if err != nil {
-			return nil, err
-		} else if tmdbID == 0 {
-			return nil, errors.New("Could not find match in TMDB ID for given filename")
-		}
-	} else {
-		log.Debugln("Read TMDB ID", tmdbID, "from xattr for", movieFile.FileName, "- skipping filename parse")
+	}
+	if !found {
+		return nil, fmt.Errorf(
+			"Could not find match in TMDB for given filename: %s", movieFile.FileName)
 	}
 
 	movie, err := m.GetOrCreateMovieByTmdbID(tmdbID)
