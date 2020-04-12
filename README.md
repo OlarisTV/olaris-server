@@ -85,5 +85,7 @@ The command below mounts `~/Videos` to `/var/media` in the container --- please 
       -e OLARIS_UID=$(id -u) -e OLARIS_GID=$(id -g) \
       olaristv/olaris-server
 
+To run the latest build from our CI (Continous Integration) infrastructure, use the `olaristv/olaris-server:from-ci` image instead. This will download a new build every time the container is started. Please note that this runs a bleeding-edge development version, which may be horribly unstable!
+
 ## How to build
 See the [hacking](HACKING.md) document for instructions on how to build Olaris yourself

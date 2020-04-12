@@ -67,6 +67,12 @@ docker-push:
 	docker push olaristv/olaris-server:latest
 	docker push olaristv/olaris-server:$(RELEASE_IDENTIFIER)
 
+docker-from-ci-build-tag-push:
+	docker build -f Dockerfile.from-ci . -t olaristv/olaris-server:from-ci
+	docker tag olaristv/olaris-server:from-ci olaristv/olaris-server:from-ci-$(RELEASE_IDENTIFIER)
+	docker push olaristv/olaris-server:from-ci
+	docker push olaristv/olaris-server:from-ci-$(RELEASE_IDENTIFIER)
+
 .PHONY: crossbuild
 crossbuild:
 	mkdir -p $(BIN_LOC)

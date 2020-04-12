@@ -1,0 +1,12 @@
+FROM olaristv/olaris-server:latest as base
+
+ADD docker/download-olaris-from-ci.sh /opt/olaris/download-olaris-from-ci.sh
+
+ENV LOGTOSTDERR=1
+ENV V=4
+
+RUN apt-get -y update && \
+    apt-get install -y --no-install-recommends curl ca-certificates unzip && \
+    apt-get autoremove && apt-get clean
+
+ENTRYPOINT ["/opt/olaris/download-olaris-from-ci.sh", "/entrypoint.sh", "/opt/olaris/olaris-from-ci"]
