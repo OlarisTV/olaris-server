@@ -23,12 +23,14 @@ type MetadataContext struct {
 	MetadataRetrievalAgent agents.MetadataRetrievalAgent
 	MetadataManager        *metadata.MetadataManager
 
+	// Currently unused
 	ExitChan chan bool
 }
 
 // Cleanup cleans up any running threads / processes for the context.
 func (m *MetadataContext) Cleanup() {
-	m.ExitChan <- true
+	// Currently unused
+	// m.ExitChan <- true
 	m.Db.Close()
 	log.Infoln("Closed all metadata context")
 }

@@ -51,7 +51,6 @@ type MediaFile interface {
 	GetFileName() string
 	GetLibrary() *Library
 	GetStreams() []Stream
-	DeleteSelfAndMD()
 }
 
 // MediaItem is an embeddeable struct that holds information about filesystem files (episode or movies).

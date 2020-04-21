@@ -26,9 +26,7 @@ func TestMetadataManager_GetOrCreateEpisodeForEpisodeFile(t *testing.T) {
 	// TODO(Leon Handreke): Dependency inject instead of relying on global singletons
 	db.NewInMemoryDBForTests(false)
 	agent := agentsfakes.FakeMetadataRetrievalAgent{}
-	m := MetadataManager{
-		agent: &agent,
-	}
+	m := NewMetadataManager(&agent)
 
 	episodeFile := db.EpisodeFile{
 		MediaItem: db.MediaItem{

@@ -11,30 +11,15 @@ import (
 
 // Resolver container object for all resolvers.
 type Resolver struct {
-	env                *app.MetadataContext
-	libs               []*managers.LibraryManager
-	subscriber         *graphqlLibrarySubscriber
-	exitChan           chan bool
-	movieAddedEvents   chan *MovieAddedEvent
-	seriesAddedEvents  chan *SeriesAddedEvent
-	seasonAddedEvents  chan *SeasonAddedEvent
-	episodeAddedEvents chan *EpisodeAddedEvent
-	subscriberChan     chan *graphqlSubscriber
+	env  *app.MetadataContext
+	libs map[uint]*managers.LibraryManager
 }
 
 // NewResolver creates a new resolver
 func NewResolver(env *app.MetadataContext) *Resolver {
 	r := &Resolver{
-		env:                env,
-		exitChan:           env.ExitChan,
-		subscriberChan:     make(chan *graphqlSubscriber),
-		movieAddedEvents:   make(chan *MovieAddedEvent),
-		episodeAddedEvents: make(chan *EpisodeAddedEvent),
-		seriesAddedEvents:  make(chan *SeriesAddedEvent),
-		seasonAddedEvents:  make(chan *SeasonAddedEvent)}
-
-	s := graphqlLibrarySubscriber{resolver: r}
-	env.MetadataManager.Subscriber = s
+		env: env,
+	}
 
 	libs := db.AllLibraries()
 
@@ -42,25 +27,14 @@ func NewResolver(env *app.MetadataContext) *Resolver {
 		r.AddLibraryManager(&libs[i])
 	}
 
-	go r.startGraphQLSubscriptionManager(r.exitChan)
-
 	return r
 }
 
 // AddLibraryManager adds a new manager
 func (r *Resolver) AddLibraryManager(lib *db.Library) {
 	man := managers.NewLibraryManager(lib, r.env.MetadataManager)
-	r.libs = append(r.libs, man)
+	r.libs[lib.ID] = man
 	go man.RefreshAll()
-}
-
-// StopLibraryManager stops a given library based on the supplied Library
-func (r *Resolver) StopLibraryManager(id uint) {
-	for _, lm := range r.libs {
-		if lm.Library.ID == id {
-			lm.Shutdown()
-		}
-	}
 }
 
 // ErrorResolver holds error information.

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	errors "github.com/pkg/errors"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -17,22 +18,43 @@ import (
 
 const xattrNameMovieTMDBID = "user.olaris.v1.movies.tmdb.id"
 
-// ForceMovieMetadataUpdate refreshes all metadata for all movies
-func (m *MetadataManager) ForceMovieMetadataUpdate() {
+// RefreshAllMovieMetadata refreshes all metadata for all movies
+func (m *MetadataManager) RefreshAllMovieMetadata() {
 	for _, movie := range db.FindAllMovies(nil) {
-		m.refreshAndSaveMovieMetadata(&movie)
+		m.RefreshMovieMetadata(&movie)
 	}
 }
 
-// refreshAndSaveMovieMetadata updates the database record with the latest data from the agent
-func (m *MetadataManager) refreshAndSaveMovieMetadata(movie *db.Movie) error {
-	if err := m.agent.UpdateMovieMD(movie, movie.TmdbID); err != nil {
+// RefreshMovieMetadata refreshes metadata for a movie and sends out an update event
+func (m *MetadataManager) RefreshMovieMetadata(movie *db.Movie) error {
+	log.WithFields(log.Fields{"title": movie.Title}).
+		Println("Refreshing metadata for movie.")
+
+	if err := m.refreshMovieMetadataFromAgent(movie); err != nil {
 		return err
+	}
+	if err := db.SaveMovie(movie); err != nil {
+		return err
+	}
+
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeMovieUpdated,
+		Payload:   movie,
+	})
+	return nil
+}
+
+// refreshMovieMetadataFromAgent updates the given struct with the latest metadata from the agent
+// but does not save the database record.
+func (m *MetadataManager) refreshMovieMetadataFromAgent(movie *db.Movie) error {
+	if err := m.agent.UpdateMovieMD(movie, movie.TmdbID); err != nil {
+		return errors.Wrapf(err,
+			"Failed to refresh metadata from agent for movie %s", movie.UUID)
 	}
 	log.WithFields(log.Fields{"title": movie.Title}).
 		Println("Refreshed metadata for movie.")
 
-	return db.SaveMovie(movie)
+	return nil
 }
 
 // Take a MovieFile object and try to read the TMDB ID from the extended file attributes
@@ -144,6 +166,7 @@ func (m *MetadataManager) GetOrCreateMovieForMovieFile(
 	}
 
 	movieFile.Movie = *movie
+	// This automatically saves the Movie as well
 	db.SaveMovieFile(movieFile)
 
 	movie.MovieFiles = []db.MovieFile{*movieFile}
@@ -164,13 +187,50 @@ func (m *MetadataManager) GetOrCreateMovieByTmdbID(tmdbID int) (*db.Movie, error
 	}
 
 	movie = &db.Movie{BaseItem: db.BaseItem{TmdbID: tmdbID}}
-	if err := m.refreshAndSaveMovieMetadata(movie); err != nil {
+	if err := m.refreshMovieMetadataFromAgent(movie); err != nil {
+		return nil, err
+	}
+	if err := db.SaveMovie(movie); err != nil {
 		return nil, err
 	}
 
-	if m.Subscriber != nil {
-		m.Subscriber.MovieAdded(movie)
-	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeMovieAdded,
+		Payload:   movie,
+	})
 
 	return movie, nil
+}
+
+// GarbageCollectMovieIfRequired deletes a Movie if
+// required if no more MovieFiles associated with it remain.
+func (m *MetadataManager) GarbageCollectMovieIfRequired(movieID uint) error {
+	log.Debugln("Garbage collecting movie", movieID)
+
+	// We get the movie here so we can send the event with the UUID later
+	movie, err := db.FindMovieByID(movieID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find movie movie")
+	}
+
+	movieFiles, err := db.FindMovieFilesByMovieID(movieID)
+	if err != nil {
+		return errors.Wrap(err, "Failed to refresh movie")
+	}
+
+	if len(movieFiles) > 0 {
+		return nil
+	}
+
+	if err := db.DeleteMovieByID(movieID); err != nil {
+		return errors.Wrap(err, "Failed to delete Movie")
+	}
+	m.eventBroker.publish(&MetadataEvent{
+		EventType: MetadataEventTypeMovieDeleted,
+		Payload:   movie,
+	})
+
+	// TODO(Leon Handreke): Also garbage collect play states
+
+	return nil
 }

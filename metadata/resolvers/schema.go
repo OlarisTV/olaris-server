@@ -17,10 +17,12 @@ var SchemaTxt = `
 	union SearchItem = Movie | Series
 
 	type Subscription {
-		movieAdded(): MovieAddedEvent!
-		episodeAdded(): EpisodeAddedEvent!
-		seriesAdded(): SeriesAddedEvent!
-		seasonAdded(): SeasonAddedEvent!
+		moviesChanged(): MetadataEvent!
+		seriesChanged(): MetadataEvent!
+		seasonChanged(seriesUUID: String): MetadataEvent!
+		# TODO(Leon Handreke): Add an episodeChanged call here to monitor a given season
+		# (or should it be a whole season?). However, let's first verify that this design works well
+		# on the client side
 	}
 
 	# The query type, represents all of the entry points into our object graph
@@ -318,22 +320,6 @@ var SchemaTxt = `
 		error: Error
 	}
 
-	type MovieAddedEvent {
-		movie: Movie!
-	}
-
-	type EpisodeAddedEvent {
-		episode: Episode!
-	}
-
-	type SeriesAddedEvent {
-		series: Series!
-	}
-
-	type SeasonAddedEvent {
-		season: Season!
-	}
-
 	# Invite that can be used to allow other users access to your server.
 	type Invite {
 		code: String
@@ -368,6 +354,47 @@ var SchemaTxt = `
 		posterPath: String!
 	}
 
+	# NOTE(Leon Handreke): I'm a bit unsure about this API design. Maybe the DeletedEvents should
+	# feature a Movie/Episode/... object as well instead of just a UUID? But it would be an
+	# invalid, deleted object at the moment we give it out.
+	union MetadataEvent = MovieAddedEvent | MovieUpdatedEvent | MovieDeletedEvent | 
+		SeriesAddedEvent | SeasonAddedEvent | EpisodeAddedEvent
+
+	type MovieAddedEvent {
+		movie: Movie!
+	}
+
+	type MovieUpdatedEvent {
+		movie: Movie!
+	}
+
+	type MovieDeletedEvent {
+		movieUUID: string!
+	}
+
+	type SeriesAddedEvent {
+		series: Series!
+	}
+
+	type SeriesDeletedEvent {
+		seriesUUID: string!
+	}
+
+	type SeasonAddedEvent {
+		season: Season!
+	}
+
+	type SeasonDeletedEvent {
+		seasonUUID: string!
+	}
+
+	type EpisodeAddedEvent {
+		episode: Episode!
+	}
+
+	type EpisodeDeletedEvent {
+		episodeUUID: string!
+	}
 `
 
 // InitSchema inits the graphql schema.

@@ -134,10 +134,14 @@ loop:
 
 				if movieFile, err := db.FindMovieFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting movie")
-					movieFile.DeleteSelfAndMD()
+					movieID := movieFile.MovieID
+					movieFile.DeleteWithStreams()
+					man.metadataManager.GarbageCollectMovieIfRequired(movieID)
 				} else if episodeFile, err := db.FindEpisodeFileByPath(n); err == nil {
 					log.WithField("path", event.Name).Debugf("deleting episode")
-					episodeFile.DeleteSelfAndMD()
+					episodeID := episodeFile.EpisodeID
+					episodeFile.DeleteWithStreams()
+					man.metadataManager.GarbageCollectEpisodeIfRequired(episodeID)
 				} else {
 					// if there was no movie or episode in the database,
 					// maybe a parent folder was renamed or moved? best

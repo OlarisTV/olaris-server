@@ -3,6 +3,7 @@ package managers
 import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/ncw/rclone/vfs"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -71,6 +72,35 @@ func (man *LibraryManager) Shutdown() {
 	man.isShuttingDown = true
 	man.exitChan <- true
 	man.Pool.Shutdown()
+}
+
+// DeleteLibrary deletes the underlying Library object in the database and all associated files.
+// Shutdown() must be called before calling this function! After that, the LibraryManager object
+// must be discarded, it is no longer valid.
+func (man *LibraryManager) DeleteLibrary() error {
+	switch man.Library.Kind {
+	case db.MediaTypeMovie:
+		movieFiles, _ := db.FindMovieFilesInLibrary(man.Library.ID)
+		for _, movieFile := range movieFiles {
+			movieID := movieFile.MovieID
+			movieFile.DeleteWithStreams()
+			man.metadataManager.GarbageCollectMovieIfRequired(movieID)
+		}
+	case db.MediaTypeSeries:
+		episodeFiles, _ := db.FindEpisodeFilesInLibrary(man.Library.ID)
+		for _, episodeFile := range episodeFiles {
+			episodeID := episodeFile.EpisodeID
+			episodeFile.DeleteWithStreams()
+			man.metadataManager.GarbageCollectEpisodeIfRequired(episodeID)
+		}
+	default:
+		log.Error("Failed to delete library of kind", man.Library.Kind)
+	}
+
+	if err := db.DeleteLibraryByID(man.Library.ID); err != nil {
+		return errors.Wrap(err, "Failed to delete library")
+	}
+	return nil
 }
 
 // IdentifyUnidentifiedFiles looks for missing metadata information and attempts to retrieve it.
@@ -372,13 +402,17 @@ func (man *LibraryManager) RemoveMissingFiles(locator filesystem.FileLocator) {
 
 	for _, movieFile := range db.FindMovieFilesInLibraryByLocator(man.Library.ID, locator) {
 		if FileMissing(movieFile) {
-			movieFile.DeleteSelfAndMD()
+			movieID := movieFile.MovieID
+			movieFile.DeleteWithStreams()
+			man.metadataManager.GarbageCollectMovieIfRequired(movieID)
 		}
 	}
 
 	for _, episodeFile := range db.FindEpisodeFilesInLibraryByLocator(man.Library.ID, locator) {
 		if FileMissing(episodeFile) {
-			episodeFile.DeleteSelfAndMD()
+			episodeID := episodeFile.EpisodeID
+			episodeFile.DeleteWithStreams()
+			man.metadataManager.GarbageCollectEpisodeIfRequired(episodeID)
 		}
 	}
 }

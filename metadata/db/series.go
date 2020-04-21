@@ -130,44 +130,14 @@ func (file EpisodeFile) GetLibrary() *Library {
 	return &library
 }
 
-// DeleteSelfAndMD deletes the episode file and any stale metadata information that might have resulted.
-func (file EpisodeFile) DeleteSelfAndMD() {
+// DeleteWithStreams deletes the episode file and any stale metadata information that might have resulted.
+func (file EpisodeFile) DeleteWithStreams() {
 	log.WithFields(log.Fields{
 		"path": file.FilePath,
 	}).Println("Removing file and metadata")
 
 	// Delete all stream information
 	db.Unscoped().Delete(Stream{}, "owner_id = ? AND owner_type = 'episode_files'", &file.ID)
-
-	var episode Episode
-	db.First(&episode, file.EpisodeID)
-
-	if file.IsSingleFile() {
-		// Delete all PlayState information
-		db.Unscoped().Delete(PlayState{}, "media_uuid = ?", file.UUID)
-
-		// Delete Episode
-		db.Unscoped().Delete(&episode)
-
-		count := 0
-		var season Season
-		db.First(&season, episode.SeasonID)
-
-		db.Model(Episode{}).Where("season_id = ?", season.ID).Count(&count)
-
-		// If there are no more episodes to this season, delete the season.
-		if count == 0 {
-			db.Unscoped().Delete(Season{}, "id = ?", episode.SeasonID)
-		}
-
-		// If there are no more seasons to this series, delete it.
-		count = 0
-		db.Model(Season{}).Where("series_id = ?", season.SeriesID).Count(&count)
-		if count == 0 {
-			db.Unscoped().Delete(Series{}, "id = ?", season.SeriesID)
-		}
-	}
-
 	// Delete all file information
 	db.Unscoped().Delete(&file)
 
@@ -273,11 +243,11 @@ func FindSeriesInLibrary(libraryID uint) (series []Series) {
 	return series
 }
 
-// FindEpisodeFilesInLibrary returns all episodes in the given library.
-func FindEpisodeFilesInLibrary(libraryID uint) (episodes []EpisodeFile) {
-	db.Where("library_id = ?", libraryID).Find(&episodes)
-
-	return episodes
+// FindEpisodeFilesInLibrary finds all episode files in the given library.
+func FindEpisodeFilesInLibrary(libraryID uint) ([]EpisodeFile, error) {
+	var episodeFiles []EpisodeFile
+	err := db.Find(&episodeFiles, "library_id =?", libraryID).Error
+	return episodeFiles, err
 }
 
 // FindEpisodeFilesInLibraryByLocator finds all episode files in the given library
@@ -405,15 +375,6 @@ func FindAllEpisodeFiles() (files []EpisodeFile) {
 	return files
 }
 
-// DeleteEpisodesFromLibrary deletes all episodes from the given library.
-func DeleteEpisodesFromLibrary(libraryID uint) {
-	files := []EpisodeFile{}
-	db.Where("library_id = ?", libraryID).Find(&files)
-	for _, file := range files {
-		file.DeleteSelfAndMD()
-	}
-}
-
 // EpisodeFileExists checks whether there already is a EpisodeFile present with the given path.
 func EpisodeFileExists(filePath string) bool {
 	count := 0
@@ -431,17 +392,26 @@ func CreateSeries(series *Series) {
 
 // SaveSeries updates a series in the database.
 func SaveSeries(series *Series) error {
-	return db.Save(series).Error
+	if err := db.Save(series).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Series %s", series.UUID)
+	}
+	return nil
 }
 
 // SaveSeason updates a season in the database.
 func SaveSeason(season *Season) error {
-	return db.Save(season).Error
+	if err := db.Save(season).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Season %s", season.UUID)
+	}
+	return nil
 }
 
 // SaveEpisode updates an episode in the database.
 func SaveEpisode(episode *Episode) error {
-	return db.Save(episode).Error
+	if err := db.Save(episode).Error; err != nil {
+		return errors.Wrapf(err, "Failed to save Episode %s", episode.UUID)
+	}
+	return nil
 }
 
 // DeleteEpisode deletes an Episode
