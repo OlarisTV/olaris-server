@@ -208,6 +208,11 @@ func buildExternalSubtitleStreams(
 	subtitleFiles, _ := filepath.Glob(mediaFilePathWithoutExt + "*.srt")
 	for _, subtitleFile := range subtitleFiles {
 		match := r.FindStringSubmatch(subtitleFile)
+		if match == nil {
+			log.Error("Failed to parse subtitle filename: ", subtitleFile)
+			continue
+		}
+
 		// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
 		tag := match[1]
 		lang := "unk"
