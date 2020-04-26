@@ -32,7 +32,7 @@ require (
 	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
-	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2
+	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3
 	github.com/ncw/rclone v1.48.1-0.20190619134754-ba72e62b41cb
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1

@@ -155,7 +155,7 @@ github.com/lib/pq/scram
 github.com/magiconair/properties
 # github.com/mattn/go-sqlite3 v1.10.0
 github.com/mattn/go-sqlite3
-# github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2
+# github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3
 github.com/maxbrunsfeld/counterfeiter/v6
 github.com/maxbrunsfeld/counterfeiter/v6/arguments
 github.com/maxbrunsfeld/counterfeiter/v6/command
@@ -330,7 +330,7 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5 => golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+# golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 => golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/curve25519
@@ -346,6 +346,9 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/terminal
+# golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee
+golang.org/x/mod/module
+golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20190628185345-da137c7871d7 => golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -378,7 +381,7 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20190706070813-72ffa07ba3db
+# golang.org/x/tools v0.0.0-20200301222351-066e0c02454c
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
@@ -387,10 +390,13 @@ golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/imports
 golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/module
-golang.org/x/tools/internal/semver
+golang.org/x/tools/internal/packagesinternal
+# golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
 # google.golang.org/api v0.5.0
 google.golang.org/api/drive/v2
 google.golang.org/api/drive/v3
