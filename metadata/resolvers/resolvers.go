@@ -18,7 +18,8 @@ type Resolver struct {
 // NewResolver creates a new resolver
 func NewResolver(env *app.MetadataContext) *Resolver {
 	r := &Resolver{
-		env: env,
+		env:  env,
+		libs: map[uint]*managers.LibraryManager{},
 	}
 
 	libs := db.AllLibraries()
