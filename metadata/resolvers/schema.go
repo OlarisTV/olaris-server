@@ -369,7 +369,7 @@ var SchemaTxt = `
 	}
 
 	type MovieDeletedEvent {
-		movieUUID: string!
+		movieUUID: String!
 	}
 
 	type SeriesAddedEvent {
@@ -377,7 +377,7 @@ var SchemaTxt = `
 	}
 
 	type SeriesDeletedEvent {
-		seriesUUID: string!
+		seriesUUID: String!
 	}
 
 	type SeasonAddedEvent {
@@ -385,7 +385,7 @@ var SchemaTxt = `
 	}
 
 	type SeasonDeletedEvent {
-		seasonUUID: string!
+		seasonUUID: String!
 	}
 
 	type EpisodeAddedEvent {
@@ -393,7 +393,7 @@ var SchemaTxt = `
 	}
 
 	type EpisodeDeletedEvent {
-		episodeUUID: string!
+		episodeUUID: String!
 	}
 `
 
