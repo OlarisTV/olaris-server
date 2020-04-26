@@ -18,6 +18,7 @@ olaris-react goes first because its release gets built into the olaris-server bi
   * git commit with version bump
   * `git tag v0.3.0`
   * `git push --tags`
+  * Wait for the new version to be build on CI because olaris-server `make ready-ci` later downloads this version
 
 ### olaris-server
 
