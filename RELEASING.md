@@ -33,3 +33,6 @@ olaris-react goes first because its release gets built into the olaris-server bi
   # Update the from-ci image
   make docker-from-ci-build-tag-push
 
+### Updatete public releases
+
+To avoid any trouble with your local machine, it's best to use the CI builds for doing the actual release. Download the `dist-linux-amd64` file from Gitlab and extract it. Upload the zip `olaris-linux-amd64-v0.3.0.zip` file to the `olaris-release/` directory on [our Google Cloud Storage](https://console.cloud.google.com/storage/browser/bysh-chef-files/?project=electric-charge-161111). Replace the `olaris-linux-amd64` binary with the unpacked binary so that the Bytesized installer can pull it directly. Update the Blog if necessary (even for a point release, we usually update the link from the latest release blogpost).
