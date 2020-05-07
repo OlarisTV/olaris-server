@@ -2,6 +2,13 @@
 
 * Update dependencies
   * Merge latest ffmpeg release
+    * `git fetch origin`
+    * Find latest release in `git tag`
+    * Merge latest release, e.g. `git merge n4.2.2` and fix any merge conflicts that may arise
+    * TODO(Leon Handreke): Maybe we should actually do this a different way? Maintain a patchset that we always rebase to keep a better overview of the changes
+    * `git push olaris`
+    * Wait for CI to build ffmpeg as olaris-server pulls it in through its build process
+
   * Merge latest videojs, videojs-http-streaming release
     * git rebase -i [the latest stable release], pick all but the „Generate dist files“ commit
     * npm install && npm run-script build && git reset HEAD && git add dist && git commit -m "Generate dist files"
