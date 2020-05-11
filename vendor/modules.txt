@@ -48,6 +48,8 @@ github.com/aws/aws-sdk-go/service/s3
 github.com/aws/aws-sdk-go/service/s3/s3iface
 github.com/aws/aws-sdk-go/service/s3/s3manager
 github.com/aws/aws-sdk-go/service/sts
+# github.com/cenkalti/backoff v2.2.1+incompatible
+github.com/cenkalti/backoff
 # github.com/coreos/bbolt v1.3.3
 github.com/coreos/bbolt
 # github.com/davecgh/go-spew v1.1.1
@@ -94,6 +96,8 @@ github.com/gorilla/handlers
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
+# github.com/grandcat/zeroconf v1.0.0
+github.com/grandcat/zeroconf
 # github.com/graph-gophers/graphql-go v0.0.0-20190513003547-158e7b876106
 github.com/graph-gophers/graphql-go
 github.com/graph-gophers/graphql-go/errors
@@ -160,6 +164,8 @@ github.com/maxbrunsfeld/counterfeiter/v6
 github.com/maxbrunsfeld/counterfeiter/v6/arguments
 github.com/maxbrunsfeld/counterfeiter/v6/command
 github.com/maxbrunsfeld/counterfeiter/v6/generator
+# github.com/miekg/dns v1.1.27
+github.com/miekg/dns
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.1.2
@@ -260,7 +266,7 @@ github.com/pengsrc/go-shared/check
 github.com/pengsrc/go-shared/convert
 github.com/pengsrc/go-shared/log
 github.com/pengsrc/go-shared/reopen
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pkg/sftp v1.10.1-0.20190523025818-e98a7bef6829 => github.com/pkg/sftp v1.10.0
 github.com/pkg/sftp
@@ -349,7 +355,8 @@ golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20190628185345-da137c7871d7 => golang.org/x/net v0.0.0-20190522155817-f3200d17e092
+# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa => golang.org/x/net v0.0.0-20190522155817-f3200d17e092
+golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -358,7 +365,11 @@ golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
 golang.org/x/net/internal/timeseries
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
 golang.org/x/net/websocket
@@ -370,7 +381,7 @@ golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb => golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
+# golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe => golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
