@@ -26,6 +26,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.7.2
+	github.com/grandcat/zeroconf v1.0.0
 	github.com/graph-gophers/graphql-go v0.0.0-20190513003547-158e7b876106
 	github.com/graph-gophers/graphql-transport-ws v0.0.0-20190611222414-40c048432299
 	github.com/jinzhu/gorm v1.9.9-0.20190611093255-321c636b9da5
@@ -35,7 +36,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3
 	github.com/ncw/rclone v1.48.1-0.20190619134754-ba72e62b41cb
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.6.0
 	github.com/ryanbradynd05/go-tmdb v0.0.0-20181220020137-291a20d25ffd
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
@@ -47,7 +48,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/t3rm1n4l/go-mega v0.0.0-20190528125457-55e675378686 // indirect
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
-	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
+	golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe
 	google.golang.org/appengine v1.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69 // indirect
 	gopkg.in/gormigrate.v1 v1.5.0

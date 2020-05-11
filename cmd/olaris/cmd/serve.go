@@ -12,6 +12,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/grandcat/zeroconf"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -68,10 +69,21 @@ var serveCmd = &cobra.Command{
 		// This is also relevant during development because the realize auto-reload
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
-		// TODO(Leon Handreke): Find a better way to do this, maybe a global flag?
 		port := viper.GetInt("server.port")
 		streaming.FfmpegUrlPort = port
 		ffmpeg.FfmpegUrlPort = port
+
+		if viper.GetBool("server.zeroconf.enabled") {
+			viper.SetDefault("server.zeroconf.domain", "local.")
+			domain := viper.GetString("server.zeroconf.domain")
+			zeroconfService, err := zeroconf.Register("olaris", "_http._tcp", domain, port, []string{"txtv=0", "lo=1", "la=2"}, nil)
+			if err != nil {
+				log.WithError(err).Warn("zeroconf setup failed")
+			} else {
+				log.Info("zeroconf successfully enabled")
+			}
+			defer zeroconfService.Shutdown()
+		}
 
 		appRoute := rrr.PathPrefix("/app").
 			Handler(http.StripPrefix("/olaris/app", react.GetHandler())).
