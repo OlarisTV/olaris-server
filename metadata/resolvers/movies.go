@@ -2,6 +2,8 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
+
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -11,6 +13,10 @@ type queryArgs struct {
 	UUID   *string
 	Offset *int32
 	Limit  *int32
+}
+
+type posterURLArgs struct {
+	Width int32
 }
 
 func createQd(args *queryArgs) *db.QueryDetails {
@@ -86,6 +92,23 @@ func (r *MovieResolver) BackdropPath() string {
 // PosterPath returns poster
 func (r *MovieResolver) PosterPath() string {
 	return r.r.PosterPath
+}
+
+// PosterURL returns poster's URL for the given size
+func (r *MovieResolver) PosterURL(ctx context.Context, args *posterURLArgs) string {
+	actualWidth := "original"
+	if args.Width > 0 {
+		// TODO: get this dynamically from TMDB at server startup
+		// (or maybe it's already fetched somewhere?)
+		availableWidths := []int32{92, 154, 185, 342, 500, 780}
+		for _, currentWidth := range availableWidths {
+			if currentWidth >= args.Width {
+				actualWidth = fmt.Sprintf("w%d", currentWidth)
+				break
+			}
+		}
+	}
+	return fmt.Sprintf("/olaris/m/images/tmdb/%s%s", actualWidth, r.r.PosterPath)
 }
 
 // Year returns year
