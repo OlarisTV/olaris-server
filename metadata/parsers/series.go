@@ -35,7 +35,9 @@ func ParseSeriesName(filePath string) *ParsedSeriesInfo {
 	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing filename for episode information.")
 	var err error
 	var psi = ParsedSeriesInfo{}
-	defer log.WithFields(psi.logFields()).Debugln("Done parsing episode.")
+	defer func(p *ParsedSeriesInfo) {
+		log.WithFields(p.logFields()).Debugln("Done parsing episode.")
+	}(&psi)
 
 	yearResult := yearRegex.FindStringSubmatch(fileName)
 	if len(yearResult) > 1 {
