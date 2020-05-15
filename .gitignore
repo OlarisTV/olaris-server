@@ -6,6 +6,7 @@ binaries
 bin
 node_modules
 cmd/olaris-server/bsmds-linux
+metadata/resolvers/schematxt.go
 **/bindata.go
 **/*fakes/*
 react/build

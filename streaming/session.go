@@ -2,20 +2,17 @@ package streaming
 
 import (
 	"fmt"
-	"github.com/google/uuid"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
 const playbackSessionTimeout = 20 * time.Minute
 
 const InitSegmentIdx = -1
-
-// TODO(Leon Handreke): Figure out a better way than a package-global variable to
-// convey this info from the top-level command flag to ffmpeg. Or maybe a setter is enough?
-// Also this should go in some util package to build URLs
-var FfmpegUrlPort = 8080
 
 type PlaybackSessionKey struct {
 	ffmpeg.StreamKey
@@ -71,7 +68,7 @@ func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int) (
 	// TODO(Leon Handreke): Find a better way to build URLs
 
 	feedbackURL := fmt.Sprintf("http://127.0.0.1:%d/olaris/s/ffmpeg/%s/feedback",
-		FfmpegUrlPort, playbackSessionID)
+		viper.GetInt("server.port"), playbackSessionID)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to build FFmpeg feedback url: %s", err.Error())

@@ -70,8 +70,6 @@ var serveCmd = &cobra.Command{
 		// tool doesn't properly send SIGTERM.
 		ffmpeg.CleanTranscodingCache()
 		port := viper.GetInt("server.port")
-		streaming.FfmpegUrlPort = port
-		ffmpeg.FfmpegUrlPort = port
 
 		if viper.GetBool("server.zeroconf.enabled") {
 			viper.SetDefault("server.zeroconf.domain", "local.")
