@@ -2,11 +2,13 @@
 package parsers
 
 import (
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/metadata/helpers"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/metadata/helpers"
 )
 
 // ParsedMovieInfo holds extracted information from the given filename.
@@ -23,6 +25,7 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 	psi := ParsedMovieInfo{}
 	var err error
 	var year string
+	fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
 	res := movieRe.FindStringSubmatch(fileName)
 
