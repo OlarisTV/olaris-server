@@ -2,19 +2,15 @@
 package helpers
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 // Sanitize prepares a filename for parsing. It tries to remove dots and other weird characters to make parsing easier.
 func Sanitize(filename string) string {
-	// Remove extension
-	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
-
-	filename = strings.Replace(filename, ".", " ", -1)
-	filename = strings.Replace(filename, "_", " ", -1)
-	filename = strings.Replace(filename, "’", "'", -1)
+	sanitizeRegEx := regexp.MustCompile(`([\._‘](| ))`)
+	filename = sanitizeRegEx.ReplaceAllString(filename, " ")
+	filename = strings.Replace(filename, "  ", " ", -1)
 	filename = strings.Trim(filename, " ")
 	filename = strings.Trim(filename, " -")
 	return filename

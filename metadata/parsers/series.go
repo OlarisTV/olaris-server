@@ -10,11 +10,11 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/helpers"
 )
 
-var yearRegex = regexp.MustCompile("([\\[\\(]?((?:19[0-9]|20[01])[0-9])[\\]\\)]?)")
+var yearRegex = regexp.MustCompile("([\\[\\(]?((19|20)\\d{2})[\\]\\)]?)")
 var seriesRegex = regexp.MustCompile("^(.*)S(\\d{1,2})E(\\d{1,2})")
 var seriesFallbackRegex = regexp.MustCompile("^(.*)(\\d{1,2})x(\\d{1,2})")
 
-var seasonRegex = regexp.MustCompile("season.*?([0-9]{1,3})")
+var seasonRegex = regexp.MustCompile("[Ss](eason|)\\s?(\\d{1,3})")
 var firstNumberRegex = regexp.MustCompile("[0-9]{1,3}")
 
 // ParsedSeriesInfo holds extracted information from the given filename.
@@ -31,6 +31,7 @@ func (psi *ParsedSeriesInfo) logFields() log.Fields {
 
 // ParseSeriesName attempts to parse a filename looking for episode/season information.
 func ParseSeriesName(filePath string) *ParsedSeriesInfo {
+	filePath = strings.TrimSuffix(filePath, filepath.Ext(filePath))
 	fileName := filepath.Base(filePath)
 	log.WithFields(log.Fields{"filename": fileName}).Debugln("Parsing filename for episode information.")
 	var err error
@@ -39,17 +40,17 @@ func ParseSeriesName(filePath string) *ParsedSeriesInfo {
 		log.WithFields(p.logFields()).Debugln("Done parsing episode.")
 	}(&psi)
 
-	yearResult := yearRegex.FindStringSubmatch(fileName)
-	if len(yearResult) > 1 {
+	yearResult := yearRegex.FindStringSubmatch(filePath)
+	if len(yearResult) > 0 {
 		yearString := yearResult[2]
 		log.WithFields(log.Fields{"year": yearString}).Println("Found release year.")
-		// Remove Year data from original fileName
+		// Remove Year data from original filePath and fileName
+		filePath = strings.Replace(filePath, yearResult[1], "", -1)
 		fileName = strings.Replace(fileName, yearResult[1], "", -1)
 		psi.Year = yearString
 		if err != nil {
 			log.WithError(err).Warnln("Could not convert year to uint")
 		}
-		log.WithFields(log.Fields{"filename": fileName}).Debugln("Removed year from episode information to create new title.", fileName)
 	}
 
 	// Find out episode numbers
@@ -96,8 +97,6 @@ func ParseSeriesName(filePath string) *ParsedSeriesInfo {
 	if err != nil {
 		log.WithError(err).Debugln("Could not convert episode to uint: ")
 	}
-
-	psi.Year = ""
 
 	seriesName := filepath.Base(filepath.Dir(filepath.Dir(filePath)))
 	psi.Title = helpers.Sanitize(seriesName)
