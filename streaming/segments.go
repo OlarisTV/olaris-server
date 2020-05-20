@@ -34,7 +34,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playbackSession, err := GetPlaybackSession(
+	playbackSession, err := PBSManager.GetPlaybackSession(
 		PlaybackSessionKey{
 			StreamKey:        streamKey,
 			sessionID:        sessionID,
@@ -91,7 +91,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 		return
 	}
 
-	playbackSession, err := GetPlaybackSession(
+	playbackSession, err := PBSManager.GetPlaybackSession(
 		PlaybackSessionKey{
 			streamKey,
 			sessionID,

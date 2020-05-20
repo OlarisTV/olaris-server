@@ -57,6 +57,7 @@ func servePlaybackSessionDebugPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var transcodingSessions []*ffmpeg.TranscodingSession
+	var playbackSessions = PBSManager.GetPlaybackSessions()
 
 	for _, s := range playbackSessions {
 		transcodingSessions = append(transcodingSessions, s.TranscodingSession)

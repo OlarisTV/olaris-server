@@ -62,7 +62,7 @@ var serveCmd = &cobra.Command{
 
 		streamingRouter := rr.PathPrefix("/s").Subrouter()
 		streaming.RegisterRoutes(streamingRouter)
-		defer streaming.Cleanup()
+		defer streaming.PBSManager.CleanupSessions()
 
 		// This is just to make sure that no temp files stay behind in case the
 		// garbage collection below didn't work properly for some reason.
@@ -114,7 +114,6 @@ var serveCmd = &cobra.Command{
 		defer cancel()
 
 		mctx.Cleanup()
-		streaming.Cleanup()
 		srv.Shutdown(ctx)
 		log.Println("Shut down complete, exiting.")
 	},

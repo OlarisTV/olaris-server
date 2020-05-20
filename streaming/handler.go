@@ -1,9 +1,9 @@
 package streaming
 
 import (
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 // For Apple devices to handle HLS properly, the m3u8 playlists must be sent with the correct Content-Type
@@ -34,17 +34,4 @@ func RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/debug/playbackSessions", servePlaybackSessionDebugPage)
 
 	//handler := cors.AllowAll().Handler(router)
-}
-
-// Cleanup cleans up any streaming artifacts that might be left.
-func Cleanup() {
-	for _, s := range playbackSessions {
-		s.referenceCount--
-		s.CleanupIfRequired()
-
-		if s.referenceCount > 0 {
-			log.Warn("Playback session reference count leak: ", s.TranscodingSession)
-		}
-	}
-	log.Println("Cleaned up all streaming context")
 }

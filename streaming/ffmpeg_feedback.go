@@ -9,7 +9,7 @@ import (
 func serveFFmpegFeedback(w http.ResponseWriter, r *http.Request) {
 	playbackSessionID := mux.Vars(r)["playbackSessionID"]
 
-	s, err := GetPlaybackSessionByID(playbackSessionID)
+	s, err := PBSManager.GetPlaybackSessionByID(playbackSessionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
