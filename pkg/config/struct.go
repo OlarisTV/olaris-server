@@ -1,4 +1,4 @@
-package cmd
+package config
 
 // Config is the base struct populated from the configuration
 // file on disk by viper
