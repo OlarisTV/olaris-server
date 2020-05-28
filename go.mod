@@ -23,6 +23,7 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
+	github.com/goava/di v1.2.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.7.2
@@ -45,7 +46,7 @@ require (
 	github.com/spf13/cobra v0.0.4
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.6.1
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/t3rm1n4l/go-mega v0.0.0-20190528125457-55e675378686 // indirect
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect
 	golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe
