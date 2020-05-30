@@ -14,3 +14,5 @@ yarn.lock
 build
 dist
 olaris-server
+vendor
+.vscode

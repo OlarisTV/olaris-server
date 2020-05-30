@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := build-local
 
-GOCMD=GO111MODULE=on GOFLAGS="-mod=vendor" go
+GOCMD=GO111MODULE=on GOFLAGS= go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOFMT=$(GOCMD) fmt

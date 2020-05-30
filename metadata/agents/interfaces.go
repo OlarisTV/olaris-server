@@ -1,6 +1,6 @@
 package agents
 
-//go:generate go run -mod vendor github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
 	"github.com/ryanbradynd05/go-tmdb"
