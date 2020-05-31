@@ -3,6 +3,7 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
@@ -173,8 +174,8 @@ func (r *MovieFileResolver) FileName() string {
 }
 
 // FileSize returns movie filesize
-func (r *MovieFileResolver) FileSize() int32 {
-	return int32(r.r.Size)
+func (r *MovieFileResolver) FileSize() string {
+	return strconv.FormatInt(r.r.Size, 10)
 }
 
 // UUID returns movie uuid.

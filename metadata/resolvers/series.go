@@ -2,6 +2,8 @@ package resolvers
 
 import (
 	"context"
+	"strconv"
+
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -290,8 +292,8 @@ func (r *EpisodeFileResolver) UUID() string {
 }
 
 // FileSize returns episode filesize
-func (r *EpisodeFileResolver) FileSize() int32 {
-	return int32(r.r.Size)
+func (r *EpisodeFileResolver) FileSize() string {
+	return strconv.FormatInt(r.r.Size, 10)
 }
 
 // Library returns library
