@@ -18,6 +18,7 @@ type ParsedMovieInfo struct {
 }
 
 var movieRe = regexp.MustCompile("(.*)\\((\\d{4})\\)")
+var yearRe = regexp.MustCompile(`[^\d]?(\d{4})[^\d]?`)
 
 // ParseMovieName attempts to parse a filename looking for movie information.
 func ParseMovieName(fileName string) *ParsedMovieInfo {
@@ -26,6 +27,14 @@ func ParseMovieName(fileName string) *ParsedMovieInfo {
 	var err error
 	var year string
 	fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName))
+
+	nyear := yearRe.FindStringSubmatch(fileName)
+
+	// pretty sure we found the year
+	if len(nyear) == 2 {
+		yearIdx := yearRe.FindStringSubmatchIndex(fileName)
+		fileName = fileName[0:yearIdx[1]]
+	}
 
 	res := movieRe.FindStringSubmatch(fileName)
 
