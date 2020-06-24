@@ -44,14 +44,6 @@ func (man *ImageManager) HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.WithFields(log.Fields{"file": filePath}).Debugln("Requested file not in cache yet.")
 
-		helpers.EnsurePath(folderPath)
-		openFile, err := os.Create(filePath)
-		if err != nil {
-			log.Warnf("Error while creating file '%s': %s", filePath, err)
-			return
-		}
-		defer openFile.Close()
-
 		url := fmt.Sprintf("http://image.tmdb.org/t/p/%s/%s", size, id)
 		response, err := http.Get(url)
 		if err != nil {
@@ -59,6 +51,14 @@ func (man *ImageManager) HTTPHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer response.Body.Close()
+
+		helpers.EnsurePath(folderPath)
+		openFile, err := os.Create(filePath)
+		if err != nil {
+			log.Warnf("Error while creating file '%s': %s", filePath, err)
+			return
+		}
+		defer openFile.Close()
 
 		var b bytes.Buffer
 		_, err = io.Copy(&b, response.Body)
