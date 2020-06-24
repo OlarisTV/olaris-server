@@ -14,6 +14,7 @@ func TestParseMovieName(t *testing.T) {
 	tests["The.Matrix.1999.mkv"] = ParsedMovieInfo{Year: 1999, Title: "The Matrix"}
 	tests["300.mkv"] = ParsedMovieInfo{Year: 0, Title: "300"}
 	tests["300 (2006).mkv"] = ParsedMovieInfo{Year: 2006, Title: "300"}
+	tests["Apollo.11.2019.BluRay.1080p.x264.DTS5.1-PTer.mkv"] = ParsedMovieInfo{Year: 2019, Title: "Apollo 11"}
 
 	for name, mi := range tests {
 		t.Log("running test on:", name)
