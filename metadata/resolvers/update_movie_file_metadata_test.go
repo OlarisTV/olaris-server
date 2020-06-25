@@ -17,6 +17,8 @@ func TestUpdateMovieFile(t *testing.T) {
 
 	ctx := auth.ContextWithUserID(context.Background(), testUserID)
 
+	ctx = context.WithValue(ctx, auth.ContextKeyIsAdmin, true)
+
 	tmdbAgent := agentsfakes.FakeMetadataRetrievalAgent{}
 	metadataCtx := app.NewTestingMDContext(&tmdbAgent)
 	r := NewResolver(metadataCtx)

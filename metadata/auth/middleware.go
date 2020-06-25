@@ -23,7 +23,7 @@ func (c contextKey) String() string {
 
 var (
 	contextKeyUserID  = contextKey("user_id")
-	contextKeyIsAdmin = contextKey("is_admin")
+	ContextKeyIsAdmin = contextKey("is_admin")
 )
 
 // UserClaims defines our custom JWT.
@@ -47,7 +47,7 @@ func ContextWithUserID(ctx context.Context, userID uint) context.Context {
 
 // UserAdmin checks whether the JWT is authorised as admin.
 func UserAdmin(ctx context.Context) (bool, bool) {
-	isAdmin, ok := ctx.Value(contextKeyIsAdmin).(bool)
+	isAdmin, ok := ctx.Value(ContextKeyIsAdmin).(bool)
 	return isAdmin, ok
 }
 
@@ -98,7 +98,7 @@ func MiddleWare(h http.Handler) http.Handler {
 				).Debugln("Authenticated with valid JWT")
 				ctx := r.Context()
 				ctx = context.WithValue(ctx, contextKeyUserID, claims.UserID)
-				ctx = context.WithValue(ctx, contextKeyIsAdmin, claims.Admin)
+				ctx = context.WithValue(ctx, ContextKeyIsAdmin, claims.Admin)
 				h.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}

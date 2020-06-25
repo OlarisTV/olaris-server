@@ -16,3 +16,4 @@ dist
 olaris-server
 vendor
 .vscode
+metadata/auth/token.secret
