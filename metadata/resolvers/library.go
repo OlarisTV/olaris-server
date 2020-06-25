@@ -100,10 +100,16 @@ type createLibraryArgs struct {
 }
 
 // RefreshAgentMetadata refreshes all metadata from agent
-func (r *Resolver) RefreshAgentMetadata(args struct {
+func (r *Resolver) RefreshAgentMetadata(ctx context.Context, args struct {
 	LibraryID *int32
 	UUID      *string
 }) bool {
+
+	err := ifAdmin(ctx)
+	if err != nil {
+		return false
+	}
+
 	if args.LibraryID != nil {
 		// TODO(Leon Handreke): Either add a refresh-per-library call to the LibraryManager
 		//  or make this a global update call without a Library ID
@@ -133,7 +139,12 @@ func (r *Resolver) RefreshAgentMetadata(args struct {
 }
 
 // RescanLibraries rescans all libraries for new files.
-func (r *Resolver) RescanLibraries() bool {
+func (r *Resolver) RescanLibraries(ctx context.Context) bool {
+	err := ifAdmin(ctx)
+	if err != nil {
+		return false
+	}
+
 	if rescanningLibraries == false {
 		rescanningLibraries = true
 		go func() {

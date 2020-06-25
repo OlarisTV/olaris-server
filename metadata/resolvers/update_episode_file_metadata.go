@@ -30,9 +30,12 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		Input UpdateEpisodeFileMetadataInput
 	},
 ) *UpdateEpisodeFileMetadataPayloadResolver {
-
-	var episodeFiles []*db.EpisodeFile
 	var err error
+	err = ifAdmin(ctx)
+	if err != nil {
+		return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
+	}
+	var episodeFiles []*db.EpisodeFile
 	if args.Input.EpisodeFileUUID != nil {
 		episodeFile, err := db.FindEpisodeFileByUUID(*args.Input.EpisodeFileUUID)
 		if err != nil {

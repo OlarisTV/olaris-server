@@ -22,6 +22,12 @@ func (r *Resolver) UpdateMovieFileMetadata(
 	ctx context.Context,
 	args *struct{ Input UpdateMovieFileMetadataInput },
 ) *UpdateMovieFileMetadataPayloadResolver {
+
+	err := ifAdmin(ctx)
+	if err != nil {
+		return &UpdateMovieFileMetadataPayloadResolver{error: err}
+	}
+
 	movieFile, err := db.FindMovieFileByUUID(args.Input.MovieFileUUID)
 	if err != nil {
 		return &UpdateMovieFileMetadataPayloadResolver{error: err}
