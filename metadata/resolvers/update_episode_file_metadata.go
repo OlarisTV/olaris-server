@@ -6,8 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -60,8 +58,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		go func(episodeFile *db.EpisodeFile) {
 			defer updateEpisodeFileMetadataGroup.Done()
 
-			name := strings.TrimSuffix(episodeFile.FileName, filepath.Ext(episodeFile.FileName))
-			parsedInfo := parsers.ParseSeriesName(name)
+			parsedInfo := parsers.ParseSeriesName(episodeFile.FileName)
 
 			if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
 				log.Warnln(

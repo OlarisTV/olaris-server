@@ -9,8 +9,6 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
 	"math"
-	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -130,8 +128,7 @@ func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) erro
 func (m *MetadataManager) getEpisodeKeyFromFilename(
 	episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
 
-	name := strings.TrimSuffix(episodeFile.FilePath, filepath.Ext(episodeFile.FileName))
-	parsedInfo := parsers.ParseSeriesName(name)
+	parsedInfo := parsers.ParseSeriesName(episodeFile.FilePath)
 
 	// Find a series for this Episode
 	var options = make(map[string]string)
