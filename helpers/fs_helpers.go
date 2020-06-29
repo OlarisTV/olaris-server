@@ -39,7 +39,6 @@ func EnsurePath(pathName string) error {
 func FileExists(pathName string) bool {
 	fi, err := os.Lstat(pathName)
 	if err != nil {
-		log.Debugln("error statting file:", err)
 		return false
 	}
 	// Is a symlink

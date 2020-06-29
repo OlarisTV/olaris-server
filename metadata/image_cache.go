@@ -33,6 +33,7 @@ func (man *ImageManager) HTTPHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	folderPath := path.Join(man.cachePath, provider, size)
 	filePath := path.Join(folderPath, id)
+
 	if helpers.FileExists(filePath) {
 		log.WithFields(log.Fields{"file": filePath}).Debugln("Requested file already in cache.")
 		file, err := ioutil.ReadFile(filePath)
