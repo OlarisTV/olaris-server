@@ -5,6 +5,7 @@ import (
 	"github.com/ncw/rclone/vfs"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -228,12 +229,20 @@ func (man *LibraryManager) RescanFilesystem() {
 // and probes any interesting files it finds along the way.
 func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 	log.WithField("path", rootNode.Path()).Debugf("RecursiveProbe called")
+
 	if !strings.Contains(rootNode.Path(), man.Library.FilePath) {
 		log.WithField("libraryRoot", man.Library.FilePath).
 			Warnf("refusing to scan outside of library root")
 		return
 	}
+
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
+		p := filepath.Base(n.Path())
+		if n.IsDir() && p[0] == '.' && viper.GetBool("metadata.scan_hidden") == false {
+			log.WithFields(log.Fields{"path": p, "fullPath": n.Path()}).Warnln("skipping hidden folder, if you want to index it please set metadata.scan_hidden to true.")
+			return filepath.SkipDir
+		}
+
 		if err != nil {
 			log.WithError(err).Warnf("received an error while walking %s", walkPath)
 		} else if ValidFile(n) {
