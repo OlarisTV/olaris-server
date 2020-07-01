@@ -174,9 +174,21 @@ func (man *LibraryManager) checkAndAddProbeJob(node filesystem.Node) {
 	}
 }
 
-// RescanFilesystem goes over the filesystem and parses filenames in the given library.
-func (man *LibraryManager) RescanFilesystem() {
-	log.WithFields(man.Library.LogFields()).Println("Scanning library for changed files.")
+// RescanFilesystem goes over the filesystem and parses filenames in the given library. If a filePath is supplied it will only scan the given path for new content.
+func (man *LibraryManager) RescanFilesystem(filePath string) {
+	if filePath == "" {
+		filePath = man.Library.FilePath
+		log.Debugln("No filePath supplied, going to scan from the root")
+	} else {
+		if strings.Contains(filePath, man.Library.FilePath) {
+			log.WithFields(log.Fields{"filePath": filePath}).Debugln("Valid filepath supplied, scanning from giving path")
+		} else {
+			log.WithFields(log.Fields{"filePath": filePath, "libraryPath": man.Library.FilePath}).Debugln("Given filePath is not part of the library, ignoring.")
+			filePath = man.Library.FilePath
+		}
+	}
+
+	log.WithFields(man.Library.LogFields()).WithField("filePath", filePath).Println("Scanning library for changed files.")
 	stime := time.Now()
 
 	// TODO: Move this into db package
@@ -190,10 +202,10 @@ func (man *LibraryManager) RescanFilesystem() {
 	// TODO: Should this be in it's own healthCheck method on the library or something?
 	switch man.Library.Backend {
 	case db.BackendLocal:
-		rootNode, err = filesystem.LocalNodeFromPath(man.Library.FilePath)
+		rootNode, err = filesystem.LocalNodeFromPath(filePath)
 	case db.BackendRclone:
 		rootNode, err = filesystem.RcloneNodeFromPath(
-			path.Join(man.Library.RcloneName, man.Library.FilePath))
+			path.Join(man.Library.RcloneName, filePath))
 	}
 
 	if err != nil {
@@ -215,7 +227,7 @@ func (man *LibraryManager) RescanFilesystem() {
 	man.RecursiveProbe(rootNode)
 
 	dur := time.Since(stime)
-	log.Printf("Probing library '%s' took %f seconds", man.Library.FilePath, dur.Seconds())
+	log.Printf("Scanning library took %f seconds", dur.Seconds())
 	man.Library.RefreshCompletedAt = time.Now()
 	db.SaveLibrary(man.Library)
 
@@ -438,7 +450,7 @@ func (man *LibraryManager) RefreshAll() {
 		man.AddWatcher(man.Library.FilePath)
 	}
 
-	man.RescanFilesystem()
+	man.RescanFilesystem("")
 	man.IdentifyUnidentifiedFiles()
 }
 

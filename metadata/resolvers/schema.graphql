@@ -69,6 +69,12 @@ type Mutation {
     # Rescan all library paths for new files that are not indexed yet.
     rescanLibraries(): Boolean!
 
+    # Rescan a library based on the given filters.
+    # 1. If supply a "ID" it will refresh the entire library
+    # 2. If you supply it an "ID" and a "filepath" it will only scan the specific filepath in the given library
+    # 3. If you supply just a "filepath" it will loop over all libraries seeing if any of the given libraries match the given path and then scan only that path.
+    rescanLibrary(id: Int, filepath: String): Boolean!
+
     # Tag an unidentified MovieFile
     updateMovieFileMetadata(input: UpdateMovieFileMetadataInput!): UpdateMovieFileMetadataPayload!
 

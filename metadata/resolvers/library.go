@@ -2,11 +2,13 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	mhelpers "gitlab.com/olaris/olaris-server/metadata/helpers"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -136,6 +138,52 @@ func (r *Resolver) RefreshAgentMetadata(ctx context.Context, args struct {
 	}
 
 	return false
+}
+
+// RescanLibrary can scan (parts) of a Library
+func (r *Resolver) RescanLibrary(ctx context.Context, args struct {
+	ID       *int32
+	FilePath *string
+}) bool {
+	err := ifAdmin(ctx)
+	if err != nil {
+		return false
+	}
+
+	// No specific library is given
+	if args.ID == nil {
+		if args.FilePath == nil {
+			return false
+		}
+
+		// A valid filepath has been given so let's look in all libraries for the given path
+		validLibFound := false
+		for _, man := range r.libs {
+			if strings.Contains(*args.FilePath, man.Library.FilePath) {
+				validLibFound = true
+				go mhelpers.WithLock(func() {
+					man.RescanFilesystem(*args.FilePath)
+				}, fmt.Sprintf("refresh-lib-%s", strconv.Itoa(int(man.Library.ID))))
+			}
+		}
+		return validLibFound
+	}
+
+	// A specific library has been given
+	libId := uint(*args.ID)
+	man := r.libs[libId]
+
+	// No specific filepath has been given so we can refresh the whole library.
+	if args.FilePath == nil {
+		go mhelpers.WithLock(func() {
+			man.RefreshAll()
+		}, fmt.Sprintf("refresh-lib-%s", strconv.Itoa(int(man.Library.ID))))
+	} else {
+		go mhelpers.WithLock(func() {
+			man.RescanFilesystem(*args.FilePath)
+		}, fmt.Sprintf("refresh-lib-%s", strconv.Itoa(int(man.Library.ID))))
+	}
+	return true
 }
 
 // RescanLibraries rescans all libraries for new files.
