@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"io"
 	"io/ioutil"
@@ -21,7 +22,7 @@ type ImageManager struct {
 
 // NewImageManager creates a new instance of a image caching server for themoviedb.
 func NewImageManager() *ImageManager {
-	cachePath := path.Join(helpers.CacheDir(), "images")
+	cachePath := path.Join(viper.GetString("server.cacheDir"), "images")
 	helpers.EnsurePath(cachePath)
 	return &ImageManager{cachePath: cachePath}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -39,7 +40,7 @@ var env *MetadataContext
 
 // NewDefaultMDContext creates a new env with sane defaults.
 func NewDefaultMDContext() *MetadataContext {
-	dbDir := helpers.MetadataConfigPath()
+	dbDir := viper.GetString("sqliteDir")
 	helpers.EnsurePath(dbDir)
 
 	dbPath := path.Join(dbDir, "metadata.db")

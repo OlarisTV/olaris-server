@@ -4,6 +4,7 @@ package ffmpeg
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"os"
 	"path"
@@ -172,7 +173,5 @@ func CleanTranscodingCache() error {
 }
 
 func getTranscodingSessionRuntimeDir() string {
-	//u, _ := user.Current()
-	//return path.Join(os.TempDir(), fmt.Sprintf("olaris-%s", u.Uid))
-	return path.Join(helpers.CacheDir(), "transcoding-sessions")
+	return path.Join(viper.GetString("server.cacheDir"), "transcoding-sessions")
 }
