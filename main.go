@@ -10,6 +10,7 @@ import (
 
 	"gitlab.com/olaris/olaris-server/cmd"
 	"gitlab.com/olaris/olaris-server/cmd/root"
+	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/pkg/config"
 	"gitlab.com/olaris/olaris-server/utils"
 )
@@ -41,8 +42,12 @@ func registerGlobalFlags(fs *pflag.FlagSet) {
 	fs.Bool("use_system_ffmpeg", false, "Whether to use system FFmpeg instead of binary builtin")
 	fs.Bool("enable_streaming_debug_pages", false, "Whether to enable debug pages in the streaming server")
 	fs.Bool("write_transcoder_log", true, "Whether to write transcoder output to logfile")
-	fs.StringVar(&config.ConfigDir, "config_dir", config.GetDefaultConfigDir(), "Default configuration directory for config files.")
 
+	fs.StringVar(&config.ConfigDir, "config_dir", config.GetDefaultConfigDir(), "Default configuration directory for config files")
+
+	fs.String("cache_dir", helpers.GetDefaultCacheDir(), "Cache directory for transcoding an other temporarily files")
+
+	viper.BindPFlag("server.cacheDir", fs.Lookup("cache_dir"))
 	viper.BindPFlag("server.directFileAccess", fs.Lookup("allow_direct_file_access"))
 	viper.BindPFlag("server.systemFFmpeg", fs.Lookup("use_system_ffmpeg"))
 	viper.BindPFlag("debug.streamingPages", fs.Lookup("enable_streaming_debug_pages"))

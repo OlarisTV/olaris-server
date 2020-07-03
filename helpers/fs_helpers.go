@@ -54,19 +54,18 @@ func FileExists(pathName string) bool {
 	return true
 }
 
-// BaseConfigPath returns the root for our config folders.
-func BaseConfigPath() string {
+// BaseConfigDir returns the root for our config folders.
+func BaseConfigDir() string {
 	configDir := viper.GetString("configDir")
+	if configDir == "" {
+		// This can happen during other use-cases where not the entire stack is loaded, for instance during tests.
+		configDir = GetDefaultCacheDir()
+	}
 	return configDir
 }
 
-// MetadataConfigPath returns the config path for the md server
-func MetadataConfigPath() string {
-	return path.Join(BaseConfigPath(), "metadb")
-}
-
-// CacheDir returns a cache folder to use.
-func CacheDir() string {
+// GetDefaultCacheDir returns a cache folder to use.
+func GetDefaultCacheDir() string {
 	cacheDir, err := UserCacheDir()
 	if err != nil {
 		panic(fmt.Sprintf("Error getting user cache dir: %s", err.Error()))
@@ -74,9 +73,9 @@ func CacheDir() string {
 	return path.Join(cacheDir, "olaris")
 }
 
-// LogPath returns the path to our logfolder.
-func LogPath() string {
-	logPath := path.Join(CacheDir(), "log")
+// LogDir returns the path to our logfolder.
+func LogDir() string {
+	logPath := path.Join(BaseConfigDir(), "log")
 	EnsurePath(logPath)
 	return logPath
 }

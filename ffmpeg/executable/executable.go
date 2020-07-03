@@ -21,7 +21,7 @@ func getExecutablePath(name string) string {
 	if viper.GetBool("server.systemFFmpeg") {
 		return name
 	}
-	binaryDir := path.Join(helpers.CacheDir(), "ffmpeg")
+	binaryDir := path.Join(viper.GetString("server.cacheDir"), "ffmpeg")
 	binaryPath := path.Join(binaryDir, name)
 
 	info, err := AssetInfo(name)

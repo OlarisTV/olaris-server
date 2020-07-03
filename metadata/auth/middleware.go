@@ -111,7 +111,7 @@ func MiddleWare(h http.Handler) http.Handler {
 
 // TODO Maran: Rotate secrets
 func tokenSecret() (string, error) {
-	tokenPath := path.Join(helpers.BaseConfigPath(), "token.secret")
+	tokenPath := path.Join(helpers.BaseConfigDir(), "token.secret")
 	err := helpers.EnsurePath(path.Dir(tokenPath))
 	if err != nil {
 		return "", err
