@@ -58,6 +58,9 @@ type Streams struct {
 }
 
 func GetStreams(fileLocator filesystem.FileLocator) (*Streams, error) {
+	log.WithFields(log.Fields{"filePath": fileLocator.String()}).
+		Debugln("reading stream information from file")
+
 	streams := Streams{}
 
 	container, err := Probe(fileLocator)

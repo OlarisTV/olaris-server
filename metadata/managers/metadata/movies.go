@@ -51,8 +51,8 @@ func (m *MetadataManager) refreshMovieMetadataFromAgent(movie *db.Movie) error {
 		return errors.Wrapf(err,
 			"Failed to refresh metadata from agent for movie %s", movie.UUID)
 	}
-	log.WithFields(log.Fields{"title": movie.Title}).
-		Println("Refreshed metadata for movie.")
+	log.WithFields(log.Fields{"title": movie.Title, "tmdbID": movie.TmdbID}).
+		Println("refreshed metadata for movie")
 
 	return nil
 }

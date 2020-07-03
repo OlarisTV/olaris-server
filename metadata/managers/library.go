@@ -285,17 +285,15 @@ func (man *LibraryManager) AddWatcher(filePath string) {
 // and tries to associate the file with metadata based on the filename.
 func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	library := man.Library
-	log.WithFields(log.Fields{"filepath": n.Path()}).Println("Parsing filepath.")
+	st := time.Now()
+	log.WithFields(log.Fields{"filepath": n.Path()}).Println("scanning file")
 
 	basename := n.Name()
-
-	log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
-		Debugln("Reading stream information from file")
 
 	streams, err := ffmpeg.GetStreams(n.FileLocator())
 	if err != nil {
 		log.WithError(err).
-			Debugln("Received error while opening file for stream inspection")
+			Debugln("received error while opening file for stream inspection")
 		return nil
 	}
 
@@ -305,7 +303,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	// but since we have to open and ffprobe the file, we do it in this async job instead.
 	if len(streams.VideoStreams) == 0 {
 		log.WithFields(log.Fields{"filePath": n.FileLocator().String()}).
-			Infoln("File doesn't have any video streams, not adding to library.")
+			Infoln("file doesn't have any video streams, not adding to library.")
 		return nil
 	}
 
@@ -326,7 +324,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(&episodeFile)
 		if err != nil {
 			log.WithError(err).WithField("episodeFile", episodeFile.FileName).
-				Warn("Failed to to identify and create episode for EpisodeFile")
+				Warn("failed to to identify and create episode for EpisodeFile")
 		}
 
 	case db.MediaTypeMovie:
@@ -344,10 +342,12 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(&movieFile)
 		if err != nil {
 			log.WithError(err).WithField("movieFile", movieFile.FileName).
-				Warn("Failed to to identify and create Movie for MovieFile")
+				Warn("failed to to identify and create Movie for MovieFile")
 		}
-
 	}
+
+	dur := time.Since(st)
+	log.WithFields(log.Fields{"duration": dur.Seconds(), "path": n.Path()}).Printf("done scanning file")
 	return nil
 }
 

@@ -45,7 +45,7 @@ func (a *TmdbAgent) UpdateEpisodeMD(
 	episode.Overview = fullEpisode.Overview
 	episode.StillPath = fullEpisode.StillPath
 	log.WithFields(log.Fields{"episodeName": episode.Name, "tmdbId": episode.TmdbID}).
-		Debugln("Found episode metadata.")
+		Debugln("found episode metadata")
 
 	return nil
 

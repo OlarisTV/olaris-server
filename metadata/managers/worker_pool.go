@@ -22,7 +22,7 @@ func NewDefaultWorkerPool() *WorkerPool {
 	p := &WorkerPool{}
 
 	p.probePool = tunny.NewFunc(4, func(payload interface{}) interface{} {
-		log.Println("Current Probe queue length:", p.probePool.QueueLength())
+		log.Debugln("current probe queue length:", p.probePool.QueueLength())
 		if job, ok := payload.(*probeJob); ok {
 			job.man.ProbeFile(job.node)
 		} else {
