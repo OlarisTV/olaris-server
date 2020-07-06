@@ -9,15 +9,6 @@ import (
 	"gitlab.com/olaris/olaris-server/filesystem"
 )
 
-// BaseItem holds information that is shared between various mediatypes.
-type BaseItem struct {
-	UUIDable
-	TmdbID       int
-	Overview     string `gorm:"type:text"`
-	BackdropPath string
-	PosterPath   string
-}
-
 // Series holds metadata information about series.
 type Series struct {
 	BaseItem
