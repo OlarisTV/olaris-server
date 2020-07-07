@@ -9,7 +9,6 @@ import (
 
 func NewSQLiteDatabase(dbPath string, dbLogMode bool) (*gorm.DB, error) {
 	db, err := gorm.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=1000")
-	//db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect database: %s\n", err)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/metadata/db/dialects/mysql"
 	"gitlab.com/olaris/olaris-server/metadata/db/dialects/postgres"
@@ -31,7 +32,7 @@ type DatabaseOptions struct {
 }
 
 func getDefaultDbPath() (string, error) {
-	dbDir := helpers.MetadataConfigPath()
+	dbDir := viper.GetString("server.sqliteDir")
 	if err := helpers.EnsurePath(dbDir); err != nil {
 		return "", err
 	}
@@ -45,10 +46,11 @@ func defaultDb(logMode bool) *gorm.DB {
 		panic(fmt.Sprintf("failed to get default database path: %s\n", err))
 	}
 	db, err = sqlite.NewSQLiteDatabase(dbPath, logMode)
-	//db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database: %s\n", err))
 	}
+
+	log.WithField("path", dbPath).Println("using default (sqlite3) database")
 	return db
 }
 
@@ -65,15 +67,16 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 		switch engine {
 		case SQLite:
 			db, err = sqlite.NewSQLiteDatabase(connection, options.LogMode)
-			//db.Exec("PRAGMA journal_mode=WAL;")
 			if err != nil {
 				panic(fmt.Sprintf("failed to connect database: %s\n", err))
 			}
+			log.Println("using sqlite3 database driver")
 		case MySQL:
 			db, err = mysql.NewMySQLDatabase(connection, options.LogMode)
 			if err != nil {
 				panic(fmt.Sprintf("failed to connect database: %s\n", err))
 			}
+			log.Println("using MySQL database driver")
 		case CockroachDB, PostgresSQL:
 			// CockroachDB uses the Postgres driver
 			// https://www.cockroachlabs.com/docs/stable/build-a-go-app-with-cockroachdb-gorm.html
@@ -81,6 +84,7 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 			if err != nil {
 				panic(fmt.Sprintf("failed to connect database: %s\n", err))
 			}
+			log.Println("using postgres database driver")
 		default:
 			panic(fmt.Sprintf("unknown database engine: %s", engine))
 		}
@@ -91,7 +95,7 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 
 	err = migrateSchema(db)
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %s", err)
+		log.Fatalf("failed to migrate database: %s", err)
 	}
 
 	return db

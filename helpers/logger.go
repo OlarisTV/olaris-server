@@ -11,7 +11,7 @@ import (
 // InitLoggers sets the default logger options
 func InitLoggers(level log.Level) {
 	rotateFileHook, err := rotatefilehook.NewRotateFileHook(rotatefilehook.RotateFileConfig{
-		Filename:   path.Join(LogPath(), "olaris-server.log"),
+		Filename:   path.Join(LogDir(), "olaris-server.log"),
 		MaxSize:    2,  // megabytes
 		MaxBackups: 7,  // amount
 		MaxAge:     28, //days
