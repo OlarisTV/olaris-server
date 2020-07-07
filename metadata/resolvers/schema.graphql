@@ -164,6 +164,7 @@ type Library {
 
     movies: [Movie]!
     episodes: [Episode]!
+    series: [Series]!
 }
 
 type Series {

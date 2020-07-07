@@ -74,6 +74,14 @@ func (r *LibraryResolver) Movies(ctx context.Context) []*MovieResolver {
 	return mr
 }
 
+// Series return seasons based on episodes in a Library.
+func (r *LibraryResolver) Series() (series []*SeriesResolver) {
+	for _, s := range db.FindSeriesInLibrary(r.r.ID) {
+		series = append(series, &SeriesResolver{r: s})
+	}
+	return series
+}
+
 // Episodes returns episodes in Library.
 func (r *LibraryResolver) Episodes() (eps []*EpisodeResolver) {
 	for _, episode := range db.FindEpisodesInLibrary(r.r.ID) {
