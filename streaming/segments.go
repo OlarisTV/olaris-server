@@ -99,7 +99,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 			claims.UserID,
 		},
 		segmentIdx)
-	playbackSession.Release()
+	defer playbackSession.Release()
 
 	for {
 		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
