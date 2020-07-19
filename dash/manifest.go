@@ -44,7 +44,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 		</AdaptationSet>
 		{{ end }}
 		{{ range $i, $s := .subtitleStreams -}}
-		<AdaptationSet contentType="text" lang="{{ $s.Stream.Language }}" title="lol">
+		<AdaptationSet contentType="text" lang="{{ $s.Stream.Language }}" title="{{ $s.Stream.Language }}">
 			<Representation id="{{ $s.Representation.RepresentationId }}"
 					mimeType="application/mp4" codecs="wvtt">
 				<BaseURL>{{ $s.URI }}</BaseURL>

@@ -41,6 +41,8 @@ var humanizedToLangTag = GetHumanizedToLangTag()
 
 func GetHumanizedToLangTag() map[string]string {
 	humanizedToLangTag := reverseMap(langTagToHumanized)
+
+	// Some other tags that sometimes appear in external subtitle filenames
 	humanizedToLangTag["Polski"] = "pol"
 	return humanizedToLangTag
 }

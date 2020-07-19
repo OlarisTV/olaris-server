@@ -216,15 +216,16 @@ func buildExternalSubtitleStreams(
 			continue
 		}
 
-		// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
-		tag := match[1]
 		lang := "unk"
 
-		if tag == "" {
-			tag = "External"
-		} else {
-			if humanizedToLangTag[tag] != "" {
+		// TODO(Leon Handreke): This is a case of aggressive programming, can this ever fail?
+		tag := match[1]
+		if tag != "" {
+			// If the language tag is "English" or "Polish" instead of a code
+			if _, ok := humanizedToLangTag[tag]; ok {
 				lang = humanizedToLangTag[tag]
+			} else {
+				lang = tag
 			}
 		}
 
@@ -240,7 +241,7 @@ func buildExternalSubtitleStreams(
 				TotalDuration:    duration,
 				StreamType:       "subtitle",
 				Language:         lang,
-				Title:            tag,
+				Title:            lang,
 				EnabledByDefault: false,
 			})
 	}
