@@ -151,6 +151,5 @@ func getTranscodingLogSink(prefix string) io.WriteCloser {
 		log.Fatal("Failed to open log file ", filepath, ": ", err.Error())
 		f, _ = os.OpenFile(os.DevNull, os.O_RDWR, 0600)
 	}
-	fmt.Println(filepath)
 	return f
 }

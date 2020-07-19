@@ -33,7 +33,6 @@ func (ud *UUIDable) SetUUID() error {
 	uuid, err := uuid.NewV4()
 
 	if err != nil {
-		fmt.Println("Could not generate unique UID", err)
 		return err
 	}
 	ud.UUID = uuid.String()
