@@ -58,7 +58,9 @@ func serveDASHManifest(w http.ResponseWriter, r *http.Request) {
 	for _, s := range subtitleRepresentations {
 		// NOTE(Leon Handreke): Because we'd have to propagate the UserID here through
 		// context or something like that and it's not used anyway, just use 0 here.
-		jwt, err := auth.CreateStreamingJWT(0, fileLocator.String())
+		// We need to use s.Stream.FileLocator here because the subtitle file may be external
+		// next to the video file.
+		jwt, err := auth.CreateStreamingJWT(0, s.Stream.FileLocator.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
