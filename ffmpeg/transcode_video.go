@@ -2,9 +2,9 @@ package ffmpeg
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -100,7 +100,7 @@ func NewVideoTranscodingSession(
 	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 
 	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
-	log.Println("ffmpeg started with", cmd.Path, cmd.Args)
+	log.Infoln("ffmpeg started with", cmd.Path, cmd.Args)
 
 	logSink := getTranscodingLogSink("ffmpeg_transcode_video")
 	//io.WriteString(logSink, fmt.Sprintf("%s %s\n\n", cmd.Args, options.String()))

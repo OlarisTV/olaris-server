@@ -2,9 +2,9 @@ package ffmpeg
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -48,7 +48,7 @@ func NewTransmuxingSession(
 	}...)
 
 	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
-	log.Println("ffmpeg started with", cmd.Args)
+	log.Infoln("ffmpeg started with", cmd.Args)
 	cmd.Dir = outputDir
 
 	logSink := getTranscodingLogSink("ffmpeg_transmux")
