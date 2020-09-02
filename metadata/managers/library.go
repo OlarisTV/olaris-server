@@ -2,7 +2,7 @@ package managers
 
 import (
 	"github.com/fsnotify/fsnotify"
-	"github.com/ncw/rclone/vfs"
+	"github.com/rclone/rclone/vfs"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

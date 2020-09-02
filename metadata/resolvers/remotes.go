@@ -1,7 +1,7 @@
 package resolvers
 
 import (
-	"github.com/ncw/rclone/fs/config"
+	"github.com/rclone/rclone/fs/config"
 	"sort"
 )
 

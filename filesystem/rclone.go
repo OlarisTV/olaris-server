@@ -2,10 +2,11 @@ package filesystem
 
 import (
 	"fmt"
-	_ "github.com/ncw/rclone/backend/all"
-	"github.com/ncw/rclone/fs"
-	"github.com/ncw/rclone/vfs"
 	"github.com/pkg/errors"
+	_ "github.com/rclone/rclone/backend/all"
+	"github.com/rclone/rclone/fs"
+	"github.com/rclone/rclone/vfs"
+	"github.com/rclone/rclone/vfs/vfscommon"
 	log "github.com/sirupsen/logrus"
 	"path"
 	"strings"
@@ -51,8 +52,8 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}
 		// Ensuring the latest default options modified for our usecase is probably safer
-		opts := vfs.DefaultOpt
-		opts.CacheMode = vfs.CacheModeMinimal
+		opts := vfscommon.DefaultOpt
+		opts.CacheMode = vfscommon.CacheModeMinimal
 		opts.ChunkSize = 32 * fs.MebiByte
 
 		vfsCache[l.remoteName] = vfs.New(filesystem, &opts)

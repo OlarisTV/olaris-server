@@ -2,7 +2,7 @@ package streaming
 
 import (
 	"fmt"
-	"github.com/ncw/rclone/vfs"
+	"github.com/rclone/rclone/vfs"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"net/http"
 	"path"
