@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"path"
 	"strings"
+	"sync"
 )
 
 type rclonePath struct {
@@ -38,6 +39,9 @@ type RcloneNode struct {
 }
 
 var vfsCache = map[string]*vfs.VFS{}
+var vfsCacheLock sync.Mutex
+
+var newFsFunc func(string) (fs.Fs, error) = fs.NewFs
 
 func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 	l, err := splitRclonePath(pathStr)
@@ -45,9 +49,12 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		return nil, err
 	}
 
+	vfsCacheLock.Lock()
+	defer vfsCacheLock.Unlock()
+
 	if _, inCache := vfsCache[l.remoteName]; !inCache {
 		log.WithFields(log.Fields{"remoteName": l.remoteName}).Debugln("Creating Rclone VFS")
-		filesystem, err := fs.NewFs(l.remoteName + ":/")
+		filesystem, err := newFsFunc(l.remoteName + ":/")
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}
