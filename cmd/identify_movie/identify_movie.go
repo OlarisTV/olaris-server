@@ -39,6 +39,7 @@ func NewIdentifyMovieCommand() *cmd.CobraCommand {
 	c := &cobra.Command{
 		Use:   "movie",
 		Short: "Identify a movie",
+		Long:  "Identify a movie pased on it's file location path.\n* To identify a local file use local#/path/to/file.\n* To identify a Rclone file use rclone#/path/to/file.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var a agents.MetadataRetrievalAgent
 			switch strings.ToLower(agent) {
