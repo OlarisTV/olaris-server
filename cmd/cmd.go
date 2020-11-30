@@ -4,6 +4,8 @@ import (
 	"github.com/goava/di"
 
 	"gitlab.com/olaris/olaris-server/cmd/dumpdebug"
+	"gitlab.com/olaris/olaris-server/cmd/identify"
+	"gitlab.com/olaris/olaris-server/cmd/identify_movie"
 	"gitlab.com/olaris/olaris-server/cmd/library"
 	"gitlab.com/olaris/olaris-server/cmd/library_create"
 	"gitlab.com/olaris/olaris-server/cmd/root"
@@ -18,6 +20,8 @@ func New() di.Option {
 		user.New(),
 		user_create.New(),
 		serve.New(),
+		identify.New(),
+		identify_movie.New(),
 		library.New(),
 		library_create.New(),
 		dumpdebug.New(),
