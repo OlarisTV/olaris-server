@@ -17,14 +17,17 @@ type PlayState struct {
 
 // latestEpResult holds information about the episode that is up next for the given user.
 type latestEpResult struct {
-	EpisodeID  int
-	SeasonID   int
-	SeriesID   int
-	EpisodeNum int
-	SeasonNum  int
-	Playtime   int
-	Finished   bool
-	Height     int
+	EpisodeID    int
+	SeasonID     int
+	SeriesID     int
+	EpisodeNum   int
+	SeasonNumber int
+	Playtime     int
+	Finished     bool
+	Height       int
+}
+type uniqueSeries struct {
+	SeriesID int
 }
 
 // UpNextMovies returns a list of movies that are recently added and not watched yet.
@@ -44,40 +47,49 @@ func UpNextMovies(userID uint) (movies []*Movie) {
 // UpNextEpisodes returns a list of episodes that are up for viewing next. If you recently finished episode 5 of series Y and episode 6 is unwatched it should return this episode.
 func UpNextEpisodes(userID uint) []*Episode {
 	result := []latestEpResult{}
+	res := []uniqueSeries{}
 	eps := []*Episode{}
-	db.Raw("SELECT episodes.id AS episode_id, episodes.episode_num AS episode_num, episodes.season_num, seasons.id AS season_id, play_states.playtime, series.id AS series_id, play_states.finished, max((episodes.season_num*100)+episodes.episode_num) AS height FROM play_states"+
-		" INNER JOIN episodes ON episodes.uuid = play_states.media_uuid "+
-		" INNER JOIN seasons ON seasons.id = episodes.season_id"+
-		" INNER join series ON series.id = seasons.series_id"+
-		" WHERE play_states.user_id = ?"+
-		" GROUP BY series.id"+
-		" ORDER BY height DESC", userID).Scan(&result)
-	// I'm not 100% the order_by height here is being used 'before' the grouping, if not then we might not always pick the latest episode
-	for _, r := range result {
+	db.Raw("SELECT DISTINCT(seasons.series_id) FROM play_states "+
+		"INNER JOIN episodes ON episodes.uuid = play_states.media_uuid "+
+		"INNER JOIN seasons on seasons.id = episodes.season_id "+
+		"WHERE play_states.user_id = ? "+
+		"GROUP BY seasons.series_id, play_states.updated_at", userID).Scan(&res)
+
+	for _, series := range res {
+		db.Raw("SELECT seasons.series_id, seasons.id as season_id,episode_num, seasons.season_number, play_states.finished, max((seasons.season_number*100)+episodes.episode_num) as height, episodes.id as episode_id, episodes.uuid FROM play_states "+
+			"INNER JOIN episodes ON episodes.uuid = play_states.media_uuid "+
+			"INNER JOIN seasons on seasons.id = episodes.season_id "+
+			"WHERE series_id = ? AND play_states.user_id = ? "+
+			"GROUP BY seasons.series_id, episodes.id, seasons.id, play_states.finished "+
+			"ORDER BY height DESC "+
+			"LIMIT 1", series.SeriesID, userID).Scan(&result)
+
+		r := result[0]
+
 		if r.Finished == false {
 			ep := Episode{}
 			db.Where("ID = ?", r.EpisodeID).First(&ep)
 			eps = append(eps, &ep)
 		} else {
 			result := latestEpResult{}
-			db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id"+
+			db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id, seasons.season_number"+
 				" FROM episodes"+
-				" JOIN series ON series.id = seasons.series_id"+
 				" JOIN seasons ON seasons.id = episodes.season_id"+
-				" WHERE season_num = ? AND episode_num > ? AND series_id = ?"+
-				" ORDER BY season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
+				" JOIN series ON series.id = seasons.series_id"+
+				" WHERE seasons.season_number = ? AND episode_num > ? AND series_id = ?"+
+				" ORDER BY season_number ASC, episode_num ASC LIMIT 1", r.SeasonNumber, r.EpisodeNum, r.SeriesID).Scan(&result)
 			ep := Episode{}
 			if result.EpisodeID != 0 {
 				db.Where("ID = ?", result.EpisodeID).First(&ep)
 				eps = append(eps, &ep)
 			} else {
 				// It appears there a no more episode left in this season, let's try the next.
-				db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id"+
+				db.Raw("SELECT episodes.id AS episode_id, series.id AS series_id, seasons.season_number"+
 					" FROM episodes"+
-					" JOIN series ON series.id = seasons.series_id"+
 					" JOIN seasons ON seasons.id = episodes.season_id"+
-					" WHERE season_num > ? AND episode_num > 0 AND series_id = ?"+
-					" ORDER BY season_num ASC, episode_num ASC LIMIT 1", r.SeasonNum, r.EpisodeNum, r.SeriesID).Scan(&result)
+					" JOIN series ON series.id = seasons.series_id"+
+					" WHERE season_number > ? AND episode_num > 0 AND series_id = ?"+
+					" ORDER BY season_number ASC, episode_num ASC LIMIT 1", r.SeasonNumber, r.SeriesID).Scan(&result)
 				if result.EpisodeID != 0 {
 					db.Where("ID = ?", result.EpisodeID).First(&ep)
 					eps = append(eps, &ep)
