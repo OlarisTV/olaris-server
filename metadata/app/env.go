@@ -33,7 +33,7 @@ func (m *MetadataContext) Cleanup() {
 	// Currently unused
 	// m.ExitChan <- true
 	m.Db.Close()
-	log.Infoln("Closed all metadata context")
+	log.Infoln("closed all metadata context")
 }
 
 var env *MetadataContext
@@ -72,7 +72,7 @@ func NewMDContext(
 
 	helpers.InitLoggers(log.InfoLevel)
 
-	log.Printf("Olaris Metadata Server - Version \"%s\"", helpers.Version)
+	log.Printf("olaris metadata server - version \"%s\"", helpers.Version)
 
 	database := db.NewDb(databaseOptions)
 	database.SetLogger(&GormLogger{})

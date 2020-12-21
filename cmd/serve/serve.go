@@ -120,7 +120,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			srv := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: handler}
 			go func() {
 				if err := srv.ListenAndServe(); err != nil {
-					log.WithFields(log.Fields{"error": err}).Fatal("Error starting server.")
+					log.WithFields(log.Fields{"error": err}).Fatal("error starting server")
 				}
 			}()
 
@@ -130,14 +130,14 @@ func NewServeCommand() *cmd.CobraCommand {
 
 			// Wait for termination signal
 			<-stopChan
-			log.Println("Shutting down...")
+			log.Println("shutting down...")
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			mctx.Cleanup()
 			srv.Shutdown(ctx)
-			log.Println("Shut down complete, exiting.")
+			log.Println("shut down complete, exiting.")
 		},
 	}
 

@@ -5,6 +5,12 @@
 #directFileAccess = false
 #systemFFmpeg = false
 
+[database]
+#connection = "postgres://host=localhost sslmode=disable dbname=olaris"
+
 [debug]
 #streamingPages = false
 #transcoderLog = true
+
+[metadata]
+#scan_hidden = false

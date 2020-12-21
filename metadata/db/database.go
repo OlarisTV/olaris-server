@@ -3,6 +3,7 @@ package db
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -68,13 +69,15 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 		case SQLite:
 			db, err = sqlite.NewSQLiteDatabase(connection, options.LogMode)
 			if err != nil {
-				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+				log.Errorf("%s", err)
+				os.Exit(1)
 			}
 			log.Println("using sqlite3 database driver")
 		case MySQL:
 			db, err = mysql.NewMySQLDatabase(connection, options.LogMode)
 			if err != nil {
-				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+				log.Errorf("%s", err)
+				os.Exit(1)
 			}
 			log.Println("using MySQL database driver")
 		case CockroachDB, PostgresSQL:
@@ -82,11 +85,13 @@ func NewDb(options DatabaseOptions) *gorm.DB {
 			// https://www.cockroachlabs.com/docs/stable/build-a-go-app-with-cockroachdb-gorm.html
 			db, err = postgres.NewPostgresDatabase(connection, options.LogMode)
 			if err != nil {
-				panic(fmt.Sprintf("failed to connect database: %s\n", err))
+				log.Errorf("%s", err)
+				os.Exit(1)
 			}
 			log.Println("using postgres database driver")
 		default:
-			panic(fmt.Sprintf("unknown database engine: %s", engine))
+			log.Errorf(fmt.Sprintf("unknown database engine: %s", engine))
+			os.Exit(1)
 		}
 	} else {
 		log.Debugf("unable to parse database connection string: %s, defaulting to sqlite3", options.Connection)
