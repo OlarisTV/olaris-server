@@ -73,6 +73,7 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Warnln("Could not marshall JWT token:", err)
 			}
+			w.Header().Add("Content-Type", "application/json")
 			w.Write(jtoken)
 		}
 	} else {
@@ -106,6 +107,7 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeError(errStr string, w http.ResponseWriter, code int) {
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(code)
 	urr := userRequestRes{true, errStr}
 	jres, err := json.Marshal(urr)
