@@ -37,12 +37,17 @@ type Node interface {
 	Size() int64
 	Name() string
 	Path() string
+	ListDir() ([]string, error)
 	IsDir() bool
 	Walk(walkFunc WalkFunc, followFileSymlinks bool) error
 	FileLocator() FileLocator
 }
 
 func ParseFileLocator(locatorStr string) (FileLocator, error) {
+	if len(locatorStr) == 0 {
+		return FileLocator{}, fmt.Errorf("\"%s\" is not a file locator string", locatorStr)
+	}
+
 	if locatorStr[0] == '/' {
 		locatorStr = locatorStr[1:]
 

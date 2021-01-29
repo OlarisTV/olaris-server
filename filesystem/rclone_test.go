@@ -10,6 +10,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+/* I can't get this to work, sad panda :-(
+func TestRcloneListDir(t *testing.T) {
+	ctx := context.Background()
+	mfs := mockfs.NewFs("rclone::/", "/")
+	mfs.AddObject(mockobject.New("test-dir"))
+	mfs.AddObject(mockobject.New("test-other-dir"))
+	mfs.AddObject(mockobject.New("test-yet-an-other-dir"))
+	vfsCache["rclone:"] = vfs.New(mfs, &vfscommon.DefaultOpt)
+	dir, err := mfs.List(ctx, "")
+	require.NoError(t, err)
+	fmt.Println("List:", dir)
+	path := "rclone:/"
+	node, err := RcloneNodeFromPath(path)
+	require.NoError(t, err)
+	dirs, err := node.ListDir()
+	firstLevel := []string{"test-dir", "test-other-dir", "test-yet-an-other-dir"}
+	if !reflect.DeepEqual(dirs, firstLevel) {
+		t.Errorf("Did not get the correct folders back from ListDir() for first level: %s:%s", dirs, firstLevel)
+	}
+}*/
+
 func TestRcloneNodeFromPath(t *testing.T) {
 	tests := []struct {
 		name          string

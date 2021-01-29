@@ -31,6 +31,12 @@ type Query {
     # List of all remotes found in a rclone config file if one exists.
     remotes(): [String]!
 
+    # List folders in the given path.
+    folders(
+      # Path argument as FileLocator path. Examples: 'rclone#gdrive/media/movies', 'local#/home/animazing/movies/'
+      path: String!
+    ): [String]!
+
     unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
     unidentifiedEpisodeFiles(offset: Int, limit: Int): [EpisodeFile]!
 
