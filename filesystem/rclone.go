@@ -54,6 +54,7 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 
 	if _, inCache := vfsCache[l.remoteName]; !inCache {
 		log.WithFields(log.Fields{"remoteName": l.remoteName}).Debugln("Creating Rclone VFS")
+		fmt.Println("Got remote:", l.remoteName)
 		filesystem, err := newFsFunc(l.remoteName + ":/")
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
@@ -87,6 +88,23 @@ func (n *RcloneNode) Size() int64 {
 
 func (n *RcloneNode) IsDir() bool {
 	return n.Node.IsDir()
+}
+func (n *RcloneNode) ListDir() ([]string, error) {
+	dirs := []string{}
+	if n.IsDir() {
+		i := n.Node.(*vfs.Dir)
+		nodes, err := i.ReadDirAll()
+		if err != nil {
+			return dirs, err
+		}
+		for _, file := range nodes {
+			if file.IsDir() {
+				dirs = append(dirs, file.Name())
+			}
+		}
+		return dirs, nil
+	}
+	return []string{}, nil
 }
 
 func (n *RcloneNode) BackendType() BackendType {

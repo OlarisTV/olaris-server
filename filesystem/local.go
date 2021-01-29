@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -27,6 +28,24 @@ func (n *LocalNode) Size() int64 {
 func (n *LocalNode) IsDir() bool {
 	return n.fileInfo.IsDir()
 }
+
+// ListDir lists all the dirs inside the given node
+func (n *LocalNode) ListDir() ([]string, error) {
+	dirs := []string{}
+	if n.IsDir() {
+		files, err := ioutil.ReadDir(n.Path())
+		if err != nil {
+			return dirs, err
+		}
+		for _, file := range files {
+			if file.IsDir() {
+				dirs = append(dirs, file.Name())
+			}
+		}
+	}
+	return dirs, nil
+}
+
 func (n *LocalNode) Path() string {
 	return n.path
 }
