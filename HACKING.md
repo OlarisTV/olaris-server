@@ -49,14 +49,6 @@ There is a makefile that can handle various project tasks.
 
   * `make build-local` to build a binary for your local platform. The binary will be placed in `build/olaris`.
 
-## Tips
-
-If you see an error about something not being found in your path, similar to this one
-
-    react/handlers.go:4: running "go-bindata-assetfs": exec: "go-bindata-assetfs": executable file not found in $PATH
-
-you may need to adjust your shell's `$PATH` environment variable to include the binaries under the `$GOPATH`. There are various ways to configure `$PATH`; you need to make sure that the output from `echo $PATH` includes `$HOME/go/bin`. If it does not, then you can simply run `export PATH="$PATH:$HOME/go/bin/"`
-
 ## Running the server
 
 By default, olaris-server will open an existing database or create a new one and start listening for web connections on port 8080. For development you may want to override the defaults, for example to run against a copy of your primary olaris db instead of the real one.

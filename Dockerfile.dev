@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch as base
+FROM golang:1.16rc1-buster as base
 
 FROM base AS olaris-dev
 
