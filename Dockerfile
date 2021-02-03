@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch as build
+FROM golang:1.16rc1-buster as build
 
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends git unzip

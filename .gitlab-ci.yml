@@ -1,4 +1,4 @@
-image: golang:1.12-stretch
+image: golang:1.16rc1-buster
 
 variables:
   REPO_NAME: gitlab.com/olaris/olaris-server
