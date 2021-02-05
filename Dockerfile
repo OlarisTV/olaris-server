@@ -1,4 +1,4 @@
-FROM golang:1.16rc1-buster as build
+FROM debian:stretch as build
 
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends git unzip
