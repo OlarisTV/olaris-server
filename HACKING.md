@@ -41,7 +41,6 @@ You can authenticate to Gitlab using username/password or ssh. Setting up ssh ke
 
 There is a makefile that can handle various project tasks.
 
-  * Run `make deps` to install some third party tools
   * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
   * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to [build it yourself](https://gitlab.org/olaris/olaris-ffmpeg).
 
