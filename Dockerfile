@@ -6,7 +6,7 @@ RUN apt-get -y update && \
 COPY . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
-RUN make deps download-olaris-react download-ffmpeg generate build-local
+RUN make download-olaris-react download-ffmpeg generate build-local
 
 FROM debian:stretch AS release
 
