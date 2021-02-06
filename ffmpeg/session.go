@@ -1,6 +1,7 @@
 package ffmpeg
 
 import (
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -39,9 +40,13 @@ func (s *TranscodingSession) Destroy() error {
 	// Signal the process group (-pid), not just the process, so that the process
 	// and all its children are signaled. Else, child procs can keep running and
 	// keep the stdout/stderr fd open and cause cmd.Wait to hang.
+	log.WithFields(log.Fields{"pid": s.cmd.Process.Pid}).Debugln("killing ffmpeg process")
+
 	syscall.Kill(-s.cmd.Process.Pid, syscall.SIGTERM)
 	// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
 	s.cmd.Wait()
+
+	log.WithFields(log.Fields{"dir": s.OutputDir}).Debugln("removing ffmpeg outputdir")
 
 	err := os.RemoveAll(s.OutputDir)
 	if err != nil {

@@ -234,6 +234,8 @@ func (m *PlaybackSessionManager) GetPlaybackSessionByID(playbackSessionID string
 }
 
 func (m *PlaybackSessionManager) removePlaybackSession(s *PlaybackSession) {
+	log.WithFields(log.Fields{"file": s.PlaybackSessionKey.FileLocator, "representationID": s.PlaybackSessionKey.representationID, "sessionID": s.playbackSessionID}).Debugln("removing playback session")
+
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
@@ -251,7 +253,10 @@ func (s *PlaybackSession) CleanupIfRequired() {
 		return
 	}
 
-	s.TranscodingSession.Destroy()
+	err := s.TranscodingSession.Destroy()
+	if err != nil {
+		log.WithField("error", err).Warnln("received an error while cleaning up transcoding folder")
+	}
 }
 
 // shouldThrottle returns whether the transcoding process is far enough ahead of the current
@@ -276,6 +281,7 @@ func (s *PlaybackSession) startTimeoutTicker(m *PlaybackSessionManager) {
 		for {
 			select {
 			case <-ticker.C:
+				log.WithFields(log.Fields{"accessTime": s.lastAccessed, "sessionID": s.sessionID, "path": s.FileLocator, "representationID": s.representationID}).Debugln("checking access timer for ffmpeg", s.lastAccessed)
 				if time.Since(s.lastAccessed) > playbackSessionTimeout {
 					m.removePlaybackSession(s)
 
