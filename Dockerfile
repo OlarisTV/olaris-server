@@ -1,4 +1,4 @@
-FROM golang:1.12-stretch as build
+FROM debian:stretch as build
 
 RUN apt-get -y update && \
     apt-get install -y --no-install-recommends git unzip
@@ -6,7 +6,7 @@ RUN apt-get -y update && \
 COPY . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
-RUN make deps download-olaris-react download-ffmpeg generate build-local
+RUN make download-olaris-react download-ffmpeg generate build-local
 
 FROM debian:stretch AS release
 

@@ -41,21 +41,12 @@ You can authenticate to Gitlab using username/password or ssh. Setting up ssh ke
 
 There is a makefile that can handle various project tasks.
 
-  * Run `make deps` to install some third party tools
   * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
   * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to [build it yourself](https://gitlab.org/olaris/olaris-ffmpeg).
 
 ## Build olaris
 
   * `make build-local` to build a binary for your local platform. The binary will be placed in `build/olaris`.
-
-## Tips
-
-If you see an error about something not being found in your path, similar to this one
-
-    react/handlers.go:4: running "go-bindata-assetfs": exec: "go-bindata-assetfs": executable file not found in $PATH
-
-you may need to adjust your shell's `$PATH` environment variable to include the binaries under the `$GOPATH`. There are various ways to configure `$PATH`; you need to make sure that the output from `echo $PATH` includes `$HOME/go/bin`. If it does not, then you can simply run `export PATH="$PATH:$HOME/go/bin/"`
 
 ## Running the server
 

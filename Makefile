@@ -24,7 +24,7 @@ LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.Version=$(RELEASE_IDENTIFIER)"
 all: generate
 
 .PHONY: ready-ci
-ready-ci: deps download-olaris-react download-ffmpeg generate
+ready-ci: download-olaris-react download-ffmpeg generate
 
 .PHONY: download-ffmpeg
 download-ffmpeg:
@@ -110,11 +110,6 @@ vet:
 clean:
 	$(GOCLEAN)
 	rm -rf ./builds
-
-.PHONY: deps
-deps:
-	$(GOGET) github.com/go-bindata/go-bindata/...
-	$(GOGET) github.com/elazarl/go-bindata-assetfs/...
 
 .PHONY: generate
 generate:

@@ -1,9 +1,8 @@
 module gitlab.com/olaris/olaris-server
 
-go 1.12
+go 1.16
 
 replace (
-	github.com/elazarl/go-bindata-assetfs => github.com/elazarl/go-bindata-assetfs v1.0.1-0.20191027195357-d0111fe6fb11
 	github.com/pkg/sftp => github.com/pkg/sftp v1.10.0
 	github.com/rfjakob/eme => github.com/rfjakob/eme v0.0.0-20170305125520-01668ae55fe0
 	github.com/yunify/qingstor-sdk-go => github.com/yunify/qingstor-sdk-go v0.0.0-20190425063759-60a6f6383677
@@ -18,10 +17,7 @@ require (
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/dgrijalva/jwt-go v3.2.1-0.20180921172315-3af4c746e1c2+incompatible
-	github.com/elazarl/go-bindata v3.0.5+incompatible // indirect
-	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/goava/di v1.2.0
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.0
