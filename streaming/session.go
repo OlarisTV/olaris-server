@@ -273,6 +273,7 @@ func (s *PlaybackSession) shouldThrottle() bool {
 	return maxSegmentIdx >= (s.lastServedSegmentIdx + 10)
 }
 
+// TODO: We should probably close this as soon as the stream stops just to clean up after ourselves
 // startTimeoutTicker starts a timer that will destroy the session if it has not been
 // accessed for playbackSessionTimeout. This ensures that no ffmpeg processes linger around.
 func (s *PlaybackSession) startTimeoutTicker(m *PlaybackSessionManager) {
@@ -281,7 +282,7 @@ func (s *PlaybackSession) startTimeoutTicker(m *PlaybackSessionManager) {
 		for {
 			select {
 			case <-ticker.C:
-				log.WithFields(log.Fields{"accessTime": s.lastAccessed, "sessionID": s.sessionID, "path": s.FileLocator, "representationID": s.representationID}).Debugln("checking access timer for ffmpeg", s.lastAccessed)
+				//log.WithFields(log.Fields{"accessTime": s.lastAccessed, "sessionID": s.sessionID, "path": s.FileLocator, "representationID": s.representationID}).Debugln("checking access timer for ffmpeg", s.lastAccessed)
 				if time.Since(s.lastAccessed) > playbackSessionTimeout {
 					m.removePlaybackSession(s)
 

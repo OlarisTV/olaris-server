@@ -33,6 +33,7 @@ func (s *TranscodingSession) Start() error {
 		s.cmd.Wait()
 		s.Terminated = true
 	}()
+
 	return nil
 }
 

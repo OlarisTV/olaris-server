@@ -103,10 +103,12 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 
 	for {
 		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		segmentIdxToServe := playbackSession.lastServedSegmentIdx + 1
 		if segmentPath, ok := availableSegments[segmentIdxToServe]; ok {
 			log.Info("Serving path ", segmentPath, " with MIME type ", mimeType)

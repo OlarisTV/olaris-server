@@ -15,6 +15,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 	xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd"
 	profiles="urn:mpeg:dash:profile:isoff-live:2011"
 	type="static"
+	minBufferTime="PT20M"
 	mediaPresentationDuration="{{ .duration }}"
 	maxSegmentDuration="PT20S">
 	<Period start="PT0S" id="0" duration="{{ .duration }}">
@@ -44,9 +45,8 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 		</AdaptationSet>
 		{{ end }}
 		{{ range $i, $s := .subtitleStreams -}}
-		<AdaptationSet contentType="text" lang="{{ $s.Stream.Language }}" title="{{ $s.Stream.Language }}">
-			<Representation id="{{ $s.Representation.RepresentationId }}"
-					mimeType="application/mp4" codecs="wvtt">
+		<AdaptationSet contentType="text" mimeType="text/vtt" lang="{{ $s.Stream.Language }}" title="{{ $s.Stream.Language }}">
+			<Representation id="{{ $s.Representation.RepresentationId }}">
 				<BaseURL>{{ $s.URI }}</BaseURL>
 			</Representation>
 		</AdaptationSet>
