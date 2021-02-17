@@ -6,7 +6,7 @@ variables:
 before_script:
   - apt-get update
   - apt-get install -y curl g++ gcc git libc6-dev make zip unzip
-  - curl -sL https://golang.org/dl/go1.16rc1.linux-amd64.tar.gz | tar -C /usr/local -xz
+  - curl -sL https://golang.org/dl/go1.16.linux-amd64.tar.gz | tar -C /usr/local -xz
   - export PATH=$PATH:/usr/local/go/bin
   - make ready-ci
 
