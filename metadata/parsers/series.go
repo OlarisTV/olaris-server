@@ -11,7 +11,7 @@ import (
 )
 
 var yearRegex = regexp.MustCompile("([\\[\\(]?((19|20)\\d{2})[\\]\\)]?)")
-var seriesRegex = regexp.MustCompile("^(.*)S(\\d{1,2})E(\\d{1,2})")
+var seriesRegex = regexp.MustCompile("^(.*)[Ss](\\d{1,2})[Ee](\\d{1,2})")
 var seriesFallbackRegex = regexp.MustCompile("^(.*)(\\d{1,2})x(\\d{1,2})")
 
 var seasonRegex = regexp.MustCompile("[Ss](eason|)\\s?(\\d{1,3})")
