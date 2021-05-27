@@ -19,6 +19,9 @@ func TestParseSeriesName(t *testing.T) {
 	tests["Mr. Robot (2016) - S01E04.mpg"] = ParsedSeriesInfo{Year: "2016", Title: "Mr Robot", EpisodeNum: 4, SeasonNum: 1}
 	tests["Mr. Robot/Season 2/03.m2ts"] = ParsedSeriesInfo{Year: "", Title: "Mr Robot", EpisodeNum: 3, SeasonNum: 2}
 	tests["This does not Exist"] = ParsedSeriesInfo{Year: "", Title: "This does not Exist", EpisodeNum: 0, SeasonNum: 0}
+	tests["Mr. Robot (2016).s01e04 - eps1.3_da3m0ns.mp4.mkv"] = ParsedSeriesInfo{Year: "2016", Title: "Mr Robot", EpisodeNum: 4, SeasonNum: 1}
+	tests["Mr. Robot (2016).s01E04 - eps1.3_da3m0ns.mp4.mkv"] = ParsedSeriesInfo{Year: "2016", Title: "Mr Robot", EpisodeNum: 4, SeasonNum: 1}
+	tests["Mr. Robot (2016).S01e04 - eps1.3_da3m0ns.mp4.mkv"] = ParsedSeriesInfo{Year: "2016", Title: "Mr Robot", EpisodeNum: 4, SeasonNum: 1}
 
 	for name, mi := range tests {
 		t.Log("running test on:", name)
