@@ -14,3 +14,6 @@
 
 [metadata]
 #scan_hidden = false
+
+[rclone]
+#configFile = "$HOME/.config/rclone/rclone.conf"

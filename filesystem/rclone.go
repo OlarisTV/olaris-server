@@ -2,15 +2,20 @@ package filesystem
 
 import (
 	"fmt"
+	"context"
 	"github.com/pkg/errors"
 	_ "github.com/rclone/rclone/backend/all"
 	"github.com/rclone/rclone/fs"
+	config "github.com/rclone/rclone/fs/config"
+	"github.com/rclone/rclone/fs/config/configfile"
 	"github.com/rclone/rclone/vfs"
 	"github.com/rclone/rclone/vfs/vfscommon"
 	log "github.com/sirupsen/logrus"
 	"path"
 	"strings"
 	"sync"
+	"os"
+	"github.com/spf13/viper"
 )
 
 type rclonePath struct {
@@ -41,7 +46,7 @@ type RcloneNode struct {
 var vfsCache = map[string]*vfs.VFS{}
 var vfsCacheLock sync.Mutex
 
-var newFsFunc func(string) (fs.Fs, error) = fs.NewFs
+var newFsFunc func(context.Context, string) (fs.Fs, error) = fs.NewFs
 
 func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 	l, err := splitRclonePath(pathStr)
@@ -55,14 +60,17 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 	if _, inCache := vfsCache[l.remoteName]; !inCache {
 		log.WithFields(log.Fields{"remoteName": l.remoteName}).Debugln("Creating Rclone VFS")
 		fmt.Println("Got remote:", l.remoteName)
-		filesystem, err := newFsFunc(l.remoteName + ":/")
+		// Set a custom config file for rclone, if specified. `rclone.configFile` defaults to '$HOME/.config/rclone/rclone.conf'
+		config.SetConfigPath(os.ExpandEnv(viper.GetString("rclone.configFile")))
+		configfile.Install()
+		filesystem, err := newFsFunc(context.Background(), l.remoteName + ":/")
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}
 		// Ensuring the latest default options modified for our usecase is probably safer
 		opts := vfscommon.DefaultOpt
 		opts.CacheMode = vfscommon.CacheModeMinimal
-		opts.ChunkSize = 32 * fs.MebiByte
+		opts.ChunkSize = 32 * fs.Mebi
 
 		vfsCache[l.remoteName] = vfs.New(filesystem, &opts)
 	}
