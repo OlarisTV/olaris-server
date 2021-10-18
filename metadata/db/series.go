@@ -181,7 +181,7 @@ func FindAllSeries(qd *QueryDetails) ([]*Series, error) {
 // SearchSeriesByTitle searches for series based on their name.
 func SearchSeriesByTitle(name string) (series []Series) {
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
-		Where("name LIKE ?", "%"+name+"%").
+		Where("LOWER(name) LIKE LOWER(?)", "%"+name+"%").
 		Find(&series)
 	return series
 }
@@ -245,7 +245,7 @@ func FindEpisodeFilesInLibrary(libraryID uint) ([]EpisodeFile, error) {
 // under the given locator's path
 func FindEpisodeFilesInLibraryByLocator(libraryID uint, locator filesystem.FileLocator) (episodes []EpisodeFile) {
 	db.Where("library_id =?", libraryID).
-		Where("file_path LIKE ?", fmt.Sprintf("%s%%", locator)).
+		Where("LOWER(file_path) LIKE LOWER(?)", fmt.Sprintf("%s%%", locator)).
 		Find(&episodes)
 	return episodes
 }
