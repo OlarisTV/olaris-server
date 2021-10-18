@@ -2,11 +2,12 @@ package db
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
-	"strconv"
 )
 
 // MovieFile is used to store fileinformation about a movie.
@@ -205,7 +206,7 @@ func findMovie(where ...interface{}) (*Movie, error) {
 
 // SearchMovieByTitle search movies by title.
 func SearchMovieByTitle(name string) (movies []Movie) {
-	db.Where("original_title LIKE ?", "%"+name+"%").Find(&movies)
+	db.Where("LOWER(original_title) LIKE LOWER(?)", "%"+name+"%").Find(&movies)
 	for _, movie := range movies {
 		CollectMovieInfo(&movie)
 	}
@@ -232,7 +233,7 @@ func FindMovieFilesByMovieID(movieID uint) ([]*MovieFile, error) {
 // provided library under the locator's path
 func FindMovieFilesInLibraryByLocator(libraryID uint, locator filesystem.FileLocator) (movies []MovieFile) {
 	db.Where("library_id =?", libraryID).
-		Where("file_path LIKE ?", fmt.Sprintf("%s%%", locator)).
+		Where("LOWER(file_path) LIKE LOWER(?)", fmt.Sprintf("%s%%", locator)).
 		Find(&movies)
 
 	return movies
