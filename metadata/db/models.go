@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 // Defines various mediatypes, only Movie and Series support atm.
@@ -28,12 +28,7 @@ func (ud *UUIDable) BeforeCreate(tx *gorm.DB) (err error) {
 
 // SetUUID creates a new v4 UUID.
 func (ud *UUIDable) SetUUID() error {
-	uuid, err := uuid.NewV4()
-
-	if err != nil {
-		return err
-	}
-	ud.UUID = uuid.String()
+	ud.UUID = uuid.NewV4().String()
 	return nil
 }
 

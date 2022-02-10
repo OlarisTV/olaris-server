@@ -124,9 +124,8 @@ func NewServeCommand() *cmd.CobraCommand {
 				}
 			}()
 
-			stopChan := make(chan os.Signal)
-			signal.Notify(stopChan, os.Interrupt)
-			signal.Notify(stopChan, os.Kill)
+			stopChan := make(chan os.Signal, 2)
+			signal.Notify(stopChan, os.Interrupt, os.Kill)
 
 			// Wait for termination signal
 			<-stopChan
