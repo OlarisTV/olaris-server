@@ -20,9 +20,9 @@ The client (playback) software for any device that is not a modern web browser. 
 ### Supported platforms
  * Linux - these instructions were written for Arch but any distribution should work
  * Golang, v1.13+ recommended. You can install this through your distribution repos but the latest version is always available at https://golang.org
- * A custom version of ffmpeg. Binaries are provided for amd64 but you will need to build this yourself on other architectures
  * Git is required if you want to contribute changes back and optionally to obtain a copy of the code
  * Make
+ * FFmpeg
 
 # Building and running
 
@@ -35,14 +35,13 @@ You can authenticate to Gitlab using username/password or ssh. Setting up ssh ke
 
   * Install the Go toolchain, either from your distro repos or directly from the [Go project](https://golang.org/dl)
   * Install make
-  * Optionally, build our custom [ffmpeg](https://gitlab.com/olaris/ffmpeg) if you want to actually transcode and playback video and you are not on a Linux amd64 system.
+  * Install FFmpeg
 
 ## Build dependencies
 
 There is a makefile that can handle various project tasks.
 
   * Run `make download-olaris-react` to grab the latest build of the web frontend for Olaris.
-  * Run `make download-ffmpeg` to download the custom build of ffmpeg required for Olaris to function. This will only work if you are on an `amd64` Linux machine. If you are on another platform, you will have to [build it yourself](https://gitlab.org/olaris/olaris-ffmpeg).
 
 ## Build olaris
 

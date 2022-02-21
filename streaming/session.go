@@ -1,20 +1,20 @@
 package streaming
 
 import (
-	"fmt"
+	"errors"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
 const playbackSessionTimeout = 20 * time.Minute
 
 const InitSegmentIdx = -1
+
+const TranscodingSegmentBuffer = 10
 
 var PBSManager, _ = NewPlaybackSessionManager()
 
@@ -48,18 +48,15 @@ type PlaybackSessionKey struct {
 type PlaybackSession struct {
 	PlaybackSessionKey
 
-	// Unique identifier, currently only used for ffmpeg feedback
-	playbackSessionID string
-
 	TranscodingSession *ffmpeg.TranscodingSession
 
-	// lastRequestedSegmentIdx is the last segment index requested by the client. Some clients notice that the segments
-	// we serve are actually longer than 5s and therefore skip segment indices, some will just request the next segment
-	// regardless of how long the previously-loaded segment was. We have a window of max 5 (defined below), allowing
-	// for segment lengths of up to 25s before our logic gets confused.
-	lastRequestedSegmentIdx int
-	// lastServedSegmentIdx tracks the actual index of the last segment we served, regardless of what index the client
-	// requested it as. This will always increase by 1 with each subsequent segment that the client requests.
+	// lastServedSegmentIdx tracks the index of the last segment we served.
+	//
+	// Note: Some clients notice that the segments we serve are actually longer
+	// than 5s and therefore skip segment indices, some will just request the
+	// next segment regardless of how long the previously-loaded segment was. We
+	// have a window of max 5 (defined below), allowing for segment lengths of
+	// up to 25s before our logic gets confused.
 	lastServedSegmentIdx int
 
 	// Explicit reference count to ensure that we don't destroy this session while
@@ -75,37 +72,22 @@ func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int, m
 	if err != nil {
 		return nil, err
 	}
+
 	streamRepresentation, err := ffmpeg.StreamRepresentationFromRepresentationId(
 		stream, playbackSessionKey.representationID)
 
-	playbackSessionID := uuid.New().String()
-	// TODO(Leon Handreke): Find a better way to build URLs
-
-	feedbackURL := fmt.Sprintf("http://127.0.0.1:%d/olaris/s/ffmpeg/%s/feedback",
-		viper.GetInt("server.port"), playbackSessionID)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to build FFmpeg feedback url: %s", err.Error())
-	}
-
-	transcodingSession, err := ffmpeg.NewTranscodingSession(
-		streamRepresentation, segmentIdx, feedbackURL)
+	transcodingSession, err := ffmpeg.NewTranscodingSession(streamRepresentation, segmentIdx)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &PlaybackSession{
 		PlaybackSessionKey: playbackSessionKey,
-
-		playbackSessionID:  playbackSessionID,
 		TranscodingSession: transcodingSession,
-		// TODO(Leon Handreke): Make this nicer, introduce a "new" state
-		lastRequestedSegmentIdx: segmentIdx - 1,
-		lastServedSegmentIdx:    segmentIdx - 1,
-		referenceCount:          1,
-		lastAccessed:            time.Now(),
+		referenceCount:     1,
+		lastAccessed:       time.Now(),
 	}
-	s.startTimeoutTicker(m)
+	s.startMaintenanceTicker(m)
 
 	return s, nil
 }
@@ -136,17 +118,14 @@ func (m *PlaybackSessionManager) GetPlaybackSession(
 	}
 
 	// If the request is for the next couple of segments, i.e. not seeking
-	if s != nil &&
-		// This is a really crude heuristic. VideoJS will skip requesting a segment
-		// if the previous segment already covers the whole duration of that segment.
-		// E.g. if the playlist has 5s segment lengths but a segment is 15s long,
-		// the next two won't be requested. This heuristic allows "skipping" at most
-		// 4 segments.
-		// TODO(Leon Handreke): Maybe do something more intelligent here by analyzing the
-		// duration of the previous delivered segment?
-		segmentIdx > s.lastRequestedSegmentIdx &&
-		segmentIdx < s.lastRequestedSegmentIdx+5 {
-
+	// Note: This is a really crude heuristic. VideoJS will skip requesting a
+	// segment if the previous segment already covers the whole duration of that
+	// segment. E.g. if the playlist has 5s segment lengths but a segment is 15s
+	// long, the next two won't be requested. This heuristic allows "skipping"
+	// at most 4 segments.
+	// TODO(Leon Handreke): Maybe do something more intelligent here by
+	// analyzing the duration of the previous delivered segment?
+	if s != nil && segmentIdx >= s.TranscodingSession.SegmentStartIndex && segmentIdx < s.lastServedSegmentIdx+5 {
 		s.referenceCount++
 		return s, nil
 	}
@@ -179,7 +158,7 @@ func (m *PlaybackSessionManager) GetPlaybackSession(
 }
 
 func (m *PlaybackSessionManager) garbageCollectPlaybackSessions() {
-	// Clean up streams after a user has switched representation or after they hhave started a
+	// Clean up streams after a user has switched representations, or after they have started a
 	// new playback session for the same stream (e.g. by reloading the page)
 	type uniqueKey struct {
 		ffmpeg.StreamKey
@@ -209,32 +188,8 @@ func (m *PlaybackSessionManager) garbageCollectPlaybackSessions() {
 	}
 }
 
-// GetPlaybackSessionByID gets the playback session by its ID. If one with the given ID does not exist,
-// and error is returned.
-// The returned PlaybackSession must be released after use by calling ReleasePlaybackSession.
-func (m *PlaybackSessionManager) GetPlaybackSessionByID(playbackSessionID string) (*PlaybackSession, error) {
-	m.mtx.Lock()
-	defer m.mtx.Unlock()
-
-	var s *PlaybackSession
-
-	for _, v := range m.sessions {
-		if v.playbackSessionID == playbackSessionID {
-			s = v
-			break
-		}
-	}
-
-	if s == nil {
-		return nil, fmt.Errorf("No PlaybackSession with the given ID %s", playbackSessionID)
-	}
-
-	s.referenceCount++
-	return s, nil
-}
-
 func (m *PlaybackSessionManager) removePlaybackSession(s *PlaybackSession) {
-	log.WithFields(log.Fields{"file": s.PlaybackSessionKey.FileLocator, "representationID": s.PlaybackSessionKey.representationID, "sessionID": s.playbackSessionID}).Debugln("removing playback session")
+	log.WithFields(log.Fields{"file": s.PlaybackSessionKey.FileLocator, "representationID": s.PlaybackSessionKey.representationID}).Debugln("removing playback session")
 
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
@@ -262,32 +217,47 @@ func (s *PlaybackSession) CleanupIfRequired() {
 // shouldThrottle returns whether the transcoding process is far enough ahead of the current
 // playback state for ffmpeg to throttle down to avoid transcoding too much, wasting resources.
 func (s *PlaybackSession) shouldThrottle() bool {
-	segments, _ := s.TranscodingSession.AvailableSegments()
+	// Determine what segment we need to transcode to
+	transcodeToSegmentIndex := MaxInt(s.TranscodingSession.SegmentStartIndex, s.lastServedSegmentIdx) + TranscodingSegmentBuffer
 
-	maxSegmentIdx := -1
-	for segmentIdx := range segments {
-		if segmentIdx > maxSegmentIdx {
-			maxSegmentIdx = segmentIdx
-		}
+	// Check to see if that segment exists
+	_, err := s.TranscodingSession.FindSegmentByIndex(transcodeToSegmentIndex)
+
+	// The segment exists, so throttle the session
+	if err == nil {
+		return true
 	}
-	return maxSegmentIdx >= (s.lastServedSegmentIdx + 10)
+
+	// The segment we want to transcode to doesn't exist, so don't throttle yet
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	// If there is some other unexpected error, log it and throttle the session
+	log.Errorf(
+		"Unexpected error trying to find segment %d: %s\n",
+		transcodeToSegmentIndex,
+		err.Error())
+	return true
 }
 
 // TODO: We should probably close this as soon as the stream stops just to clean up after ourselves
-// startTimeoutTicker starts a timer that will destroy the session if it has not been
+// startMaintenanceTicker starts a timer that will destroy the session if it has not been
 // accessed for playbackSessionTimeout. This ensures that no ffmpeg processes linger around.
-func (s *PlaybackSession) startTimeoutTicker(m *PlaybackSessionManager) {
-	ticker := time.NewTicker(10 * time.Second)
+func (s *PlaybackSession) startMaintenanceTicker(m *PlaybackSessionManager) {
+	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				//log.WithFields(log.Fields{"accessTime": s.lastAccessed, "sessionID": s.sessionID, "path": s.FileLocator, "representationID": s.representationID}).Debugln("checking access timer for ffmpeg", s.lastAccessed)
 				if time.Since(s.lastAccessed) > playbackSessionTimeout {
-					m.removePlaybackSession(s)
-
 					ticker.Stop()
+					m.removePlaybackSession(s)
 					return
+				}
+
+				if s.shouldThrottle() {
+					s.TranscodingSession.Pause()
 				}
 			}
 		}

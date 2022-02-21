@@ -3,7 +3,6 @@ package ffmpeg
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -16,8 +15,7 @@ func NewTransmuxingSession(
 	stream StreamRepresentation,
 	startTime time.Duration,
 	segmentStartIndex int,
-	outputDirBase string,
-	feedbackURL string) (*TranscodingSession, error) {
+	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -35,6 +33,7 @@ func NewTransmuxingSession(
 	args = append(args, []string{
 		"-i", buildFfmpegUrlFromFileLocator(stream.Stream.FileLocator),
 		"-copyts",
+		"-start_at_zero",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "copy",
 		"-f", "hls",
@@ -42,12 +41,11 @@ func NewTransmuxingSession(
 		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
-		"-olaris_feedback_url", feedbackURL,
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
 	}...)
 
-	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
+	cmd := exec.Command("ffmpeg", args...)
 	log.Infoln("ffmpeg started with", cmd.Args)
 	cmd.Dir = outputDir
 
@@ -61,9 +59,10 @@ func NewTransmuxingSession(
 	//stdin.Close()
 
 	return &TranscodingSession{
-		cmd:       cmd,
-		Stream:    stream,
-		OutputDir: outputDir,
+		cmd:               cmd,
+		Stream:            stream,
+		OutputDir:         outputDir,
+		SegmentStartIndex: segmentStartIndex,
 	}, nil
 }
 

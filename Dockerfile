@@ -9,13 +9,13 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 COPY . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
-RUN make download-olaris-react download-ffmpeg generate build-local
+RUN make download-olaris-react generate build-local
 
 FROM debian:stretch AS release
 
 # Install sudo because entrypoint.sh uses it
 RUN apt-get -y update && \
-    apt-get install -y --no-install-recommends sudo ca-certificates && \
+    apt-get install -y --no-install-recommends sudo ca-certificates ffmpeg && \
     apt-get autoremove && apt-get clean
 
 RUN useradd --create-home -U olaris

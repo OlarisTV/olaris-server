@@ -39,7 +39,6 @@ func main() {
 
 func registerGlobalFlags(fs *pflag.FlagSet) {
 	fs.Bool("allow_direct_file_access", false, "Whether accessing files directly by path (without a valid JWT) is allowed")
-	fs.Bool("use_system_ffmpeg", false, "Whether to use system FFmpeg instead of binary builtin")
 	fs.Bool("enable_streaming_debug_pages", false, "Whether to enable debug pages in the streaming server")
 	fs.Bool("write_transcoder_log", true, "Whether to write transcoder output to logfile")
 
@@ -49,7 +48,6 @@ func registerGlobalFlags(fs *pflag.FlagSet) {
 
 	viper.BindPFlag("server.cacheDir", fs.Lookup("cache_dir"))
 	viper.BindPFlag("server.directFileAccess", fs.Lookup("allow_direct_file_access"))
-	viper.BindPFlag("server.systemFFmpeg", fs.Lookup("use_system_ffmpeg"))
 	viper.BindPFlag("debug.streamingPages", fs.Lookup("enable_streaming_debug_pages"))
 	viper.BindPFlag("debug.transcoderLog", fs.Lookup("write_transcoder_log"))
 	viper.BindPFlag("rclone.configFile", fs.Lookup("rclone_config"))

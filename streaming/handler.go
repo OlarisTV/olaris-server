@@ -25,7 +25,6 @@ func RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveMediaSegment)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.vtt", serveSubtitleSegment)
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/init.mp4", serveInit)
-	router.HandleFunc("/ffmpeg/{playbackSessionID}/feedback", serveFFmpegFeedback)
 
 	// This handler just serves up the file for downloading. This is also used
 	// internally by ffmpeg to access rclone files.

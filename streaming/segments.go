@@ -1,10 +1,13 @@
 package streaming
 
 import (
+	"errors"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 	"time"
 )
@@ -44,22 +47,25 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 	defer playbackSession.Release()
 
 	for {
-		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
+		segmentPath, err := playbackSession.TranscodingSession.FindSegmentByIndex(InitSegmentIdx)
+		if errors.Is(err, os.ErrNotExist) {
+			// REVIEW: Should there be a context timeout here to prevent an
+			// endless loop if the segment requested will never exist?
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if segmentPath, ok := availableSegments[ffmpeg.InitialSegmentIdx]; ok {
-			log.Info("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
-			w.Header().Set("Content-Type", videoMIMEType)
-			http.ServeFile(w, r, segmentPath)
 
-			playbackSession.lastAccessed = time.Now()
-			return
-		} else {
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
+		log.Info("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
+		w.Header().Set("Content-Type", videoMIMEType)
+		http.ServeFile(w, r, segmentPath)
+
+		playbackSession.lastAccessed = time.Now()
+		playbackSession.lastServedSegmentIdx = InitSegmentIdx
+		return
 	}
 }
 
@@ -71,6 +77,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	segmentIdx, err := strconv.Atoi(mux.Vars(r)["segmentId"])
 	if err != nil {
 		http.Error(w, "Invalid segmentId", http.StatusBadRequest)
+		return
 	}
 
 	fileLocator, statusErr := getFileLocatorOrFail(r)
@@ -102,30 +109,46 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 	defer playbackSession.Release()
 
 	for {
-		availableSegments, err := playbackSession.TranscodingSession.AvailableSegments()
-
+		segmentPath, err := playbackSession.TranscodingSession.FindSegmentByIndex(segmentIdx)
+		if errors.Is(err, os.ErrNotExist) {
+			// Make sure the session isn't throttled and try again
+			playbackSession.TranscodingSession.Resume()
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		segmentIdxToServe := playbackSession.lastServedSegmentIdx + 1
-		if segmentPath, ok := availableSegments[segmentIdxToServe]; ok {
-			log.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
-			w.Header().Set("Content-Type", mimeType)
-			http.ServeFile(w, r, segmentPath)
+		w.Header().Set("Content-Type", mimeType)
 
-			// Sometimes video.js seems to request the same segment twice, deal with that.
-			if playbackSession.lastRequestedSegmentIdx != segmentIdx {
-				playbackSession.lastRequestedSegmentIdx = segmentIdx
-				playbackSession.lastServedSegmentIdx++
-			}
-			playbackSession.lastAccessed = time.Now()
-			return
+		if playbackSession.TranscodingSession.SegmentStartIndex == 0 {
+			// If the segment doesn't need to be patched, serve the file
+			log.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
+			http.ServeFile(w, r, segmentPath)
 		} else {
-			time.Sleep(100 * time.Millisecond)
-			continue
+			// If it does need to be patched, patch it in memory and serve that
+			_, fileName := path.Split(segmentPath)
+			patchedSegment, err := playbackSession.TranscodingSession.PatchSegment(segmentPath)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			log.Info("Serving patched segment ", segmentPath, " with MIME type ", mimeType)
+			http.ServeContent(w, r, fileName, time.Now(), patchedSegment)
 		}
+
+		playbackSession.lastAccessed = time.Now()
+		playbackSession.lastServedSegmentIdx = segmentIdx
+
+		// Resume transcoding if we need to after serving this segment
+		if playbackSession.TranscodingSession.State == ffmpeg.SessionStateThrottled && !playbackSession.shouldThrottle() {
+			playbackSession.TranscodingSession.Resume()
+		}
+
+		return
 	}
 }
 
