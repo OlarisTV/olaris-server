@@ -8,4 +8,5 @@ const (
 	SessionStateRunning
 	SessionStateThrottled
 	SessionStateExited
+	SessionStateDestroying
 )

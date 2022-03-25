@@ -208,10 +208,13 @@ func (s *PlaybackSession) CleanupIfRequired() {
 		return
 	}
 
-	err := s.TranscodingSession.Destroy()
-	if err != nil {
-		log.WithField("error", err).Warnln("received an error while cleaning up transcoding folder")
-	}
+	// This could take a minute, so don't wait.
+	go func() {
+		err := s.TranscodingSession.Destroy()
+		if err != nil {
+			log.WithField("error", err).Warnln("received an error while cleaning up transcoding folder")
+		}
+	}()
 }
 
 // shouldThrottle returns whether the transcoding process is far enough ahead of the current
@@ -256,7 +259,7 @@ func (s *PlaybackSession) startMaintenanceTicker(m *PlaybackSessionManager) {
 					return
 				}
 
-				if s.shouldThrottle() {
+				if s.TranscodingSession.State == ffmpeg.SessionStateRunning && s.shouldThrottle() {
 					s.TranscodingSession.Pause()
 				}
 			}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -20,13 +21,17 @@ type TranscodingSession struct {
 	cmd               *exec.Cmd
 	Stream            StreamRepresentation
 	OutputDir         string
+	WaitGroup         sync.WaitGroup
 	State             SessionState
 	ProgressPercent   float32
 	SegmentStartIndex int
 }
 
 func (s *TranscodingSession) Start() error {
+	s.WaitGroup.Add(1)
+
 	if err := s.cmd.Start(); err != nil {
+		s.WaitGroup.Done()
 		return err
 	}
 	s.State = SessionStateRunning
@@ -35,12 +40,16 @@ func (s *TranscodingSession) Start() error {
 	go func() {
 		s.cmd.Wait()
 		s.State = SessionStateExited
+		s.WaitGroup.Done()
 	}()
 
 	return nil
 }
 
 func (s *TranscodingSession) Destroy() error {
+	s.Resume()
+	s.State = SessionStateDestroying
+
 	// Signal the process group (-pid), not just the process, so that the process
 	// and all its children are signaled. Else, child procs can keep running and
 	// keep the stdout/stderr fd open and cause cmd.Wait to hang.
@@ -49,13 +58,11 @@ func (s *TranscodingSession) Destroy() error {
 	// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
 	syscall.Kill(-s.cmd.Process.Pid, syscall.SIGTERM)
 
-	// Resume to allow the process to handle the pending SIGTERM signal
-	s.Resume()
-	s.cmd.Wait()
-
+	// Wait for the FFmpeg process to be done and then clean up the output directory
+	s.WaitGroup.Wait()
 	log.WithFields(log.Fields{"dir": s.OutputDir}).Debugln("removing ffmpeg outputdir")
-
 	err := os.RemoveAll(s.OutputDir)
+
 	return err
 }
 
@@ -199,8 +206,7 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 // Pause pauses the transcoding session's FFmpeg process. Returns an error if
 // the process is not found.
 func (s *TranscodingSession) Pause() error {
-	// No need to do anything if it's not running
-	if s.State != SessionStateRunning {
+	if s.State < SessionStateRunning || s.State >= SessionStateExited {
 		return nil
 	}
 
@@ -221,8 +227,7 @@ func (s *TranscodingSession) Pause() error {
 // Resume resumes the transcoding session's FFmpeg process. Returns an error if
 // the process is not found.
 func (s *TranscodingSession) Resume() error {
-	// No need to resume if we're not throttled
-	if s.State != SessionStateThrottled {
+	if s.State < SessionStateRunning || s.State >= SessionStateExited {
 		return nil
 	}
 
