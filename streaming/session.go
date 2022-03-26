@@ -20,16 +20,43 @@ var PBSManager, _ = NewPlaybackSessionManager()
 
 func NewPlaybackSessionManager() (m *PlaybackSessionManager, cleanup func()) {
 	m = &PlaybackSessionManager{
-		mtx:      sync.Mutex{},
-		sessions: make(map[PlaybackSessionKey]*PlaybackSession),
+		mtx:               sync.Mutex{},
+		canCreateSessions: true,
+		sessions:          make(map[PlaybackSessionKey]*PlaybackSession),
 	}
 
 	return m, m.CleanupSessions
 }
 
+// DestroyAll destroys all sessions and prevents new ones from being spawned
+func (m *PlaybackSessionManager) DestroyAll() {
+	m.canCreateSessions = false
+	wg := sync.WaitGroup{}
+
+	for key, session := range m.sessions {
+		session := session
+		key := key
+		wg.Add(1)
+
+		go func() {
+			err := session.TranscodingSession.Destroy()
+			if err != nil {
+				log.WithFields(log.Fields{"SessionID": key.sessionID}).Error("failed to destroy session")
+			}
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
 type PlaybackSessionManager struct {
 	// Read-modify-write mutex for sessions. This ensures that two parallel requests don't both create a session.
-	mtx      sync.Mutex
+	mtx sync.Mutex
+
+	// Set to false during shutdown to prevent new sessions from spawning
+	canCreateSessions bool
+
 	sessions map[PlaybackSessionKey]*PlaybackSession
 }
 
@@ -68,6 +95,10 @@ type PlaybackSession struct {
 }
 
 func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int, m *PlaybackSessionManager) (*PlaybackSession, error) {
+	if m.canCreateSessions == false {
+		return nil, errors.New("cannot create new playback sessions for this manager")
+	}
+
 	stream, err := ffmpeg.GetStream(playbackSessionKey.StreamKey)
 	if err != nil {
 		return nil, err

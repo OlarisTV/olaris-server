@@ -135,6 +135,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			defer cancel()
 
 			mctx.Cleanup()
+			streaming.PBSManager.DestroyAll()
 			srv.Shutdown(ctx)
 			log.Println("shut down complete, exiting.")
 		},
