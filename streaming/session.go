@@ -291,7 +291,7 @@ func (s *PlaybackSession) startMaintenanceTicker(m *PlaybackSessionManager) {
 				}
 
 				if s.TranscodingSession.State == ffmpeg.SessionStateRunning && s.shouldThrottle() {
-					s.TranscodingSession.Pause()
+					s.TranscodingSession.Suspend()
 				}
 			}
 		}

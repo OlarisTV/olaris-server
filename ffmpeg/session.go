@@ -18,19 +18,18 @@ var InitialSegmentIdx int = -1
 
 // TranscodingSession contains many attributes which are only public because they are displayed on the debug page.
 type TranscodingSession struct {
-	cmd              *exec.Cmd
-	stateChangeMutex sync.Mutex
-
+	cmd               *exec.Cmd
+	stateChangeMutex  sync.Mutex
+	State             SessionState
 	Stream            StreamRepresentation
 	OutputDir         string
-	WaitGroup         sync.WaitGroup
-	State             SessionState
+	ProcessWaitGroup  sync.WaitGroup
 	ProgressPercent   float32
 	SegmentStartIndex int
 }
 
 func (s *TranscodingSession) Start() error {
-	s.WaitGroup.Add(1)
+	s.ProcessWaitGroup.Add(1)
 
 	// Tells it to create a separate process group for FFmpeg that can be
 	// terminated separately from Olaris' process group
@@ -41,7 +40,7 @@ func (s *TranscodingSession) Start() error {
 	defer s.stateChangeMutex.Unlock()
 
 	if err := s.cmd.Start(); err != nil {
-		s.WaitGroup.Done()
+		s.ProcessWaitGroup.Done()
 		return err
 	}
 	s.State = SessionStateRunning
@@ -54,7 +53,7 @@ func (s *TranscodingSession) Start() error {
 		s.State = SessionStateExited
 		s.stateChangeMutex.Unlock()
 
-		s.WaitGroup.Done()
+		s.ProcessWaitGroup.Done()
 	}()
 
 	return nil
@@ -86,7 +85,7 @@ func (s *TranscodingSession) Destroy() error {
 	}
 
 	// Wait for the FFmpeg process to be done and then clean up the output directory
-	s.WaitGroup.Wait()
+	s.ProcessWaitGroup.Wait()
 	log.WithFields(log.Fields{"dir": s.OutputDir}).Debugln("removing ffmpeg outputdir")
 	err := os.RemoveAll(s.OutputDir)
 
@@ -230,18 +229,12 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 	return memoryBuffer.BytesReader(), nil
 }
 
-// Pause pauses the transcoding session's FFmpeg process. Returns an error if
+// Suspend pauses the transcoding session's FFmpeg process. Returns an error if
 // the process is not found.
-func (s *TranscodingSession) Pause() error {
+func (s *TranscodingSession) Suspend() error {
 	s.stateChangeMutex.Lock()
 	defer s.stateChangeMutex.Unlock()
-	return s.pauseUnlocked()
-}
 
-// Private method that pauses the FFmpeg process without acquiring the state
-// change lock. This is required because sometimes the process needs to be
-// paused as part of another state change.
-func (s *TranscodingSession) pauseUnlocked() error {
 	if s.State != SessionStateRunning {
 		return nil
 	}
@@ -272,6 +265,8 @@ func (s *TranscodingSession) Resume() error {
 // Private method that resumes the FFmpeg process without acquiring the state
 // change lock. This is required because sometimes the process needs to be
 // resumed as part of another state change.
+// CAUTION: You should acquire a lock on the state change mutex before calling
+// this method.
 func (s *TranscodingSession) resumeUnlocked() error {
 	if s.State != SessionStateThrottled {
 		return nil
