@@ -46,9 +46,9 @@ func (s *TranscodingSession) Start() error {
 		s.cmd.Wait()
 
 		s.stateChangeMutex.Lock()
-		defer s.stateChangeMutex.Unlock()
-
 		s.State = SessionStateExited
+		s.stateChangeMutex.Unlock()
+
 		s.WaitGroup.Done()
 	}()
 
@@ -57,18 +57,19 @@ func (s *TranscodingSession) Start() error {
 
 func (s *TranscodingSession) Destroy() error {
 	s.stateChangeMutex.Lock()
-	defer s.stateChangeMutex.Unlock()
+	if s.State != SessionStateExited {
+		s.resumeUnlocked()
+		s.State = SessionStateStopping
 
-	s.resumeUnlocked()
-	s.State = SessionStateDestroying
+		// Signal the process group (-pid), not just the process, so that the process
+		// and all its children are signaled. Else, child procs can keep running and
+		// keep the stdout/stderr fd open and cause cmd.Wait to hang.
+		log.WithFields(log.Fields{"pid": s.cmd.Process.Pid}).Debugln("killing ffmpeg process")
 
-	// Signal the process group (-pid), not just the process, so that the process
-	// and all its children are signaled. Else, child procs can keep running and
-	// keep the stdout/stderr fd open and cause cmd.Wait to hang.
-	log.WithFields(log.Fields{"pid": s.cmd.Process.Pid}).Debugln("killing ffmpeg process")
-
-	// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
-	syscall.Kill(-s.cmd.Process.Pid, syscall.SIGTERM)
+		// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
+		syscall.Kill(-s.cmd.Process.Pid, syscall.SIGTERM)
+	}
+	s.stateChangeMutex.Unlock()
 
 	// Wait for the FFmpeg process to be done and then clean up the output directory
 	s.WaitGroup.Wait()

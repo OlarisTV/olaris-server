@@ -7,6 +7,6 @@ const (
 	SessionStateNew SessionState = iota
 	SessionStateRunning
 	SessionStateThrottled
+	SessionStateStopping
 	SessionStateExited
-	SessionStateDestroying
 )
