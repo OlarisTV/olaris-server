@@ -139,47 +139,15 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 	}
 	defer segmentFile.Close()
 
-	foundSidx := false
-	var earliestPresentationTimeV0 uint32 = 0
-	var earliestPresentationTimeV1 uint64 = 0
-
 	memoryBuffer := &MemoryWriteSeeker{}
 	w := mp4.NewWriter(memoryBuffer)
 
-	// Read the segments once to get the EarliestPresentationTime from the sidx
-	// box.
-	_, err = mp4.ReadBoxStructure(segmentFile, func(h *mp4.ReadHandle) (interface{}, error) {
-		switch h.BoxInfo.Type {
-		case mp4.BoxTypeSidx():
-			foundSidx = true
-
-			box, _, err := h.ReadPayload()
-			if err != nil {
-				return nil, err
-			}
-
-			sidx := box.(*mp4.Sidx)
-			earliestPresentationTimeV0 = sidx.EarliestPresentationTimeV0
-			earliestPresentationTimeV1 = sidx.EarliestPresentationTimeV1
-
-			return nil, nil
-		default:
-			return nil, nil
-		}
-	})
-
-	// Seek back to the beginning of the file
-	_, err = segmentFile.Seek(0, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	// Copy each box, patching the tfdt box's BaseMediaDecodeTime
+	// Copy each box, patching anything we need to
 	_, err = mp4.ReadBoxStructure(segmentFile, func(h *mp4.ReadHandle) (interface{}, error) {
 		switch h.BoxInfo.Type {
 
 		// Some box types need to be expanded, so we can reach their children
-		case mp4.BoxTypeMoof(), mp4.BoxTypeMoov(), mp4.BoxTypeTraf(), mp4.BoxTypeTrak():
+		case mp4.BoxTypeMoof(), mp4.BoxTypeMoov():
 			if _, err := w.StartBox(&h.BoxInfo); err != nil {
 				return nil, err
 			}
@@ -196,8 +164,8 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 			_, err = w.EndBox()
 			return nil, err
 
-		// The tfdt box is where we need to update the BaseMediaDecodeTime
-		case mp4.BoxTypeTfdt():
+		// Need to update the sequence number in the mfhd box
+		case mp4.BoxTypeMfhd():
 			if _, err := w.StartBox(&h.BoxInfo); err != nil {
 				return nil, err
 			}
@@ -207,13 +175,10 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 				return nil, err
 			}
 
-			tfdt := box.(*mp4.Tfdt)
-			if foundSidx {
-				tfdt.BaseMediaDecodeTimeV0 = earliestPresentationTimeV0
-				tfdt.BaseMediaDecodeTimeV1 = earliestPresentationTimeV1
-			}
+			mfhd := box.(*mp4.Mfhd)
+			mfhd.SequenceNumber = mfhd.SequenceNumber + uint32(s.SegmentStartIndex)
 
-			if _, err := mp4.Marshal(w, tfdt, h.BoxInfo.Context); err != nil {
+			if _, err := mp4.Marshal(w, mfhd, h.BoxInfo.Context); err != nil {
 				return nil, err
 			}
 
