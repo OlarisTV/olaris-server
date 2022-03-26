@@ -18,7 +18,9 @@ var InitialSegmentIdx int = -1
 
 // TranscodingSession contains many attributes which are only public because they are displayed on the debug page.
 type TranscodingSession struct {
-	cmd               *exec.Cmd
+	cmd              *exec.Cmd
+	stateChangeMutex sync.Mutex
+
 	Stream            StreamRepresentation
 	OutputDir         string
 	WaitGroup         sync.WaitGroup
@@ -30,6 +32,9 @@ type TranscodingSession struct {
 func (s *TranscodingSession) Start() error {
 	s.WaitGroup.Add(1)
 
+	s.stateChangeMutex.Lock()
+	defer s.stateChangeMutex.Unlock()
+
 	if err := s.cmd.Start(); err != nil {
 		s.WaitGroup.Done()
 		return err
@@ -39,6 +44,10 @@ func (s *TranscodingSession) Start() error {
 	// Prevent zombies
 	go func() {
 		s.cmd.Wait()
+
+		s.stateChangeMutex.Lock()
+		defer s.stateChangeMutex.Unlock()
+
 		s.State = SessionStateExited
 		s.WaitGroup.Done()
 	}()
@@ -47,7 +56,10 @@ func (s *TranscodingSession) Start() error {
 }
 
 func (s *TranscodingSession) Destroy() error {
-	s.Resume()
+	s.stateChangeMutex.Lock()
+	defer s.stateChangeMutex.Unlock()
+
+	s.resumeUnlocked()
 	s.State = SessionStateDestroying
 
 	// Signal the process group (-pid), not just the process, so that the process
@@ -206,7 +218,16 @@ func (s *TranscodingSession) PatchSegment(segmentPath string) (io.ReadSeeker, er
 // Pause pauses the transcoding session's FFmpeg process. Returns an error if
 // the process is not found.
 func (s *TranscodingSession) Pause() error {
-	if s.State < SessionStateRunning || s.State >= SessionStateExited {
+	s.stateChangeMutex.Lock()
+	defer s.stateChangeMutex.Unlock()
+	return s.pauseUnlocked()
+}
+
+// Private method that pauses the FFmpeg process without acquiring the state
+// change lock. This is required because sometimes the process needs to be
+// paused as part of another state change.
+func (s *TranscodingSession) pauseUnlocked() error {
+	if s.State != SessionStateRunning {
 		return nil
 	}
 
@@ -227,7 +248,17 @@ func (s *TranscodingSession) Pause() error {
 // Resume resumes the transcoding session's FFmpeg process. Returns an error if
 // the process is not found.
 func (s *TranscodingSession) Resume() error {
-	if s.State < SessionStateRunning || s.State >= SessionStateExited {
+	s.stateChangeMutex.Lock()
+	defer s.stateChangeMutex.Unlock()
+
+	return s.resumeUnlocked()
+}
+
+// Private method that resumes the FFmpeg process without acquiring the state
+// change lock. This is required because sometimes the process needs to be
+// resumed as part of another state change.
+func (s *TranscodingSession) resumeUnlocked() error {
+	if s.State != SessionStateThrottled {
 		return nil
 	}
 
