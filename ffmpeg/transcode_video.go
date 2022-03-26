@@ -89,6 +89,18 @@ func NewVideoTranscodingSession(
 		"-hls_segment_filename", "stream0_%d.m4s",
 	}...)
 
+	// If we are not starting with the first segment, indicate that the fragment
+	// is discontinuous
+	if segmentStartIndex != 0 {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash+frag_discont",
+		}...)
+	} else {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash",
+		}...)
+	}
+
 	if encoderParams.width != 0 || encoderParams.height != 0 {
 		args = append(args, []string{
 			"-filter:0", fmt.Sprintf("scale=%d:%d", encoderParams.width, encoderParams.height),

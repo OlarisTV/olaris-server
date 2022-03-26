@@ -41,6 +41,21 @@ func NewTransmuxingSession(
 		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
+	}...)
+
+	// If we are not starting with the first segment, indicate that the fragment
+	// is discontinuous
+	if segmentStartIndex != 0 {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash+frag_discont",
+		}...)
+	} else {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash",
+		}...)
+	}
+
+	args = append(args, []string{
 		// We serve our own manifest, so we don't really care about this.
 		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
 	}...)

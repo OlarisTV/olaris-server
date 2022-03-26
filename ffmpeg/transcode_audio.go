@@ -48,9 +48,22 @@ func NewAudioTranscodingSession(
 		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
-		// We serve our own manifest, so we don't really care about this.
-		path.Join(outputDir, "generated_by_ffmpeg.m3u"),
 	}...)
+
+	// If we are not starting with the first segment, indicate that the fragment
+	// is discontinuous
+	if segmentStartIndex != 0 {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash+frag_discont",
+		}...)
+	} else {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash",
+		}...)
+	}
+
+	// We serve our own manifest, so we don't really care about this.
+	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 
 	cmd := exec.Command("ffmpeg", args...)
 	log.Infoln("ffmpeg started with", cmd.Args)
