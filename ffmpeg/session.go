@@ -32,6 +32,11 @@ type TranscodingSession struct {
 func (s *TranscodingSession) Start() error {
 	s.WaitGroup.Add(1)
 
+	// Tells it to create a separate process group for FFmpeg that can be
+	// terminated separately from Olaris' process group
+	s.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	s.cmd.SysProcAttr.Setpgid = true
+
 	s.stateChangeMutex.Lock()
 	defer s.stateChangeMutex.Unlock()
 
@@ -55,21 +60,30 @@ func (s *TranscodingSession) Start() error {
 	return nil
 }
 
+// Destroy destroys the FFmpeg process group if it's still running, and removes
+// its output directory.
 func (s *TranscodingSession) Destroy() error {
-	s.stateChangeMutex.Lock()
 	if s.State != SessionStateExited {
+		s.stateChangeMutex.Lock()
 		s.resumeUnlocked()
 		s.State = SessionStateStopping
+		s.stateChangeMutex.Unlock()
 
-		// Signal the process group (-pid), not just the process, so that the process
-		// and all its children are signaled. Else, child procs can keep running and
-		// keep the stdout/stderr fd open and cause cmd.Wait to hang.
-		log.WithFields(log.Fields{"pid": s.cmd.Process.Pid}).Debugln("killing ffmpeg process")
+		// Signal the process group (-pid), not just the process, so that the
+		// process and all its children are signaled. Else, child procs can keep
+		// running and keep the stdout/stderr fd open and cause cmd.Wait to
+		// hang. No error handling, we don't care if ffmpeg errors out, we're
+		// done here anyway.
+		pgid, err := syscall.Getpgid(s.cmd.Process.Pid)
+		if err == nil {
+			log.WithFields(log.Fields{
+				"pid":  s.cmd.Process.Pid,
+				"pgid": pgid,
+			}).Debugln("killing ffmpeg process")
 
-		// No error handling, we don't care if ffmpeg errors out, we're done here anyway.
-		syscall.Kill(-s.cmd.Process.Pid, syscall.SIGTERM)
+			syscall.Kill(-pgid, syscall.SIGTERM)
+		}
 	}
-	s.stateChangeMutex.Unlock()
 
 	// Wait for the FFmpeg process to be done and then clean up the output directory
 	s.WaitGroup.Wait()
