@@ -131,12 +131,19 @@ func NewServeCommand() *cmd.CobraCommand {
 			<-stopChan
 			log.Println("shutting down...")
 
+			// Clean up the metadata context
+			mctx.Cleanup()
+
+			// Clean up playback/transcode sessions
+			sessionCleanupContext, sessionCleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer sessionCleanupCancel()
+			streaming.PBSManager.DestroyAll(sessionCleanupContext)
+
+			// Shut down the HTTP server
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-
-			mctx.Cleanup()
-			streaming.PBSManager.DestroyAll()
 			srv.Shutdown(ctx)
+
 			log.Println("shut down complete, exiting.")
 		},
 	}

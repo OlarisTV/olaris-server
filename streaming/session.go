@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"context"
 	"errors"
 	"os"
 	"sync"
@@ -28,26 +29,46 @@ func NewPlaybackSessionManager() (m *PlaybackSessionManager, cleanup func()) {
 	return m, m.CleanupSessions
 }
 
-// DestroyAll destroys all sessions and prevents new ones from being spawned
-func (m *PlaybackSessionManager) DestroyAll() {
+// DestroyAll destroys all sessions and prevents new ones from being spawned.
+func (m *PlaybackSessionManager) DestroyAll(ctx context.Context) {
 	m.canCreateSessions = false
-	wg := sync.WaitGroup{}
+	numWaiting := 0
+	errChannel := make(chan error)
+
+	// Nothing to do if there are no sessions
+	if len(m.sessions) == 0 {
+		return
+	}
 
 	for key, session := range m.sessions {
 		session := session
 		key := key
-		wg.Add(1)
+		numWaiting++
 
 		go func() {
 			err := session.TranscodingSession.Destroy()
 			if err != nil {
-				log.WithFields(log.Fields{"SessionID": key.sessionID}).Error("failed to destroy session")
+				log.WithFields(log.Fields{"SessionID": key.sessionID}).WithError(err).Error("failed to destroy transcoding session")
 			}
-			wg.Done()
+
+			numWaiting--
+			errChannel <- err
 		}()
 	}
 
-	wg.Wait()
+	// Return once either all the sessions have been destroyed or the timeout is
+	// reached
+	for {
+		select {
+		case <-errChannel:
+			if numWaiting == 0 {
+				return
+			}
+		case <-ctx.Done():
+			log.Warning("reached timeout while destroying sessions")
+			return
+		}
+	}
 }
 
 type PlaybackSessionManager struct {
