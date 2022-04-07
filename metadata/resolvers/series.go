@@ -13,6 +13,21 @@ type mustUUIDArgs struct {
 	UUID *string
 }
 
+type seriesQueryArgs struct {
+	queryArgs
+	Sort *SeriesSort
+}
+
+func (m *seriesQueryArgs) asQueryDetails() *db.QueryDetails {
+	qd := m.queryArgs.asQueryDetails()
+
+	if m.Sort != nil {
+		qd.SortColumn = m.Sort.ToString()
+	}
+
+	return qd
+}
+
 // Episode returns episode.
 func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeResolver {
 	episode, err := db.FindEpisodeByUUID(*args.UUID)
@@ -31,7 +46,7 @@ func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolv
 }
 
 // Series return series.
-func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolver {
+func (r *Resolver) Series(ctx context.Context, args *seriesQueryArgs) []*SeriesResolver {
 	var series []*db.Series
 
 	if args.UUID != nil {
@@ -42,7 +57,7 @@ func (r *Resolver) Series(ctx context.Context, args *queryArgs) []*SeriesResolve
 			series = []*db.Series{serie}
 		}
 	} else {
-		qd := createQd(args)
+		qd := args.asQueryDetails()
 		series, _ = db.FindAllSeries(qd)
 	}
 

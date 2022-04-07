@@ -34,7 +34,9 @@ func TestPlayState(t *testing.T) {
 	// UUID gets created on insertion
 	movieUUID := movie.UUID
 
-	movieResolvers := r.Movies(ctx, &queryArgs{UUID: &movieUUID})
+	movieResolvers := r.Movies(ctx, &movieQueryArgs{
+		queryArgs: queryArgs{UUID: &movieUUID},
+	})
 	assert.Len(t, movieResolvers, 1, "Should return exactly one movie")
 	movieResolver := movieResolvers[0]
 

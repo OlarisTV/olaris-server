@@ -121,9 +121,11 @@ func FindMovieFileByPath(filePath filesystem.Node) (*MovieFile, error) {
 
 // QueryDetails specify arguments for media queries
 type QueryDetails struct {
-	UserID uint
-	Offset int
-	Limit  int
+	UserID        uint
+	Offset        int
+	Limit         int
+	SortDirection string
+	SortColumn    string
 }
 
 // CollectMovieInfo ensures that all relevant information for a movie is loaded
@@ -169,9 +171,15 @@ func FindMoviesForMDRefresh() (movies []Movie) {
 // FindAllMovies finds all identified movies including all associated information like streams and files.
 func FindAllMovies(qd *QueryDetails) (movies []Movie) {
 	q := db
+
+	if qd != nil && qd.SortColumn != "" {
+		q = q.Order(fmt.Sprintf("%s %s", qd.SortColumn, qd.SortDirection))
+	}
+
 	if qd != nil {
 		q = q.Limit(qd.Limit).Offset(qd.Offset)
 	}
+
 	q = q.Find(&movies)
 	for _, movie := range movies {
 		CollectMovieInfo(&movie)

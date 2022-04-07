@@ -10,38 +10,30 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-type queryArgs struct {
-	UUID   *string
-	Offset *int32
-	Limit  *int32
+type movieQueryArgs struct {
+	queryArgs
+	Sort *MovieSort
+}
+
+func (m *movieQueryArgs) asQueryDetails() *db.QueryDetails {
+	qd := m.queryArgs.asQueryDetails()
+
+	if m.Sort != nil {
+		qd.SortColumn = m.Sort.ToString()
+	}
+
+	return qd
 }
 
 type posterURLArgs struct {
 	Width int32
 }
 
-func createQd(args *queryArgs) *db.QueryDetails {
-	qd := db.QueryDetails{}
-
-	if args.Limit == nil {
-		qd.Limit = 50
-	} else {
-		qd.Limit = int(*args.Limit)
-	}
-
-	if args.Offset == nil {
-		qd.Offset = 0
-	} else {
-		qd.Offset = int(*args.Offset)
-	}
-	return &qd
-}
-
 // Movies returns all movies.
-func (r *Resolver) Movies(ctx context.Context, args *queryArgs) []*MovieResolver {
+func (r *Resolver) Movies(ctx context.Context, args *movieQueryArgs) []*MovieResolver {
 	var l []*MovieResolver
 	var movies []db.Movie
-	qd := createQd(args)
+	qd := args.asQueryDetails()
 	if args.UUID != nil {
 		movie, _ := db.FindMovieByUUID(*args.UUID)
 		movies = []db.Movie{*movie}
