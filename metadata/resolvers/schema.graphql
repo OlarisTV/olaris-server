@@ -7,9 +7,14 @@ schema {
 union MediaItem = Movie | Episode
 union SearchItem = Movie | Series
 
+enum SortDirection {
+    asc
+    desc
+}
+
 type Subscription {
-    moviesChanged(): MetadataEvent!
-    seriesChanged(): MetadataEvent!
+    moviesChanged: MetadataEvent!
+    seriesChanged: MetadataEvent!
     seasonChanged(seriesUUID: String): MetadataEvent!
     # TODO(Leon Handreke): Add an episodeChanged call here to monitor a given season
     # (or should it be a whole season?). However, let's first verify that this design works well
@@ -18,18 +23,18 @@ type Subscription {
 
 # The query type, represents all of the entry points into our object graph
 type Query {
-    movies(uuid: String, offset: Int, limit: Int): [Movie]!
-    libraries(): [Library]!
-    series(uuid: String, offset: Int, limit: Int): [Series]!
+    movies(uuid: String, offset: Int, limit: Int, sort: MovieSort, sortDirection: SortDirection): [Movie]!
+    libraries: [Library]!
+    series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!
     season(uuid: String): Season!
     episode(uuid: String): Episode
-    users(): [User]!
-    recentlyAdded(): [MediaItem]
-    upNext(): [MediaItem]
+    users: [User]!
+    recentlyAdded: [MediaItem]
+    upNext: [MediaItem]
     search(name: String!): [SearchItem]
-    invites(): [Invite]
+    invites: [Invite]
     # List of all remotes found in a rclone config file if one exists.
-    remotes(): [String]!
+    remotes: [String]!
 
     # List folders in the given path.
     folders(
@@ -54,7 +59,7 @@ type Mutation {
     deleteLibrary(id: Int!): LibraryResponse!
 
     # Create a invite code so a user can register on the server
-    createUserInvite(): UserInviteResponse!
+    createUserInvite: UserInviteResponse!
 
     # Create a playstate for the given media item can be the UUID of an episode or movie.
     # Playtime should always be given in seconds.
@@ -73,7 +78,7 @@ type Mutation {
     refreshAgentMetadata(libraryID: Int, uuid: String): Boolean!
 
     # Rescan all library paths for new files that are not indexed yet.
-    rescanLibraries(): Boolean!
+    rescanLibraries: Boolean!
 
     # Rescan a library based on the given filters.
     # 1. If supply a "ID" it will refresh the entire library
@@ -187,6 +192,11 @@ type Series {
     unwatchedEpisodesCount: Int!
 }
 
+enum SeriesSort {
+    name
+    firstAirDate
+}
+
 type Season {
     name: String!
     overview: String!
@@ -278,6 +288,11 @@ type Movie {
     playState: PlayState
 }
 
+enum MovieSort {
+    title
+    releaseDate
+}
+
 type MovieFile {
     # Filename
     fileName: String!
@@ -296,11 +311,11 @@ type MovieFile {
 }
 
 input UpdateMovieFileMetadataInput {
-    // UUID of the movie file to update
+    # UUID of the movie file to update
     movieFileUUID: String!
 
-    // TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
-    // item appropriately.
+    # TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+    # item appropriately.
     tmdbID: Int!
 }
 
@@ -311,14 +326,14 @@ type UpdateMovieFileMetadataPayload {
 }
 
 input UpdateEpisodeFileMetadataInput {
-    // UUID of the episode file to update
+    # UUID of the episode file to update
     episodeFileUUID: String
-    // UUID of the series for which all EpisodeFiles should be updated.
-    // episodeFileUUID and seriesUUID are mutually exclusive.
+    # UUID of the series for which all EpisodeFiles should be updated.
+    # episodeFileUUID and seriesUUID are mutually exclusive.
     seriesUUID: String
 
-    // TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
-    // item appropriately.
+    # TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+    # item appropriately.
     tmdbID: Int!
 }
 

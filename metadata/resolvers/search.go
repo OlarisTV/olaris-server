@@ -4,7 +4,7 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 
-// SearchItemResolver wrapper arounds search items.
+// SearchItemResolver wrapper around search items.
 type SearchItemResolver struct {
 	r interface{}
 }
@@ -15,7 +15,7 @@ func (r *SearchItemResolver) ToMovie() (*MovieResolver, bool) {
 	return res, ok
 }
 
-// ToSeries parses content to a serie.
+// ToSeries parses content to a series.
 func (r *SearchItemResolver) ToSeries() (*SeriesResolver, bool) {
 	res, ok := r.r.(*SeriesResolver)
 	return res, ok

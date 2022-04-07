@@ -165,10 +165,15 @@ func FindSeriesForMDRefresh() (series []Series) {
 func FindAllSeries(qd *QueryDetails) ([]*Series, error) {
 	var series []*Series
 	q := db
+
+	if qd != nil && qd.SortColumn != "" {
+		q = q.Order(fmt.Sprintf("%s %s", qd.SortColumn, qd.SortDirection))
+	}
+
 	if qd != nil {
 		q = q.Offset(qd.Offset).Limit(qd.Limit)
-
 	}
+
 	if err := q.
 		Preload("Seasons.Episodes.EpisodeFiles.Streams").
 		Find(&series).
