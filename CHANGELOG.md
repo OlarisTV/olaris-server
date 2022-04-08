@@ -1,3 +1,18 @@
+### 0.4.0 - TBD
+
+* Added support for Postgres, MySQL and other external databases
+* Added support for the official Android application
+* Added initial support for reading xattrs to lookup metadata before querying outside sources
+* Added support for partial library rescanning based on a given path
+* Added support to supply a custom Rclone config
+* Added ZeroConf support to the server
+* Added an initial set of GraphQL subscriptions
+* Added support for sorting media content in the GraphQL API
+* Added more flexibilty to set various folders such as the cache and database folder
+* Added the ability to identify movies using the CLI
+* Added filebrowser support to the GraphQL API
+* Tons of small little fixes and refactoring
+
 ### 0.3.0 - 2019-11-18
 
 * Chromecast support
