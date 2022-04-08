@@ -1,8 +1,8 @@
 package filesystem
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"github.com/pkg/errors"
 	_ "github.com/rclone/rclone/backend/all"
 	"github.com/rclone/rclone/fs"
@@ -11,11 +11,11 @@ import (
 	"github.com/rclone/rclone/vfs"
 	"github.com/rclone/rclone/vfs/vfscommon"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"os"
 	"path"
 	"strings"
 	"sync"
-	"os"
-	"github.com/spf13/viper"
 )
 
 type rclonePath struct {
@@ -63,7 +63,7 @@ func RcloneNodeFromPath(pathStr string) (*RcloneNode, error) {
 		// Set a custom config file for rclone, if specified. `rclone.configFile` defaults to '$HOME/.config/rclone/rclone.conf'
 		config.SetConfigPath(os.ExpandEnv(viper.GetString("rclone.configFile")))
 		configfile.Install()
-		filesystem, err := newFsFunc(context.Background(), l.remoteName + ":/")
+		filesystem, err := newFsFunc(context.Background(), l.remoteName+":/")
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to create rclone Fs")
 		}

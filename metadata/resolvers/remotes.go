@@ -3,9 +3,9 @@ package resolvers
 import (
 	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/config/configfile"
-	"sort"
-	"os"
 	"github.com/spf13/viper"
+	"os"
+	"sort"
 )
 
 // Remotes returns all Rclone remotes.

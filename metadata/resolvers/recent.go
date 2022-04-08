@@ -22,9 +22,11 @@ func (a ByCreationDate) Less(i, j int) bool { return a[i].TimeStamp() > a[j].Tim
 // ByUpdatedAt is a sortable type to sort by updated_at date.
 type ByUpdatedAt []sortable
 
-func (a ByUpdatedAt) Len() int           { return len(a) }
-func (a ByUpdatedAt) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByUpdatedAt) Less(i, j int) bool { return a[i].UpdatedAtTimeStamp() > a[j].UpdatedAtTimeStamp() }
+func (a ByUpdatedAt) Len() int      { return len(a) }
+func (a ByUpdatedAt) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByUpdatedAt) Less(i, j int) bool {
+	return a[i].UpdatedAtTimeStamp() > a[j].UpdatedAtTimeStamp()
+}
 
 // RecentlyAdded returns recently added media content.
 func (r *Resolver) RecentlyAdded(ctx context.Context) *[]*MediaItemResolver {

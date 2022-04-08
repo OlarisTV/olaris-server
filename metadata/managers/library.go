@@ -2,8 +2,8 @@ package managers
 
 import (
 	"github.com/fsnotify/fsnotify"
-	"github.com/rclone/rclone/vfs"
 	"github.com/pkg/errors"
+	"github.com/rclone/rclone/vfs"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/ffmpeg"

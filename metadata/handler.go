@@ -31,6 +31,6 @@ func RegisterRoutes(menv *app.MetadataContext, r *mux.Router) {
 	r.HandleFunc("/images/{provider}/{size}/{id}", imageManager.HTTPHandler)
 }
 
-func versionHandler(w http.ResponseWriter, r *http.Request){
+func versionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(helpers.Version))
 }

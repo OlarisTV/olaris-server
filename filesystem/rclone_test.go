@@ -1,9 +1,9 @@
 package filesystem
 
 import (
+	"context"
 	"sync"
 	"testing"
-	"context"
 
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fstest/mockfs"
@@ -42,7 +42,7 @@ func TestRcloneNodeFromPath(t *testing.T) {
 		{
 			name: "test multiple remotes with same name",
 			giveNewFsFunc: func(ctx context.Context, name string) (fs.Fs, error) {
-				mfs := mockfs.NewFs(ctx,name, "")
+				mfs := mockfs.NewFs(ctx, name, "")
 				mfs.AddObject(mockobject.New("test-dir"))
 				mfs.AddObject(mockobject.New("test-other-dir"))
 				return mfs, nil

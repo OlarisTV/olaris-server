@@ -2,11 +2,11 @@ package version
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"github.com/goava/di"
-	"gitlab.com/olaris/olaris-server/pkg/cmd"
+	"github.com/spf13/cobra"
 	"gitlab.com/olaris/olaris-server/cmd/root"
+	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/pkg/cmd"
 )
 
 type VersionCommand cmd.Command
@@ -27,7 +27,7 @@ func NewVersionCommand() *cmd.CobraCommand {
 		Use:   "version",
 		Short: "Displays the current olaris-server version",
 		Run: func(cmd *cobra.Command, args []string) {
-      fmt.Println(helpers.Version)
+			fmt.Println(helpers.Version)
 		},
 	}
 
