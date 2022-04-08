@@ -322,3 +322,10 @@ func FindStreamsForMovieFileUUID(uuid string) (streams []*Stream) {
 		Find(&streams)
 	return streams
 }
+
+// GetMovieCount returns the number of movies in the database
+func GetMovieCount() (int32, error) {
+	count := 0
+	err := db.Model(&Movie{}).Count(&count).Error
+	return int32(count), err
+}

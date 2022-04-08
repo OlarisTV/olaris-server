@@ -497,3 +497,24 @@ func FindAllUnidentifiedEpisodeFilesInLibrary(libraryID uint) ([]*EpisodeFile, e
 	}
 	return episodeFiles, nil
 }
+
+// GetSeriesCount returns the number of series in the database
+func GetSeriesCount() (int32, error) {
+	count := 0
+	err := db.Model(&Series{}).Count(&count).Error
+	return int32(count), err
+}
+
+// GetSeasonCount returns the number of seasons in the database
+func GetSeasonCount() (int32, error) {
+	count := 0
+	err := db.Model(&Season{}).Count(&count).Error
+	return int32(count), err
+}
+
+// GetEpisodeCount returns the number of episodes in the database
+func GetEpisopdeCount() (int32, error) {
+	count := 0
+	err := db.Model(&Episode{}).Count(&count).Error
+	return int32(count), err
+}
