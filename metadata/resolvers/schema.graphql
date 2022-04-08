@@ -35,6 +35,7 @@ type Query {
     invites: [Invite]
     # List of all remotes found in a rclone config file if one exists.
     remotes: [String]!
+    mediaStats: MediaStatsResponse!
 
     # List folders in the given path.
     folders(
@@ -114,6 +115,13 @@ type CreatePSResponse {
 
 type BoolResponse {
     success: Boolean!
+}
+
+type MediaStatsResponse {
+    movieCount: Int!
+    seriesCount: Int!
+    seasonCount: Int!
+    episodeCount: Int!
 }
 
 type CreateSTResponse {
