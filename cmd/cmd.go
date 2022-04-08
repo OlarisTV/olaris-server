@@ -12,6 +12,7 @@ import (
 	"gitlab.com/olaris/olaris-server/cmd/serve"
 	"gitlab.com/olaris/olaris-server/cmd/user"
 	"gitlab.com/olaris/olaris-server/cmd/user_create"
+	"gitlab.com/olaris/olaris-server/cmd/version"
 )
 
 func New() di.Option {
@@ -25,5 +26,6 @@ func New() di.Option {
 		library.New(),
 		library_create.New(),
 		dumpdebug.New(),
+		version.New(),
 	)
 }
