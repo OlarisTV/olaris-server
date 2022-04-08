@@ -179,7 +179,10 @@ type Library {
 }
 
 type Series {
+    # Localized English series title
     name: String!
+    # Original series title
+    originalName: String!
     overview: String!
     firstAirDate: String!
     status: String!
@@ -194,6 +197,7 @@ type Series {
 
 enum SeriesSort {
     name
+    originalName
     firstAirDate
 }
 
@@ -290,6 +294,7 @@ type Movie {
 
 enum MovieSort {
     title
+    name
     releaseDate
 }
 

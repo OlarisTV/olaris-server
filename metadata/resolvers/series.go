@@ -79,6 +79,11 @@ func (r *SeriesResolver) Name() string {
 	return r.r.Name
 }
 
+// OriginalName returns original name
+func (r *SeriesResolver) OriginalName() string {
+	return r.r.OriginalName
+}
+
 // UUID returns uuid.
 func (r *SeriesResolver) UUID() string {
 	return r.r.UUID
