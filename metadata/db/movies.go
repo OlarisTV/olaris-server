@@ -214,7 +214,10 @@ func findMovie(where ...interface{}) (*Movie, error) {
 
 // SearchMovieByTitle search movies by title.
 func SearchMovieByTitle(name string) (movies []Movie) {
-	db.Where("LOWER(original_title) LIKE LOWER(?)", "%"+name+"%").Find(&movies)
+	db.Where("LOWER(original_title) LIKE LOWER(?)", "%"+name+"%").
+		Or("LOWER(title) LIKE LOWER(?)", "%"+name+"%").
+		Find(&movies)
+
 	for _, movie := range movies {
 		CollectMovieInfo(&movie)
 	}

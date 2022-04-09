@@ -186,7 +186,8 @@ func FindAllSeries(qd *QueryDetails) ([]*Series, error) {
 // SearchSeriesByTitle searches for series based on their name.
 func SearchSeriesByTitle(name string) (series []Series) {
 	db.Preload("Seasons.Episodes.EpisodeFiles.Streams").
-		Where("LOWER(name) LIKE LOWER(?)", "%"+name+"%").
+		Where("LOWER(original_name) LIKE LOWER(?)", "%"+name+"%").
+		Or("LOWER(name) LIKE LOWER(?)", "%"+name+"%").
 		Find(&series)
 	return series
 }
