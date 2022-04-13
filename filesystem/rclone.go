@@ -3,6 +3,11 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"strings"
+	"sync"
+
 	"github.com/pkg/errors"
 	_ "github.com/rclone/rclone/backend/all"
 	"github.com/rclone/rclone/fs"
@@ -12,10 +17,6 @@ import (
 	"github.com/rclone/rclone/vfs/vfscommon"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"os"
-	"path"
-	"strings"
-	"sync"
 )
 
 type rclonePath struct {
@@ -24,6 +25,11 @@ type rclonePath struct {
 }
 
 func splitRclonePath(pathStr string) (rclonePath, error) {
+
+	if pathStr == "" {
+		return rclonePath{}, fmt.Errorf("can't translate an empty string to an rclone path")
+	}
+
 	if pathStr[0] == '/' {
 		pathStr = pathStr[1:]
 	}
