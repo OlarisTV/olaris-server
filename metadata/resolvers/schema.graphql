@@ -41,6 +41,8 @@ type Query {
     folders(
       # Path argument as FileLocator path. Examples: 'rclone#gdrive/media/movies', 'local#/home/animazing/movies/'
       path: String!
+      # Whether or not to return the full path of the discovered folders
+      fullPath: Boolean = false 
     ): [String]!
 
     unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
