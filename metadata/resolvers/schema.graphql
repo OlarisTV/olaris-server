@@ -28,6 +28,7 @@ type Query {
     series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!
     season(uuid: String): Season!
     episode(uuid: String): Episode
+    nextEpisodes(uuid: String!, limit: Int): [Episode]!
     users: [User]!
     recentlyAdded: [MediaItem]
     upNext: [MediaItem]
