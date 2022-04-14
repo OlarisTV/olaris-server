@@ -25,5 +25,5 @@ func (r *MediaStatsResolver) SeasonCount() (int32, error) {
 }
 
 func (r *MediaStatsResolver) EpisodeCount() (int32, error) {
-	return db.GetEpisopdeCount()
+	return db.GetEpisodeCount()
 }
