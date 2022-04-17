@@ -3,7 +3,7 @@ package agents
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
 
 import (
-	"github.com/ryanbradynd05/go-tmdb"
+	"github.com/olaristv/go-tmdb"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
 

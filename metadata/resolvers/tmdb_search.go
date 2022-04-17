@@ -2,7 +2,8 @@ package resolvers
 
 import (
 	"context"
-	"github.com/ryanbradynd05/go-tmdb"
+
+	"github.com/olaristv/go-tmdb"
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 )
 

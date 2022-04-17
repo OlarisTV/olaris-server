@@ -1,11 +1,12 @@
 package metadata
 
 import (
-	"github.com/ryanbradynd05/go-tmdb"
+	"testing"
+
+	"github.com/olaristv/go-tmdb"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/olaris/olaris-server/metadata/agents/agentsfakes"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"testing"
 )
 
 // TODO(Leon Handreke): Merge this into our TMDB lib

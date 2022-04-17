@@ -19,7 +19,12 @@ type Series struct {
 	OriginalName string
 	Status       string
 	Type         string
-	Seasons      []*Season
+
+	NextAirDate       string
+	NextEpisodeNumber int
+	NextSeasonNumber  int
+
+	Seasons []*Season
 }
 
 // Season holds metadata information about seasons.

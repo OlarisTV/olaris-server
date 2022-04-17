@@ -23,8 +23,8 @@ type Subscription {
 
 # The query type, represents all of the entry points into our object graph
 type Query {
-    movies(uuid: String, offset: Int, limit: Int, sort: MovieSort, sortDirection: SortDirection): [Movie]!
     libraries: [Library]!
+    movies(uuid: String, offset: Int, limit: Int, sort: MovieSort, sortDirection: SortDirection): [Movie]!
     series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!
     season(uuid: String): Season!
     episode(uuid: String): Episode
@@ -203,6 +203,10 @@ type Series {
     type: String!
     uuid: String!
     unwatchedEpisodesCount: Int!
+    nextAirDate: String
+    nextEpisodeNumber: Int
+    # Returns which season the next episode is in, not the next season
+    nextSeasonNumber: Int
 }
 
 enum SeriesSort {

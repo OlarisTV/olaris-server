@@ -1,6 +1,9 @@
 package metadata
 
 import (
+	"math"
+	"sync"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -8,8 +11,6 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"math"
-	"sync"
 )
 
 type TmdbEpisodeKey struct {
@@ -42,7 +43,6 @@ func (m *MetadataManager) getSeriesLock(seriesID uint) *sync.RWMutex {
 func (m *MetadataManager) RefreshAllSeriesMetadata() {
 	series, err := db.FindAllSeries(nil)
 	if err != nil {
-
 		log.WithField("error", err.Error()).
 			Error("Failed to get series for forced metadata update")
 	}

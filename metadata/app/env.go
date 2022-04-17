@@ -3,6 +3,10 @@ package app
 
 import (
 	"fmt"
+	"math/rand"
+	"path"
+	"time"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -11,9 +15,6 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
-	"math/rand"
-	"path"
-	"time"
 )
 
 // MetadataContext is a container for all important vars.
@@ -90,6 +91,9 @@ func NewMDContext(
 	go func() {
 		for range metadataRefreshTicker.C {
 			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
+
+			// Refresh Metadata for series, we mainly do this to ensure we pickup nextEpisode data
+			env.MetadataManager.RefreshAllSeriesMetadata()
 		}
 	}()
 

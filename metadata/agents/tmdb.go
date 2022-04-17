@@ -1,11 +1,12 @@
 package agents
 
 import (
+	"time"
+
+	"github.com/olaristv/go-tmdb"
 	"github.com/pkg/errors"
-	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"time"
 )
 
 const tmdbAPIKey = "0cdacd9ab172ac6ff69c8d84b2c938a8"
@@ -70,6 +71,7 @@ func (a *TmdbAgent) UpdateSeasonMD(season *db.Season, seriesTmdbID int, seasonNu
 	season.Name = fullSeason.Name
 	season.TmdbID = fullSeason.ID
 	season.PosterPath = fullSeason.PosterPath
+
 	log.WithFields(log.Fields{"seasonName": season.Name, "tmdbId": season.TmdbID}).
 		Debugln("Found season metadata.")
 	return nil
@@ -87,6 +89,8 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 			Debugln("Could not grab full TV details.")
 		return err
 	}
+	log.WithFields(log.Fields{"seriesName": series.Name, "tmdbId": series.TmdbID}).
+		Debugln("Found Series metadata.")
 
 	firstAirDate, _ := ParseTmdbDate(fullTv.FirstAirDate)
 
@@ -99,6 +103,14 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 	series.Type = fullTv.Type
 	series.BackdropPath = fullTv.BackdropPath
 	series.PosterPath = fullTv.PosterPath
+
+	if fullTv.NextEpisodeToAir.ID > 0 {
+		log.WithFields(log.Fields{"nextEpisodeNumber": fullTv.NextEpisodeToAir.EpisodeNumber}).Debugln("Found next episode data")
+		series.NextAirDate = fullTv.NextEpisodeToAir.AirDate
+		series.NextEpisodeNumber = fullTv.NextEpisodeToAir.EpisodeNumber
+		series.NextSeasonNumber = fullTv.NextEpisodeToAir.SeasonNumber
+	}
+
 	return nil
 }
 

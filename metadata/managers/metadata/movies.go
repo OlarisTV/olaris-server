@@ -2,18 +2,19 @@ package metadata
 
 import (
 	"fmt"
+	"math"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/olaristv/go-tmdb"
 	errors "github.com/pkg/errors"
-	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"math"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 const xattrNameMovieTMDBID = "user.olaris.v1.movies.tmdb.id"
