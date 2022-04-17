@@ -65,10 +65,9 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 		Debugln("Looking to refresh metadata agent data.")
 	movie, err := db.FindMovieByUUID(UUID)
 	if err == nil {
-		// TODO(Leon Handreke): Pull these locks into the methods that actually touch the DB
-		//  structures
 		mhelpers.WithLock(func() {
 			m.RefreshMovieMetadata(movie)
+			db.SaveMovie(movie)
 		}, movie.UUID)
 		return true
 	}
@@ -77,6 +76,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	if err == nil {
 		mhelpers.WithLock(func() {
 			m.refreshSeriesMetadataFromAgent(series)
+			db.SaveSeries(series)
 		}, series.UUID)
 		return true
 	}
@@ -85,6 +85,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	if err == nil {
 		mhelpers.WithLock(func() {
 			m.refreshSeasonMetadataFromAgent(season)
+			db.SaveSeason(season)
 		}, season.UUID)
 		return true
 	}
@@ -93,6 +94,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	if err == nil {
 		mhelpers.WithLock(func() {
 			m.refreshEpisodeMetadataFromAgent(episode)
+			db.SaveEpisode(episode)
 		}, episode.UUID)
 		return true
 	}
