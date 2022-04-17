@@ -28,7 +28,7 @@ type Query {
     series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!
     season(uuid: String): Season!
     episode(uuid: String): Episode
-    nextEpisodes(uuid: String!, limit: Int): [Episode]!
+    nearbyEpisodes(uuid: String!, previousLimit: Int, nextLimit: Int): NearbyEpisodesResponse!
     users: [User]!
     recentlyAdded: [MediaItem]
     upNext: [MediaItem]
@@ -95,6 +95,11 @@ type Mutation {
 
     # Retag one or multiple EpisodeFiles
     updateEpisodeFileMetadata(input: UpdateEpisodeFileMetadataInput!): UpdateEpisodeFileMetadataPayload!
+}
+
+type NearbyEpisodesResponse {
+    previous: [Episode]!
+    next: [Episode]!
 }
 
 type LibraryResponse {

@@ -543,3 +543,27 @@ func GetNextEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
 	err := q.Find(&episodes).Error
 	return episodes, err
 }
+
+// GetPreviousEpisodes returns the next n episodes after the episode with the
+// provided UUID
+func GetPreviousEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
+	var episodes []Episode
+
+	q := db.Preload("Season").
+		Model(&Episode{}).
+		Joins("CROSS JOIN episodes target_episode").
+		Joins("INNER JOIN seasons ON seasons.id = episodes.season_id").
+		Joins("INNER JOIN seasons target_season ON target_episode.season_id = target_season.id").
+		Where("target_episode.uuid = ?", episodeUuid).
+		Where("seasons.series_id = target_season.series_id").
+		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num < target_episode.episode_num) OR seasons.season_number < target_season.season_number").
+		Order("seasons.season_number DESC").
+		Order("episodes.episode_num DESC")
+
+	if limit != nil {
+		q = q.Limit(*limit)
+	}
+
+	err := q.Find(&episodes).Error
+	return episodes, err
+}
