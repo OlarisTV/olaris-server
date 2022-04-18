@@ -1,7 +1,10 @@
 FROM debian:stretch as build
 
 RUN apt-get -y update && \
-    apt-get install -y --no-install-recommends git unzip
+    apt-get install -y --no-install-recommends ca-certificates curl g++ gcc git libc6-dev make unzip && \
+    curl -sL https://golang.org/dl/go1.18.linux-amd64.tar.gz | tar -C /usr/local -xz
+
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 COPY . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server

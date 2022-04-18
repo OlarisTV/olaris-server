@@ -1,6 +1,6 @@
 module gitlab.com/olaris/olaris-server
 
-go 1.17
+go 1.18
 
 replace github.com/jlaffaye/ftp => github.com/rclone/ftp v1.0.0-210902f
 
