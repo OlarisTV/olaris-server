@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
@@ -348,6 +349,11 @@ func FindEpisodeByNumber(season *Season, episodeNum int) (*Episode, error) {
 	return findEpisode("season_id = ? AND episode_num = ?", season.ID, episodeNum)
 }
 
+// FindEpisodeByTMDB finds an Episode by external db id (TMDB)
+func FindEpisodeByExternalID(tmdb_id int) (*Episode, error) {
+	return findEpisode("tmdb_id = ?", tmdb_id)
+}
+
 func findEpisode(where ...interface{}) (*Episode, error) {
 	var episode Episode
 
@@ -365,6 +371,14 @@ func FindAllEpisodes() ([]*Episode, error) {
 	if err := db.
 		Preload("EpisodeFiles.Streams").
 		Find(&episodes).Error; err != nil {
+		return nil, err
+	}
+	return episodes, nil
+}
+
+func FindAllUpcomingEpisodes() ([]*Episode, error) {
+	var episodes []*Episode
+	if err := db.Where("air_date >= ?", time.Now()).Find(&episodes).Error; err != nil {
 		return nil, err
 	}
 	return episodes, nil

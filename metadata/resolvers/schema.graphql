@@ -23,6 +23,7 @@ type Subscription {
 
 # The query type, represents all of the entry points into our object graph
 type Query {
+    upcomingEpisodes: [Episode]!
     libraries: [Library]!
     movies(uuid: String, offset: Int, limit: Int, sort: MovieSort, sortDirection: SortDirection): [Movie]!
     series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!

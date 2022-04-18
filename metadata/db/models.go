@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Defines various mediatypes, only Movie and Series support atm.
@@ -83,6 +83,6 @@ func RecentlyAddedMovies(userID uint) (movies []*Movie) {
 
 // RecentlyAddedEpisodes returns a list of the latest 10 episodes added to the database.
 func RecentlyAddedEpisodes(userID uint) (eps []*Episode) {
-	db.Select("episodes.*, play_states.*").Preload("EpisodeFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = episodes.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("episodes.created_at DESC").Limit(10).Find(&eps)
+	db.Select("episodes.*, play_states.*").Joins("JOIN episode_files ON episode_files.episode_id  = episodes.id").Preload("EpisodeFiles.Streams").Joins("LEFT JOIN play_states ON play_states.media_uuid = episodes.uuid").Where("play_states.user_id = ? OR play_states.user_id IS NULL", userID).Where("tmdb_id != 0").Order("episodes.created_at DESC").Limit(10).Find(&eps)
 	return eps
 }

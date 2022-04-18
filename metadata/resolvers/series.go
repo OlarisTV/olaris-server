@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
@@ -43,6 +44,24 @@ func (r *Resolver) Episode(ctx context.Context, args *mustUUIDArgs) *EpisodeReso
 func (r *Resolver) Season(ctx context.Context, args *mustUUIDArgs) *SeasonResolver {
 	season, _ := db.FindSeasonByUUID(*args.UUID)
 	return &SeasonResolver{r: *season}
+}
+
+func (r *Resolver) UpcomingEpisodes(ctx context.Context) []*EpisodeResolver {
+	var resolvers []*EpisodeResolver
+
+	episodes, err := db.FindAllUpcomingEpisodes()
+
+	if err != nil {
+		log.Warnln("Could not find upcoming episodes:", err)
+	} else {
+		log.Debugln(episodes)
+		for _, s := range episodes {
+			resolvers = append(resolvers, &EpisodeResolver{r: *s})
+		}
+	}
+
+	return resolvers
+
 }
 
 // Series return series.
