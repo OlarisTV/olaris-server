@@ -4,8 +4,8 @@ FROM base AS olaris-dev
 
 RUN apt-get -y update && \
     apt-get install -y apt-transport-https curl g++ gcc git gnupg libc6-dev make tar && \
-    curl -sL https://golang.org/dl/go1.17.linux-amd64.tar.gz | tar -C /usr/local -xz \
-    curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
+    curl -sL https://golang.org/dl/go1.18.linux-amd64.tar.gz | tar -C /usr/local -xz && \
+    curl -sL https://deb.nodesource.com/setup_lts.x | bash - && \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
     apt-get -y update && apt-get install -y nodejs yarn make && \
@@ -15,7 +15,7 @@ RUN apt-get -y update && \
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 
-RUN go get github.com/cortesi/modd/cmd/modd
+RUN go install github.com/cortesi/modd/cmd/modd@latest
 
 ADD . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server

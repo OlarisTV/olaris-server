@@ -66,6 +66,12 @@ docker-push:
 	docker push olaristv/olaris-server:latest
 	docker push olaristv/olaris-server:$(RELEASE_IDENTIFIER)
 
+docker-dev-build:
+	docker build -f Dockerfile.dev . -t olaristv/olaris-server:dev
+
+docker-from-ci-build:
+	docker build -f Dockerfile.from-ci . -t olaristv/olaris-server:from-ci
+
 docker-from-ci-build-tag-push:
 	docker build -f Dockerfile.from-ci . -t olaristv/olaris-server:from-ci
 	docker tag olaristv/olaris-server:from-ci olaristv/olaris-server:from-ci-$(RELEASE_IDENTIFIER)
