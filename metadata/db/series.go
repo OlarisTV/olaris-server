@@ -514,8 +514,50 @@ func GetSeasonCount() (int32, error) {
 }
 
 // GetEpisodeCount returns the number of episodes in the database
-func GetEpisopdeCount() (int32, error) {
+func GetEpisodeCount() (int32, error) {
 	count := 0
 	err := db.Model(&Episode{}).Count(&count).Error
 	return int32(count), err
+}
+
+// GetNextEpisodes returns the next n episodes after the episode with the
+// provided UUID
+func GetNextEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
+	var episodes []Episode
+
+	q := db.Preload("Season").
+		Model(&Episode{}).
+		Joins("CROSS JOIN episodes target_episode").
+		Joins("INNER JOIN seasons ON seasons.id = episodes.season_id").
+		Joins("INNER JOIN seasons target_season ON target_episode.season_id = target_season.id").
+		Where("target_episode.uuid = ?", episodeUuid).
+		Where("seasons.series_id = target_season.series_id").
+		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num > target_episode.episode_num) OR seasons.season_number > target_season.season_number").
+		Order("seasons.season_number").
+		Order("episodes.episode_num").
+		Limit(limit)
+
+	err := q.Find(&episodes).Error
+	return episodes, err
+}
+
+// GetPreviousEpisodes returns the next n episodes after the episode with the
+// provided UUID
+func GetPreviousEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
+	var episodes []Episode
+
+	q := db.Preload("Season").
+		Model(&Episode{}).
+		Joins("CROSS JOIN episodes target_episode").
+		Joins("INNER JOIN seasons ON seasons.id = episodes.season_id").
+		Joins("INNER JOIN seasons target_season ON target_episode.season_id = target_season.id").
+		Where("target_episode.uuid = ?", episodeUuid).
+		Where("seasons.series_id = target_season.series_id").
+		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num < target_episode.episode_num) OR seasons.season_number < target_season.season_number").
+		Order("seasons.season_number DESC").
+		Order("episodes.episode_num DESC").
+		Limit(limit)
+
+	err := q.Find(&episodes).Error
+	return episodes, err
 }
