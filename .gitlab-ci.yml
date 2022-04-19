@@ -10,20 +10,12 @@ before_script:
   - export PATH=$PATH:/usr/local/go/bin
   - make ready-ci
 
-stages:
-    - format
-    - test
-    - build
-    - dist-linux-amd64
-
 format:
-    stage: format
     script:
       - make fmt
       - make vet
 
 build:
-    stage: build
     script:
       - make build-linux
     artifacts:
@@ -37,7 +29,6 @@ build:
 
 # This stage is to have a small downloadable package for the most common platform
 dist-linux-amd64:
-    stage: dist-linux-amd64
     script:
       - GOOS=linux GOARCH=amd64 make dist
       - cp -r dist/olaris-linux-amd64-*.zip $CI_PROJECT_DIR/
@@ -47,6 +38,5 @@ dist-linux-amd64:
       expire_in: 4 week
 
 test:
-    stage: test
     script:
       - make test
