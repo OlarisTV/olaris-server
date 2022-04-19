@@ -560,7 +560,7 @@ func GetEpisodeCount() (int32, error) {
 
 // GetNextEpisodes returns the next n episodes after the episode with the
 // provided UUID
-func GetNextEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
+func GetNextEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 	var episodes []Episode
 
 	q := db.Preload("Season").
@@ -572,11 +572,8 @@ func GetNextEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
 		Where("seasons.series_id = target_season.series_id").
 		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num > target_episode.episode_num) OR seasons.season_number > target_season.season_number").
 		Order("seasons.season_number").
-		Order("episodes.episode_num")
-
-	if limit != nil {
-		q = q.Limit(*limit)
-	}
+		Order("episodes.episode_num").
+		Limit(limit)
 
 	err := q.Find(&episodes).Error
 	return episodes, err
@@ -584,7 +581,7 @@ func GetNextEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
 
 // GetPreviousEpisodes returns the next n episodes after the episode with the
 // provided UUID
-func GetPreviousEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
+func GetPreviousEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 	var episodes []Episode
 
 	q := db.Preload("Season").
@@ -596,11 +593,8 @@ func GetPreviousEpisodes(episodeUuid string, limit *int32) ([]Episode, error) {
 		Where("seasons.series_id = target_season.series_id").
 		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num < target_episode.episode_num) OR seasons.season_number < target_season.season_number").
 		Order("seasons.season_number DESC").
-		Order("episodes.episode_num DESC")
-
-	if limit != nil {
-		q = q.Limit(*limit)
-	}
+		Order("episodes.episode_num DESC").
+		Limit(limit)
 
 	err := q.Find(&episodes).Error
 	return episodes, err
