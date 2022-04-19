@@ -9,17 +9,14 @@ import (
 // nearbyEpisodes query
 type NearbyEpisodesQueryArgs struct {
 	Uuid          string
-	PreviousLimit *int32
-	NextLimit     *int32
+	PreviousLimit int32
+	NextLimit     int32
 }
 
-// NearbyEpisodes returns the next "x" episodes before and "y" episodes after
-// the one identified by the provided UUID. If no limit is provided, it will
-// return all of them.
+// NearbyEpisodes returns the next "x" episodes before and after the episode
+// identified by the provided UUID.
 func (r *Resolver) NearbyEpisodes(_ context.Context, args *NearbyEpisodesQueryArgs) *NearbyEpisodesResolver {
-	return &NearbyEpisodesResolver{
-		args: args,
-	}
+	return &NearbyEpisodesResolver{args: args}
 }
 
 // NearbyEpisodesResolver resolves the episodes directly before and after any
@@ -29,7 +26,7 @@ type NearbyEpisodesResolver struct {
 }
 
 // Previous returns the previous n episodes before the one identified by the
-// given UUID. If no limit is provided, it will return all of them.
+// given UUID.
 func (r *NearbyEpisodesResolver) Previous() ([]*EpisodeResolver, error) {
 	episodes, err := db.GetPreviousEpisodes(r.args.Uuid, r.args.PreviousLimit)
 
@@ -42,7 +39,6 @@ func (r *NearbyEpisodesResolver) Previous() ([]*EpisodeResolver, error) {
 }
 
 // Next returns the next n episodes before the one identified by the given UUID.
-// If no limit is provided, it will return all of them.
 func (r *NearbyEpisodesResolver) Next() ([]*EpisodeResolver, error) {
 	episodes, err := db.GetNextEpisodes(r.args.Uuid, r.args.NextLimit)
 

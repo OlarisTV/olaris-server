@@ -28,7 +28,6 @@ type Query {
     series(uuid: String, offset: Int, limit: Int, sort: SeriesSort, sortDirection: SortDirection): [Series]!
     season(uuid: String): Season!
     episode(uuid: String): Episode
-    nearbyEpisodes(uuid: String!, previousLimit: Int, nextLimit: Int): NearbyEpisodesResponse!
     users: [User]!
     recentlyAdded: [MediaItem]
     upNext: [MediaItem]
@@ -37,6 +36,16 @@ type Query {
     # List of all remotes found in a rclone config file if one exists.
     remotes: [String]!
     mediaStats: MediaStatsResponse!
+
+    # List episodes before and after a given episode
+    nearbyEpisodes(
+        # The target episode's UUID
+        uuid: String!,
+        # The maximum number of previous episodes to return
+        previousLimit: Int = 10,
+        # The maximum number of next episodes to return
+        nextLimit: Int = 10
+    ): NearbyEpisodesResponse!
 
     # List folders in the given path.
     folders(
