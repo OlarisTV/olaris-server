@@ -38,7 +38,6 @@ dist-linux-amd64:
       expire_in: 4 week
 
 docker:
-    stage: docker
     image:
       name: docker:stable
     services:
