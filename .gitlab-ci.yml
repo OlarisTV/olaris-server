@@ -10,12 +10,22 @@ before_script:
   - export PATH=$PATH:/usr/local/go/bin
   - make ready-ci
 
+stages:
+  - format
+  - test
+  - build
+
 format:
     script:
       - make fmt
       - make vet
 
+test:
+    script:
+      - make test
+
 build:
+    stage: build
     script:
       - make build-linux
     artifacts:
@@ -29,6 +39,7 @@ build:
 
 # This stage is to have a small downloadable package for the most common platform
 dist-linux-amd64:
+    stage: build
     script:
       - GOOS=linux GOARCH=amd64 make dist
       - cp -r dist/olaris-linux-amd64-*.zip $CI_PROJECT_DIR/
@@ -38,6 +49,7 @@ dist-linux-amd64:
       expire_in: 4 week
 
 docker:
+    stage: build
     image:
       name: docker:stable
     services:
@@ -53,7 +65,3 @@ docker:
       - make docker-build
       - make docker-dev-build
       - make docker-from-ci-build
-
-test:
-    script:
-      - make test
