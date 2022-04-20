@@ -37,6 +37,24 @@ dist-linux-amd64:
         - olaris-linux-amd64-*.zip
       expire_in: 4 week
 
+docker:
+    stage: docker
+    image:
+      name: docker:stable
+    services:
+      - name: docker:dind
+        alias: dockerdaemon
+    variables:
+      DOCKER_HOST: tcp://dockerdaemon:2375/
+      DOCKER_DRIVER: overlay2
+      DOCKER_TLS_CERTDIR: ""
+    before_script:
+      - apk --no-cache add make
+    script:
+      - make docker-build
+      - make docker-dev-build
+      - make docker-from-ci-build
+
 test:
     script:
       - make test
