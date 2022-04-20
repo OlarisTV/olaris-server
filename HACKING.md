@@ -55,6 +55,10 @@ By default, olaris-server will open an existing database or create a new one and
 You can run the compiled binary as follows:
     `build/olaris --config_dir ~/olaris_dev_cfg/`
 
+## Using Docker
+
+Alternatively you can use the Docker development issue which supports hot-reloading of the codebase while you work on it. You can build the image using `docker build - < Dockerfile.dev -t olaris-dev` from the olaris-server repository. Once built you can run it using `docker run -p 8080:8080 -v $PWD:/go/src/gitlab.com/olaris/olaris-server -it olaris-dev /go/bin/modd`
+
 # Merging your changes upstream
 
 So you've fixed a bug or added a new feature and now you want to merge your changes back to the main project so everyone can benefit.
