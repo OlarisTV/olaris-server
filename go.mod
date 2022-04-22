@@ -7,7 +7,6 @@ replace github.com/jlaffaye/ftp => github.com/rclone/ftp v1.0.0-210902f
 require (
 	github.com/Jeffail/tunny v0.1.4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/goava/di v1.11.1
 	github.com/google/uuid v1.3.0
@@ -18,6 +17,7 @@ require (
 	github.com/graph-gophers/graphql-transport-ws v0.0.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
+	github.com/olaristv/go-tmdb v0.0.0-20220417152947-3cc0c7d57226
 	github.com/pkg/errors v0.9.1
 	github.com/rclone/rclone v1.57.0
 	github.com/rs/cors v1.8.2
@@ -43,7 +43,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
-	github.com/OlarisTV/go-tmdb v0.0.0-20220417152947-3cc0c7d57226 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/Unknwon/goconfig v0.0.0-20200908083735-df7de6a44db8 // indirect
 	github.com/abbot/go-http-auth v0.4.0 // indirect
@@ -100,7 +99,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/ncw/go-acd v0.0.0-20201019170801-fe55f33415b1 // indirect
 	github.com/ncw/swift/v2 v2.0.1 // indirect
-	github.com/olaristv/go-tmdb v0.0.0-20220417152947-3cc0c7d57226 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
