@@ -577,8 +577,8 @@ github.com/nsf/termbox-go v1.1.1/go.mod h1:T0cTdVuOwf7pHQNtfhnEbzHbcNyCEcVU4YPpo
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
-github.com/olaristv/go-tmdb v0.0.0-20220417152947-3cc0c7d57226 h1:KbjH2YViAaJF6gBBV5Y0GDz+fByDFQPyffnAaEXafKA=
-github.com/olaristv/go-tmdb v0.0.0-20220417152947-3cc0c7d57226/go.mod h1:/kaHLkgOsQa1iH9BeZgtL4nHr4ifDjfQ+mNf5E3fasU=
+github.com/olaristv/go-tmdb v0.0.0-20220422132654-a64c6a92749f h1:RkV+Ad81/Bt+ekq7Ktooi1a/rMpC5v00iSBGzKJrojc=
+github.com/olaristv/go-tmdb v0.0.0-20220422132654-a64c6a92749f/go.mod h1:/kaHLkgOsQa1iH9BeZgtL4nHr4ifDjfQ+mNf5E3fasU=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.12.0/go.mod h1:oUhWkIvk5aDxtKvDDuw8gItl8pKl42LzjC9KZE0HfGg=

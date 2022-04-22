@@ -17,7 +17,7 @@ require (
 	github.com/graph-gophers/graphql-transport-ws v0.0.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
-	github.com/olaristv/go-tmdb v0.0.0-20220417152947-3cc0c7d57226
+	github.com/olaristv/go-tmdb v0.0.0-20220422132654-a64c6a92749f
 	github.com/pkg/errors v0.9.1
 	github.com/rclone/rclone v1.57.0
 	github.com/rs/cors v1.8.2
