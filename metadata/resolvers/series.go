@@ -118,23 +118,6 @@ func (r *SeriesResolver) FirstAirDate() string {
 	return r.r.FirstAirDate
 }
 
-// FirstAirDate returns next air date.
-func (r *SeriesResolver) NextAirDate() *string {
-	return &r.r.NextAirDate
-}
-
-// NextEpisodeNumber returns next episode.
-func (r *SeriesResolver) NextEpisodeNumber() *int32 {
-	n := int32(r.r.NextEpisodeNumber)
-	return &n
-}
-
-// NextSeasonNumber returns which season t.he next episode is in
-func (r *SeriesResolver) NextSeasonNumber() *int32 {
-	n := int32(r.r.NextSeasonNumber)
-	return &n
-}
-
 // Status returns serie status.
 func (r *SeriesResolver) Status() string {
 	return r.r.Status

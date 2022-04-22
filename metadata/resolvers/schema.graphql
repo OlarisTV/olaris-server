@@ -204,10 +204,6 @@ type Series {
     type: String!
     uuid: String!
     unwatchedEpisodesCount: Int!
-    nextAirDate: String
-    nextEpisodeNumber: Int
-    # Returns which season the next episode is in, not the next season
-    nextSeasonNumber: Int
 }
 
 enum SeriesSort {

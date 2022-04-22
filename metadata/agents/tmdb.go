@@ -3,7 +3,6 @@ package agents
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/olaristv/go-tmdb"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -87,7 +86,7 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 			WithFields(log.Fields{
 				"tmdbID": tmdbID,
 				"error":  err}).
-			Debugln("Could not grab full TV details.")
+			Debugln("Could not grab full series details.")
 		return err
 	}
 	log.WithFields(log.Fields{"seriesName": series.Name, "tmdbId": series.TmdbID}).
@@ -106,30 +105,9 @@ func (a *TmdbAgent) UpdateSeriesMD(series *db.Series, tmdbID int) error {
 	series.PosterPath = fullTv.PosterPath
 
 	if fullTv.NextEpisodeToAir.ID > 0 {
-		log.WithFields(log.Fields{"nextEpisodeNumber": fullTv.NextEpisodeToAir.EpisodeNumber, "nextSeasonNumber": fullTv.NextEpisodeToAir.SeasonNumber, "ID": fullTv.NextEpisodeToAir.ID}).Debugln("Found next episode data")
-		_, err := db.FindEpisodeByExternalID(fullTv.NextEpisodeToAir.ID)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				log.Debugln("Found a new episode not in the database yet, adding it now.")
-				episode := db.Episode{AirDate: fullTv.NextEpisodeToAir.AirDate, EpisodeNum: fullTv.NextEpisodeToAir.EpisodeNumber, SeasonNum: fullTv.NextEpisodeToAir.SeasonNumber}
-				episode.TmdbID = fullTv.NextEpisodeToAir.ID
-
-				season, err := db.FindSeasonBySeasonNumber(series, episode.SeasonNum)
-				if err != nil {
-					if errors.Is(err, gorm.ErrRecordNotFound) {
-						log.Debugln("Couldn't find season, adding new one")
-						season = &db.Season{SeriesID: series.ID, SeasonNumber: episode.SeasonNum}
-						a.UpdateSeasonMD(season, series.TmdbID, episode.SeasonNum)
-						db.SaveSeason(season)
-					}
-				}
-				episode.SeasonID = season.ID
-				a.UpdateEpisodeMD(&episode, series.TmdbID, episode.SeasonNum, episode.EpisodeNum)
-				db.CreateEpisode(&episode)
-			}
-		} else {
-			log.Debugln("Episode already in database")
-		}
+		series.NextEpisodeID = fullTv.NextEpisodeToAir.ID
+		series.NextEpisodeNum = fullTv.NextEpisodeToAir.EpisodeNumber
+		series.NextSeasonNum = fullTv.NextEpisodeToAir.SeasonNumber
 	}
 
 	return nil

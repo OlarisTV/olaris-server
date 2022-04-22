@@ -21,9 +21,9 @@ type Series struct {
 	Status       string
 	Type         string
 
-	NextAirDate       string
-	NextEpisodeNumber int
-	NextSeasonNumber  int
+	NextEpisodeID  int `gorm:"-:all"`
+	NextSeasonNum  int `gorm:"-:all"`
+	NextEpisodeNum int `gorm:"-:all"`
 
 	Seasons []*Season
 }
@@ -208,6 +208,25 @@ func FindSeriesByTmdbID(tmdbID int) (*Series, error) {
 	return findSeries("tmdb_id = ?", tmdbID)
 }
 
+func FindAiringSeries() (series []Series, err error) {
+	r := db.Where("status = 'Returning Series'").Find(&series)
+	return series, r.Error
+}
+
+func CleanupAiredEpisodes() {
+	var ids []uint
+	db.Table("episodes").Select("episodes.id").Joins("LEFT JOIN episode_files ON episodes.id = episode_files.episode_id").
+		Where("episode_files.uuid IS NULL AND episodes.air_date < DATE(?)", time.Now()).
+		Pluck("episodes.id", &ids)
+
+	for _, i := range ids {
+		if i > 0 {
+			log.WithField("episodeID", i).Debugln("Removing Episode with no files and air_date in the past.")
+			db.Unscoped().Delete(&Episode{}, i)
+		}
+	}
+}
+
 // FindSeries finds a series by it's ID
 func FindSeries(seriesID uint) (*Series, error) {
 	return findSeries("id = ?", seriesID)
@@ -378,7 +397,7 @@ func FindAllEpisodes() ([]*Episode, error) {
 
 func FindAllUpcomingEpisodes() ([]*Episode, error) {
 	var episodes []*Episode
-	if err := db.Where("air_date >= ?", time.Now()).Find(&episodes).Error; err != nil {
+	if err := db.Where("air_date >= DATE(?)", time.Now()).Find(&episodes).Error; err != nil {
 		return nil, err
 	}
 	return episodes, nil

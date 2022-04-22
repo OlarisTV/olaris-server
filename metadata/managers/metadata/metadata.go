@@ -40,21 +40,25 @@ func NewMetadataManager(agent agents.MetadataRetrievalAgent) *MetadataManager {
 func (m *MetadataManager) RefreshAgentMetadataWithMissingArt() {
 	log.Debugln("Checking and updating media items for missing art.")
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
+
 	uuids := make(chan string, runtime.NumCPU())
 
 	missingItems := db.ItemsWithMissingMetadata()
-	log.Debugln(len(missingItems), " items appear to be missing art.")
-	for _, UUID := range missingItems {
-		go func(UUID string) {
-			defer wg.Done()
-			uuids <- UUID
-			m.RefreshAgentMetadataForUUID(UUID)
-			<-uuids
-		}(UUID)
+	if len(missingItems) > 0 {
+		wg.Add(1)
+		log.Debugln(len(missingItems), " items appear to be missing art.")
+		for _, UUID := range missingItems {
+			go func(UUID string) {
+				defer wg.Done()
+				uuids <- UUID
+				m.RefreshAgentMetadataForUUID(UUID)
+				<-uuids
+			}(UUID)
+		}
 	}
 
 	wg.Wait()
+	log.Debugln("Done updating media items with missing art.")
 }
 
 // RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
@@ -74,8 +78,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	series, err := db.FindSeriesByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.refreshSeriesMetadataFromAgent(series)
-			db.SaveSeries(series)
+			m.RefreshSeriesMetadata(series)
 		}, series.UUID)
 		return true
 	}

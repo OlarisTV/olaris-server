@@ -38,6 +38,23 @@ func (m *MetadataManager) getSeriesLock(seriesID uint) *sync.RWMutex {
 	return v.(*sync.RWMutex)
 }
 
+// RefreshRunningSeriesMetadata loops over all series that are still airing and updates their metadata
+// We use this specifically to grab episodes that are airing next.
+func (m *MetadataManager) RefreshRunningSeriesMetadata() {
+	log.Debugln("Updating running series metadata")
+
+	series, err := db.FindAiringSeries()
+	if err != nil {
+		log.WithField("error", err.Error()).
+			Error("Failed to get running series.")
+	}
+	for _, s := range series {
+		m.RefreshSeriesMetadata(&s)
+	}
+
+	db.CleanupAiredEpisodes()
+}
+
 // RefreshAllSeriesMetadata refreshes all data from the agent and updates the database record.
 // TODO(Leon Handreke): Queue these updates async
 func (m *MetadataManager) RefreshAllSeriesMetadata() {
@@ -65,6 +82,13 @@ func (m *MetadataManager) RefreshSeriesMetadata(series *db.Series) error {
 	if err := m.refreshSeriesMetadataFromAgent(series); err != nil {
 		return err
 	}
+
+	if series.NextEpisodeID != 0 {
+		log.WithFields(log.Fields{"name": series.Name, "episodeID": series.NextEpisodeID, "episodeNum": series.NextEpisodeNum}).
+			Println("Found upcoming Episode")
+		m.GetOrCreateEpisodeByTmdbID(series.TmdbID, series.NextSeasonNum, series.NextEpisodeNum)
+	}
+
 	if err := db.SaveSeries(series); err != nil {
 		return err
 	}
@@ -288,6 +312,7 @@ func (m *MetadataManager) getOrCreateSeriesByTmdbID(
 	if err := m.refreshSeriesMetadataFromAgent(series); err != nil {
 		return nil, err
 	}
+
 	if err := db.SaveSeries(series); err != nil {
 		return nil, err
 	}

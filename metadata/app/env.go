@@ -87,13 +87,17 @@ func NewMDContext(
 		MetadataManager:        metadata.NewMetadataManager(agent),
 	}
 
-	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
+	metadataRefreshTicker := time.NewTicker(15 * time.Second)
 	go func() {
 		for range metadataRefreshTicker.C {
+			log.Debugln("Running periodic jobs")
+
 			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
 
-			// Refresh Metadata for series, we mainly do this to ensure we pickup nextEpisode data
-			env.MetadataManager.RefreshAllSeriesMetadata()
+			// Refresh running series to pick up episodes that might be airing next
+			env.MetadataManager.RefreshRunningSeriesMetadata()
+
+			metadataRefreshTicker.Reset(4 * time.Hour)
 		}
 	}()
 
