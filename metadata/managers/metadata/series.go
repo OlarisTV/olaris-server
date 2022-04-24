@@ -128,7 +128,6 @@ func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) erro
 // that uniquely identify the episode (on TMDB)
 func (m *MetadataManager) getEpisodeKeyFromFilename(
 	episodeFile *db.EpisodeFile, ignoreYear bool) (*TmdbEpisodeKey, error) {
-	log.Debugln(ignoreYear)
 	parsedInfo := parsers.ParseSeriesName(episodeFile.FilePath)
 
 	// Find a series for this Episode
