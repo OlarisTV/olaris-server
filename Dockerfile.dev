@@ -8,7 +8,7 @@ RUN apt-get -y update && \
     curl -sL https://deb.nodesource.com/setup_lts.x | bash - && \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt-get -y update && apt-get install -y nodejs yarn make && \
+    apt-get -y update && apt-get install -y nodejs yarn make unzip && \
     apt-get autoremove -y && \
     apt-get clean -y
 
@@ -22,6 +22,6 @@ WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
 RUN mkdir /var/media
 
-EXPOSE 8080
+CMD /go/bin/modd
 
-ENTRYPOINT ["/bin/bash", "-c"]
+EXPOSE 8080
