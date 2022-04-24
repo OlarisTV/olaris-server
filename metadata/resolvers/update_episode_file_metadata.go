@@ -29,8 +29,6 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		Input UpdateEpisodeFileMetadataInput
 	},
 ) *UpdateEpisodeFileMetadataPayloadResolver {
-	log.Debugln("0")
-
 	var err error
 	err = ifAdmin(ctx)
 	if err != nil {
@@ -38,17 +36,13 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 	}
 
 	var episodeFiles []*db.EpisodeFile
-	log.Debugln("1")
 	var episodeFileUUIDs []*string
 
 	if args.Input.EpisodeFileUUID != nil {
 		episodeFileUUIDs = *args.Input.EpisodeFileUUID
 	}
 
-	log.Debugln("2")
-
 	if len(episodeFileUUIDs) > 0 {
-		log.Debugln("Received EpisodeFileUUIDs")
 		for _, e := range episodeFileUUIDs {
 			episodeFile, err := db.FindEpisodeFileByUUID(*e)
 			if err != nil {
