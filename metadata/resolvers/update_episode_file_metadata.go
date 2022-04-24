@@ -2,16 +2,17 @@ package resolvers
 
 import (
 	"context"
+	"sync"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"sync"
 )
 
 // UpdateEpisodeFileMetadataInput is a request
 type UpdateEpisodeFileMetadataInput struct {
-	EpisodeFileUUID *string
+	EpisodeFileUUID *[]*string
 	SeriesUUID      *string
 	TmdbID          int32
 }
@@ -28,19 +29,35 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 		Input UpdateEpisodeFileMetadataInput
 	},
 ) *UpdateEpisodeFileMetadataPayloadResolver {
+	log.Debugln("0")
+
 	var err error
 	err = ifAdmin(ctx)
 	if err != nil {
 		return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
 	}
+
 	var episodeFiles []*db.EpisodeFile
+	log.Debugln("1")
+	var episodeFileUUIDs []*string
+
 	if args.Input.EpisodeFileUUID != nil {
-		episodeFile, err := db.FindEpisodeFileByUUID(*args.Input.EpisodeFileUUID)
-		if err != nil {
-			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
+		episodeFileUUIDs = *args.Input.EpisodeFileUUID
+	}
+
+	log.Debugln("2")
+
+	if len(episodeFileUUIDs) > 0 {
+		log.Debugln("Received EpisodeFileUUIDs")
+		for _, e := range episodeFileUUIDs {
+			episodeFile, err := db.FindEpisodeFileByUUID(*e)
+			if err != nil {
+				return &UpdateEpisodeFileMetadataPayloadResolver{error: err}
+			}
+			episodeFiles = append(episodeFiles, episodeFile)
 		}
-		episodeFiles = append(episodeFiles, episodeFile)
 	} else if args.Input.SeriesUUID != nil {
+		log.Debugln("Received SeriesUUID")
 		episodeFiles, err = findEpisodeFilesForSeries(*args.Input.SeriesUUID)
 		if err != nil {
 			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}

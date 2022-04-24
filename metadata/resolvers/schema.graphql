@@ -356,13 +356,14 @@ type UpdateMovieFileMetadataPayload {
 }
 
 input UpdateEpisodeFileMetadataInput {
-    # UUID of the episode file to update
-    episodeFileUUID: String
-    # UUID of the series for which all EpisodeFiles should be updated.
+    # An array of UUIDs of the episodes file to update.
+    episodeFileUUID: [String]
+
+    # Alternatively a UUID of the series for which all EpisodeFiles should be updated to the provided tmdbID.
     # episodeFileUUID and seriesUUID are mutually exclusive.
     seriesUUID: String
 
-    # TMDB ID to update with. The mutation will retrieve the details from TMDB and update the
+    # Series tmdbID to update the episode/series with. The mutation will retrieve the details from TMDB and update the
     # item appropriately.
     tmdbID: Int!
 }
