@@ -2,6 +2,11 @@ package metadata
 
 import (
 	"fmt"
+	"math"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	errors "github.com/pkg/errors"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
@@ -10,10 +15,6 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"math"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 const xattrNameMovieTMDBID = "user.olaris.v1.movies.tmdb.id"
@@ -100,7 +101,7 @@ func (m *MetadataManager) getMovieTMDBIDFromFilename(
 		log.WithFields(log.Fields{
 			"title": parsedInfo.Title,
 			"year":  parsedInfo.Year,
-		}).Warnln("Could not find match based on parsed title and given year.")
+		}).Warnln("Could not find Movie match based on parsed title and given year.")
 
 		return 0, false, nil
 	}

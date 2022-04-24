@@ -1,6 +1,9 @@
 package metadata
 
 import (
+	"math"
+	"sync"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/olaris/olaris-server/filesystem"
@@ -8,8 +11,6 @@ import (
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/parsers"
-	"math"
-	"sync"
 )
 
 type TmdbEpisodeKey struct {
@@ -126,26 +127,36 @@ func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) erro
 // Attempt to parse a filename and determine the three values
 // that uniquely identify the episode (on TMDB)
 func (m *MetadataManager) getEpisodeKeyFromFilename(
-	episodeFile *db.EpisodeFile) (*TmdbEpisodeKey, error) {
-
+	episodeFile *db.EpisodeFile, ignoreYear bool) (*TmdbEpisodeKey, error) {
+	log.Debugln(ignoreYear)
 	parsedInfo := parsers.ParseSeriesName(episodeFile.FilePath)
 
 	// Find a series for this Episode
 	var options = make(map[string]string)
-	if parsedInfo.Year != "" {
+
+	if !ignoreYear && parsedInfo.Year != "" {
 		options["first_air_date_year"] = parsedInfo.Year
 	}
+
 	searchRes, err := m.agent.TmdbSearchTv(parsedInfo.Title, options)
+
 	if err != nil {
 		return nil, err
 	}
+
 	if len(searchRes.Results) == 0 {
 		log.WithFields(log.Fields{
 			"title": parsedInfo.Title,
 			"year":  parsedInfo.Year,
-		}).Warnln("Could not find match based on parsed title and given year.")
+		}).Warnln("Could not find Episode match based on parsed title and given year.")
 
-		return nil, errors.New("Could not find match in TMDB ID for given filename")
+		if !ignoreYear {
+			log.Debugln("Omiting year and trying to search again")
+			return m.getEpisodeKeyFromFilename(episodeFile, true)
+		} else {
+			return nil, errors.New("Could not find match in TMDB ID for given filename")
+		}
+
 	}
 
 	var bestDistance = math.MaxInt32
@@ -202,7 +213,7 @@ func (m *MetadataManager) getEpisodeKey(episodeFile *db.EpisodeFile) (*TmdbEpiso
 		return episodeKey, nil
 	}
 
-	return m.getEpisodeKeyFromFilename(episodeFile)
+	return m.getEpisodeKeyFromFilename(episodeFile, false)
 }
 
 // GetOrCreateEpisodeForEpisodeFile tries to create an Episode object by parsing the filename of the
