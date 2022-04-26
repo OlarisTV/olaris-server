@@ -15,12 +15,15 @@ RUN apt-get -y update && \
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 
-RUN go install github.com/cortesi/modd/cmd/modd@latest
 
 ADD . /go/src/gitlab.com/olaris/olaris-server
 WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
 RUN mkdir /var/media
+RUN go install github.com/cortesi/modd/cmd/modd@latest && \
+    make download-olaris-react && \ 
+    make download-ffmpeg
+
 
 CMD /go/bin/modd
 
