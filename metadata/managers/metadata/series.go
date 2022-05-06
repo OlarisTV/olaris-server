@@ -6,11 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-rename/identify"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/parsers"
 )
 
 type TmdbEpisodeKey struct {
@@ -128,7 +128,11 @@ func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) erro
 // that uniquely identify the episode (on TMDB)
 func (m *MetadataManager) getEpisodeKeyFromFilename(
 	episodeFile *db.EpisodeFile, ignoreYear bool) (*TmdbEpisodeKey, error) {
-	parsedInfo := parsers.ParseSeriesName(episodeFile.FilePath)
+
+	opts := identify.GetDefaultOptions()
+	opts.ForceSeries = true
+
+	parsedInfo := identify.NewParsedFile(episodeFile.FilePath, opts)
 
 	// Find a series for this Episode
 	var options = make(map[string]string)
@@ -137,7 +141,7 @@ func (m *MetadataManager) getEpisodeKeyFromFilename(
 		options["first_air_date_year"] = parsedInfo.Year
 	}
 
-	searchRes, err := m.agent.TmdbSearchTv(parsedInfo.Title, options)
+	searchRes, err := m.agent.TmdbSearchTv(parsedInfo.CleanName, options)
 
 	if err != nil {
 		return nil, err
@@ -145,7 +149,7 @@ func (m *MetadataManager) getEpisodeKeyFromFilename(
 
 	if len(searchRes.Results) == 0 {
 		log.WithFields(log.Fields{
-			"title": parsedInfo.Title,
+			"title": parsedInfo.CleanName,
 			"year":  parsedInfo.Year,
 		}).Warnln("Could not find Episode match based on parsed title and given year.")
 
@@ -162,7 +166,7 @@ func (m *MetadataManager) getEpisodeKeyFromFilename(
 	// We use the index here because the type is really long.
 	var bestResultIdx int
 	for i, r := range searchRes.Results {
-		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Name)
+		d := levenshtein.ComputeDistance(parsedInfo.CleanName, r.Name)
 		if d < bestDistance {
 			bestDistance = d
 			bestResultIdx = i
@@ -170,7 +174,7 @@ func (m *MetadataManager) getEpisodeKeyFromFilename(
 	}
 	seriesInfo := searchRes.Results[bestResultIdx]
 
-	return &TmdbEpisodeKey{TmdbSeriesID: seriesInfo.ID, SeasonNumber: parsedInfo.SeasonNum, EpisodeNumber: parsedInfo.EpisodeNum}, nil
+	return &TmdbEpisodeKey{TmdbSeriesID: seriesInfo.ID, SeasonNumber: parsedInfo.SeasonNum(), EpisodeNumber: parsedInfo.EpisodeNum()}, nil
 
 }
 

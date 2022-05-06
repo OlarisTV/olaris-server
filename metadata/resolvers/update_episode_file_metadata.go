@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-rename/identify"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/parsers"
 )
 
 // UpdateEpisodeFileMetadataInput is a request
@@ -68,10 +68,12 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 	for _, v := range episodeFiles {
 		go func(episodeFile *db.EpisodeFile) {
 			defer updateEpisodeFileMetadataGroup.Done()
+			opts := identify.GetDefaultOptions()
+			opts.ForceSeries = true
 
-			parsedInfo := parsers.ParseSeriesName(episodeFile.FileName)
+			parsedInfo := identify.NewParsedFile(episodeFile.FileName, opts)
 
-			if parsedInfo.SeasonNum == 0 || parsedInfo.EpisodeNum == 0 {
+			if parsedInfo.SeasonNum() == 0 || parsedInfo.EpisodeNum() == 0 {
 				log.Warnln(
 					"Failed to parse Episode/Season number from filename:",
 					episodeFile.FileName)
@@ -81,7 +83,7 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 			// TODO(Leon Handreke): Make the handling for figuring out whether the episode
 			// actually exists more explicit. Right now, it's in the err clause + continue.
 			episode, err := r.env.MetadataManager.GetOrCreateEpisodeByTmdbID(
-				int(args.Input.TmdbID), parsedInfo.SeasonNum, parsedInfo.EpisodeNum)
+				int(args.Input.TmdbID), parsedInfo.SeasonNum(), parsedInfo.EpisodeNum())
 			if err != nil {
 				log.Warnln("Failed to create episode: ", err.Error())
 				return
