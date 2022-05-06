@@ -131,6 +131,7 @@ func (m *MetadataManager) getEpisodeKeyFromFilename(
 
 	opts := identify.GetDefaultOptions()
 	opts.ForceSeries = true
+	opts.Lookup = true
 
 	parsedInfo := identify.NewParsedFile(episodeFile.FilePath, opts)
 
