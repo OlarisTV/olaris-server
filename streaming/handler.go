@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/graph-gophers/graphql-transport-ws/graphqlws"
+	"gitlab.com/olaris/olaris-server/metadata/auth"
 )
 
 // For Apple devices to handle HLS properly, the m3u8 playlists must be sent with the correct Content-Type
@@ -33,5 +35,7 @@ func RegisterRoutes(router *mux.Router) {
 
 	router.HandleFunc("/debug/playbackSessions", servePlaybackSessionDebugPage)
 
+	schema, handler := NewRelayHandler()
+	router.Handle("/query", auth.MiddleWare(graphqlws.NewHandlerFunc(schema, handler)))
 	//handler := cors.AllowAll().Handler(router)
 }
