@@ -87,7 +87,6 @@ func (m *MetadataManager) getMovieTMDBIDFromFilename(
 	opts.ForceMovie = true
 
 	parsedInfo := identify.NewParsedFile(movieFile.FileName, opts)
-	log.Debugln("OHAI", parsedInfo.CleanName)
 	var options = make(map[string]string)
 	options["year"] = parsedInfo.Year
 
