@@ -11,22 +11,40 @@ type Query {
 }
 
 type Session {
+    # Filelocater of the media file currently playing
     fileLocator: String!
+    # Unique ID of the transcoder session, this is shared between multiple streams (a audio and video stream that pair together will have the same ID)
     sessionID: String!
-    lastAccessed: String!
-    playbackSessionID: String!
-    container: String!
-    resolution: String!
-    codecs: String!
-    codecName: String!
-    streamType: String!
-    language: String!
-    title: String!
+    # UserID of the stream owner
     userID: Int!
-    lastRequestedSegmentIdx: Int!
+    # Percentage of transcoded content available in buffer
     transcodingPercentage: Int!
+    # Whether the stream is throttled since we have enough buffer available
     throttled: Boolean!
+    # Whether this is a transcoded stream
     transcoded: Boolean!
+    # Whether this is a transmuxed stream
     transmuxed: Boolean!
+    # Last time this stream had a segment requested by a client
+    lastAccessed: String!
+    # Target container for this stream
+    container: String!
+    # Target resolution for this stream
+    resolution: String!
+    # Target coded for this stream
+    codecs: String!
+    # Target coded name for this stream
+    codecName: String!
+    # Stream type (Video/Audio/Subtitle)
+    streamType: String!
+    # Language information for audio/subtitle stream
+    language: String!
+    # Title for audio/subtitle stream
+    title: String!
+    # Number of the latest segment requested
+    lastRequestedSegmentIdx: Int!
+    # Target bitrate
     bitRate: Int!
+    # Unique key used for FFMPEG feedback
+    playbackSessionID: String!
 }`

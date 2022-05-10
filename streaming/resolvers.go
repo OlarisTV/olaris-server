@@ -47,7 +47,7 @@ type SessionResolver struct {
 }
 
 func (t *SessionResolver) FileLocator() string {
-	return t.s.FileLocator.Path
+	return t.s.FileLocator.String()
 }
 func (t *SessionResolver) SessionID() string {
 	return t.s.sessionID

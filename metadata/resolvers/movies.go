@@ -145,6 +145,15 @@ func (r *MovieFileResolver) Library() *LibraryResolver {
 	return &LibraryResolver{r: Library{Library: lib}}
 }
 
+// Episode returns the episode this file belongs to
+func (r *MovieFileResolver) Movie() (e *MovieResolver) {
+	movie, err := db.FindMovieByID(r.r.MovieID)
+	if err == nil {
+		e = &MovieResolver{r: *movie}
+	}
+	return e
+}
+
 // LibraryID returns library id
 func (r *MovieFileResolver) LibraryID() int32 {
 	// TODO: Will this be a problem if we ever run out of the 32int space?

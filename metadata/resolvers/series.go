@@ -311,6 +311,15 @@ func (r *EpisodeFileResolver) UUID() string {
 	return r.r.UUID
 }
 
+// Episode returns the episode this file belongs to
+func (r *EpisodeFileResolver) Episode() (e *EpisodeResolver) {
+	episode, err := db.FindEpisodeByID(r.r.EpisodeID)
+	if err == nil {
+		e = &EpisodeResolver{r: *episode}
+	}
+	return e
+}
+
 // FileSize returns episode filesize
 func (r *EpisodeFileResolver) FileSize() string {
 	return strconv.FormatInt(r.r.Size, 10)
