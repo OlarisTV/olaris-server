@@ -2,7 +2,6 @@ package streaming
 
 var schemaTxt = `schema {
     query: Query
-    mutation: Mutation
 }
 
 
@@ -11,17 +10,18 @@ type Query {
     sessions(): [Session]!
 }
 
-type Mutation {
-}
-
-
 type Session {
     fileLocator: String!
+    sessionID: String!
     lastAccessed: String!
     playbackSessionID: String!
     container: String!
     resolution: String!
     codecs: String!
+    codecName: String!
+    streamType: String!
+    language: String!
+    title: String!
     userID: Int!
     lastRequestedSegmentIdx: Int!
     transcodingPercentage: Int!
