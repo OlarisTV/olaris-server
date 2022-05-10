@@ -37,6 +37,25 @@ dist-linux-amd64:
         - olaris-linux-amd64-*.zip
       expire_in: 4 week
 
+dist-linux-arm:
+    script:
+      - GOOS=linux GOARCH=arm make dist
+      - cp -r dist/olaris-linux-arm-*.zip $CI_PROJECT_DIR/
+    artifacts:
+      paths:
+        - olaris-linux-arm-*.zip
+      expire_in: 4 week
+
+
+dist-linux-arm64:
+    script:
+      - GOOS=linux GOARCH=arm64 make dist
+      - cp -r dist/olaris-linux-arm64-*.zip $CI_PROJECT_DIR/
+    artifacts:
+      paths:
+        - olaris-linux-arm64-*.zip
+      expire_in: 4 week
+
 docker:
     image:
       name: docker:stable
