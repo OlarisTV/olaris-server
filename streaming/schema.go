@@ -11,7 +11,6 @@ import (
 )
 
 type StreamingResolver struct {
-	manager PlaybackSessionManager
 }
 
 // Episode returns episode.
