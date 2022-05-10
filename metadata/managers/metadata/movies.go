@@ -3,18 +3,15 @@ package metadata
 import (
 	"fmt"
 	"math"
-	"path/filepath"
-	"strconv"
-	"strings"
 
 	errors "github.com/pkg/errors"
 	"github.com/ryanbradynd05/go-tmdb"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-rename/identify"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/helpers"
 	"gitlab.com/olaris/olaris-server/helpers/levenshtein"
 	"gitlab.com/olaris/olaris-server/metadata/db"
-	"gitlab.com/olaris/olaris-server/metadata/parsers"
 )
 
 const xattrNameMovieTMDBID = "user.olaris.v1.movies.tmdb.id"
@@ -84,22 +81,23 @@ func (m *MetadataManager) getMovieTMDBIDFromXattr(
 // TMDB ID by parsing the filename
 func (m *MetadataManager) getMovieTMDBIDFromFilename(
 	movieFile *db.MovieFile) (tmdbID int, found bool, err error) {
-	name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
-	parsedInfo := parsers.ParseMovieName(name)
+	//name := strings.TrimSuffix(movieFile.FileName, filepath.Ext(movieFile.FileName))
 
+	opts := identify.GetDefaultOptions()
+	opts.ForceMovie = true
+
+	parsedInfo := identify.NewParsedFile(movieFile.FileName, opts)
 	var options = make(map[string]string)
-	if parsedInfo.Year > 0 {
-		options["year"] = strconv.FormatUint(parsedInfo.Year, 10)
-	}
+	options["year"] = parsedInfo.Year
 
-	searchRes, err := m.agent.TmdbSearchMovie(parsedInfo.Title, options)
+	searchRes, err := m.agent.TmdbSearchMovie(parsedInfo.CleanName, options)
 	if err != nil {
 		return 0, false, err
 	}
 
 	if len(searchRes.Results) == 0 {
 		log.WithFields(log.Fields{
-			"title": parsedInfo.Title,
+			"title": parsedInfo.CleanName,
 			"year":  parsedInfo.Year,
 		}).Warnln("Could not find Movie match based on parsed title and given year.")
 
@@ -111,7 +109,7 @@ func (m *MetadataManager) getMovieTMDBIDFromFilename(
 	var bestDistance = math.MaxInt32
 	var bestResult tmdb.MovieShort
 	for _, r := range searchRes.Results {
-		d := levenshtein.ComputeDistance(parsedInfo.Title, r.Title)
+		d := levenshtein.ComputeDistance(parsedInfo.CleanName, r.Title)
 		if d < bestDistance {
 			bestDistance = d
 			bestResult = r
