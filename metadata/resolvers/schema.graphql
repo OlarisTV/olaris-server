@@ -295,9 +295,11 @@ type Stream {
 # A movie file
 type Movie {
     # Official title according to the MovieDB
-    name: String!
-    # Title based on parsed filename
+    name: String! @deprecated(reason: "Use 'original_title' instead")
+    # Official title (international)
     title: String!
+    # Original title in the native language.
+    original_title: String!
     # Release year
     year: String!
     # Short description of the movie
