@@ -91,3 +91,13 @@ func UpdateStreams(mediaUUID string) bool {
 func CreateStream(stream *Stream) {
 	db.Create(&stream)
 }
+
+// FindStreamsForEpisodeFileUUID returns all the streams for the given episode file
+func FindStreamsForEpisodeFileUUID(uuid string) (streams []Stream, err error) {
+	q := db.Model(&Stream{}).
+		Joins("INNER JOIN episode_files ON streams.owner_id = episode_files.id").
+		Where("episode_files.uuid = ?", uuid)
+
+	err = q.Find(&streams).Error
+	return
+}
