@@ -372,6 +372,16 @@ func FindAllEpisodeFiles() (files []EpisodeFile) {
 	return files
 }
 
+// FindFilesForEpisodeUUID finds all episodeFiles for the associated episode UUID
+func FindFilesForEpisodeUUID(uuid string) (episodeFiles []EpisodeFile, err error) {
+	q := db.Model(&EpisodeFile{}).
+		Joins("INNER JOIN episodes ON episode_files.episode_id = episodes.id").
+		Where("episodes.uuid = ?", uuid)
+
+	err = q.Find(&episodeFiles).Error
+	return
+}
+
 // EpisodeFileExists checks whether there already is a EpisodeFile present with the given path.
 func EpisodeFileExists(filePath string) bool {
 	count := 0
