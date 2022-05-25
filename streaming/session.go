@@ -65,7 +65,7 @@ func (m *PlaybackSessionManager) DestroyAll(ctx context.Context) {
 				return
 			}
 		case <-ctx.Done():
-			log.Warning("reached timeout while destroying sessions")
+			log.Warning("Reached timeout while destroying sessions. Some FFmpeg processes and/or transcode session files might be left behind.")
 			return
 		}
 	}

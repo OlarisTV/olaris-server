@@ -59,7 +59,7 @@ func serveInit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Info("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
+		log.Debug("Serving path ", segmentPath, " with MIME type ", videoMIMEType)
 		w.Header().Set("Content-Type", videoMIMEType)
 		http.ServeFile(w, r, segmentPath)
 
@@ -125,7 +125,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 
 		if playbackSession.TranscodingSession.SegmentStartIndex == 0 {
 			// If the segment doesn't need to be patched, serve the file
-			log.Info("Serving path ", segmentPath, " with MIME type ", mimeType)
+			log.Debug("Serving path ", segmentPath, " with MIME type ", mimeType)
 			http.ServeFile(w, r, segmentPath)
 		} else {
 			// If it does need to be patched, patch it in memory and serve that
@@ -136,7 +136,7 @@ func serveSegment(w http.ResponseWriter, r *http.Request, mimeType string) {
 				return
 			}
 
-			log.Info("Serving patched segment ", segmentPath, " with MIME type ", mimeType)
+			log.Debug("Serving patched segment ", segmentPath, " with MIME type ", mimeType)
 			http.ServeContent(w, r, fileName, time.Now(), patchedSegment)
 		}
 
