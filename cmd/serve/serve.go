@@ -53,6 +53,35 @@ func NewServeCommand() *cmd.CobraCommand {
 		Use:   "serve",
 		Short: "Start the olaris server",
 		Run: func(cmd *cobra.Command, args []string) {
+			if viper.GetBool("server.verbose") {
+				log.SetLevel(log.DebugLevel)
+			}
+			viper.WatchConfig()
+
+			// Check FFmpeg version and warn if it's missing
+			ffmpegVersion, err := ffmpeg.GetFfmpegVersion()
+			if err != nil {
+				if parseErr, ok := err.(*ffmpeg.VersionParseError); ok {
+					log.WithError(parseErr).Warn("unable to determine installed FFmpeg version")
+				} else {
+					log.WithError(err).Warn("FFmpeg not found. STREAMING WILL NOT WORK IF FFMPEG IS NOT INSTALLED AND IN YOUR PATH!")
+				}
+			} else {
+				log.WithField("version", ffmpegVersion.ToString()).Debugf("FFmpeg found")
+			}
+
+			// Check FFprobe version and warn if it's missing
+			ffprobeVersion, err := ffmpeg.GetFfprobeVersion()
+			if err != nil {
+				if parseErr, ok := err.(*ffmpeg.VersionParseError); ok {
+					log.WithError(parseErr).Warn("unable to determine installed FFprobe version")
+				} else {
+					log.WithError(err).Warn("FFprobe not found. STREAMING WILL NOT WORK IF FFPROBE IS NOT INSTALLED AND IN YOUR PATH!")
+				}
+			} else {
+				log.WithField("version", ffprobeVersion.ToString()).Debugf("FFprobe found")
+			}
+
 			mainRouter := mux.NewRouter()
 
 			r := mainRouter.PathPrefix("/olaris")
@@ -65,10 +94,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			}
 
 			mctx := app.NewMDContext(dbOptions, agents.NewTmdbAgent())
-			if viper.GetBool("server.verbose") {
-				log.SetLevel(log.DebugLevel)
-			}
-			viper.WatchConfig()
+
 			updateConfig := func(in fsnotify.Event) {
 				log.Infoln("configuration file change detected")
 				if viper.GetBool("server.verbose") {
