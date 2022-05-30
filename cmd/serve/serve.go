@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/interfaces/web"
 	"net/http"
 	_ "net/http/pprof" // For Profiling
 	"os"
@@ -36,6 +37,7 @@ type ServeCommand cmd.Command
 
 func New() di.Option {
 	return di.Options(
+		streaming.Options(),
 		di.Provide(NewServeCommand, di.As(new(ServeCommand))),
 		di.Invoke(RegisterServeCommand),
 	)
@@ -48,7 +50,15 @@ func RegisterServeCommand(rootCommand root.RootCommand, serveCommand ServeComman
 	rootCommand.GetCobraCommand().Run = serveCommand.GetCobraCommand().Run
 }
 
-func NewServeCommand() *cmd.CobraCommand {
+// Parameters contains the parameters that are required when creating a new
+// serve command.
+type Parameters struct {
+	di.Inject
+
+	StreamingController web.Controller `di:"type=streaming"`
+}
+
+func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the olaris server",
@@ -110,7 +120,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			metadata.RegisterRoutes(mctx, metaRouter)
 
 			streamingRouter := rr.PathPrefix("/s").Subrouter()
-			streaming.RegisterRoutes(streamingRouter)
+			params.StreamingController.RegisterRoutes(streamingRouter)
 
 			// This is just to make sure that no temp files stay behind in case the
 			// garbage collection below didn't work properly for some reason.
