@@ -21,8 +21,7 @@ WORKDIR /go/src/gitlab.com/olaris/olaris-server
 
 RUN mkdir /var/media
 RUN go install github.com/cortesi/modd/cmd/modd@latest && \
-    make download-olaris-react && \ 
-    make download-ffmpeg
+    make download-olaris-react
 
 
 CMD /go/bin/modd
