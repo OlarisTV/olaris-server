@@ -50,17 +50,8 @@ func NewAudioTranscodingSession(
 		"-hls_segment_filename", "stream0_%d.m4s",
 	}...)
 
-	// If we are not starting with the first segment, indicate that the fragment
-	// is discontinuous
-	if segmentStartIndex != 0 {
-		args = append(args, []string{
-			"-hls_ts_options", "movflags=dash+frag_discont",
-		}...)
-	} else {
-		args = append(args, []string{
-			"-hls_ts_options", "movflags=dash",
-		}...)
-	}
+	// Set the HLS output format options
+	args = setHlsTsOptions(args, segmentStartIndex)
 
 	// We serve our own manifest, so we don't really care about this.
 	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
