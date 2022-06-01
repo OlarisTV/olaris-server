@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/interfaces/web"
 	"net/http"
 	_ "net/http/pprof" // For Profiling
 	"os"
@@ -36,6 +37,7 @@ type ServeCommand cmd.Command
 
 func New() di.Option {
 	return di.Options(
+		streaming.Options(),
 		di.Provide(NewServeCommand, di.As(new(ServeCommand))),
 		di.Invoke(RegisterServeCommand),
 	)
@@ -48,11 +50,48 @@ func RegisterServeCommand(rootCommand root.RootCommand, serveCommand ServeComman
 	rootCommand.GetCobraCommand().Run = serveCommand.GetCobraCommand().Run
 }
 
-func NewServeCommand() *cmd.CobraCommand {
+// Parameters contains the parameters that are required when creating a new
+// serve command.
+type Parameters struct {
+	di.Inject
+
+	StreamingController web.Controller `di:"type=streaming"`
+}
+
+func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the olaris server",
 		Run: func(cmd *cobra.Command, args []string) {
+			if viper.GetBool("server.verbose") {
+				log.SetLevel(log.DebugLevel)
+			}
+			viper.WatchConfig()
+
+			// Check FFmpeg version and warn if it's missing
+			ffmpegVersion, err := ffmpeg.GetFfmpegVersion()
+			if err != nil {
+				if parseErr, ok := err.(*ffmpeg.VersionParseError); ok {
+					log.WithError(parseErr).Warn("unable to determine installed FFmpeg version")
+				} else {
+					log.WithError(err).Warn("FFmpeg not found. STREAMING WILL NOT WORK IF FFMPEG IS NOT INSTALLED AND IN YOUR PATH!")
+				}
+			} else {
+				log.WithField("version", ffmpegVersion.ToString()).Debugf("FFmpeg found")
+			}
+
+			// Check FFprobe version and warn if it's missing
+			ffprobeVersion, err := ffmpeg.GetFfprobeVersion()
+			if err != nil {
+				if parseErr, ok := err.(*ffmpeg.VersionParseError); ok {
+					log.WithError(parseErr).Warn("unable to determine installed FFprobe version")
+				} else {
+					log.WithError(err).Warn("FFprobe not found. STREAMING WILL NOT WORK IF FFPROBE IS NOT INSTALLED AND IN YOUR PATH!")
+				}
+			} else {
+				log.WithField("version", ffprobeVersion.ToString()).Debugf("FFprobe found")
+			}
+
 			mainRouter := mux.NewRouter()
 
 			r := mainRouter.PathPrefix("/olaris")
@@ -65,10 +104,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			}
 
 			mctx := app.NewMDContext(dbOptions, agents.NewTmdbAgent())
-			if viper.GetBool("server.verbose") {
-				log.SetLevel(log.DebugLevel)
-			}
-			viper.WatchConfig()
+
 			updateConfig := func(in fsnotify.Event) {
 				log.Infoln("configuration file change detected")
 				if viper.GetBool("server.verbose") {
@@ -84,7 +120,7 @@ func NewServeCommand() *cmd.CobraCommand {
 			metadata.RegisterRoutes(mctx, metaRouter)
 
 			streamingRouter := rr.PathPrefix("/s").Subrouter()
-			streaming.RegisterRoutes(streamingRouter)
+			params.StreamingController.RegisterRoutes(streamingRouter)
 
 			// This is just to make sure that no temp files stay behind in case the
 			// garbage collection below didn't work properly for some reason.
@@ -131,11 +167,19 @@ func NewServeCommand() *cmd.CobraCommand {
 			<-stopChan
 			log.Println("shutting down...")
 
+			// Clean up the metadata context
+			mctx.Cleanup()
+
+			// Clean up playback/transcode sessions
+			sessionCleanupContext, sessionCleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer sessionCleanupCancel()
+			streaming.PBSManager.DestroyAll(sessionCleanupContext)
+
+			// Shut down the HTTP server
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-
-			mctx.Cleanup()
 			srv.Shutdown(ctx)
+
 			log.Println("shut down complete, exiting.")
 		},
 	}

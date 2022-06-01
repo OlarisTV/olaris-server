@@ -1,6 +1,7 @@
 package streaming
 
 import (
+	"gitlab.com/olaris/olaris-server/interfaces/web"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -14,18 +15,27 @@ func AddM3U8Header(next http.Handler) http.Handler {
 	})
 }
 
-// RegisterRoutes registers streaming routes to an existing router
-func RegisterRoutes(router *mux.Router) {
+// Controller is the controller for the streaming package. It implements the
+// web.Controller interface.
+type Controller struct{}
+
+// NewStreamingController creates and returns a new StreamingHandler.
+func NewStreamingController() web.Controller {
+	return &Controller{}
+}
+
+// RegisterRoutes registers the streaming handler's routes on the provided
+// router.
+func (sh *Controller) RegisterRoutes(router *mux.Router) {
 	router.Handle("/files/{fileLocator:.*}/{sessionID}/hls-transmuxing-manifest.m3u8", AddM3U8Header(http.HandlerFunc(serveHlsTransmuxingMasterPlaylist)))
 	router.Handle("/files/{fileLocator:.*}/{sessionID}/hls-transcoding-manifest.m3u8", AddM3U8Header(http.HandlerFunc(serveHlsTranscodingMasterPlaylist)))
 	router.HandleFunc("/files/{fileLocator:.*}/metadata.json", serveMetadata)
 	router.Handle("/files/{fileLocator:.*}/{sessionID}/hls-manifest.m3u8", AddM3U8Header(http.HandlerFunc(serveHlsMasterPlaylist)))
 	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/dash-manifest.mpd", serveDASHManifest)
 	router.Handle("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/media.m3u8", AddM3U8Header(http.HandlerFunc(serveHlsTranscodingMediaPlaylist)))
-	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", serveMediaSegment)
-	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.vtt", serveSubtitleSegment)
-	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/init.mp4", serveInit)
-	router.HandleFunc("/ffmpeg/{playbackSessionID}/feedback", serveFFmpegFeedback)
+	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.m4s", buildMediaSegmentHandlerFunc())
+	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/{segmentId:[0-9]+}.vtt", buildSubtitleSegmentHandlerFunc())
+	router.HandleFunc("/files/{fileLocator:.*}/{sessionID}/{streamId}/{representationId}/init.mp4", buildInitHandlerFunc())
 
 	// This handler just serves up the file for downloading. This is also used
 	// internally by ffmpeg to access rclone files.

@@ -113,3 +113,11 @@ func getFileLocatorOrFail(r *http.Request) (filesystem.FileLocator, Error) {
 	}
 	return fileLocator, nil
 }
+
+// MaxInt returns the greater of the two integer parameters
+func MaxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}

@@ -6,11 +6,10 @@ replace github.com/jlaffaye/ftp => github.com/rclone/ftp v1.0.0-210902f
 
 require (
 	github.com/Jeffail/tunny v0.1.4
+	github.com/abema/go-mp4 v0.6.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/goava/di v1.11.1
-	github.com/google/uuid v1.3.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/grandcat/zeroconf v1.0.0
@@ -23,6 +22,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/ryanbradynd05/go-tmdb v0.0.0-20201006144520-c0566c3d1506
 	github.com/satori/go.uuid v1.2.0
+	github.com/shirou/gopsutil/v3 v3.21.8
 	github.com/sirupsen/logrus v1.8.1
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
 	github.com/spf13/cobra v1.3.0
@@ -67,6 +67,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
@@ -112,7 +113,6 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/putdotio/go-putio/putio v0.0.0-20200123120452-16d982cac2b8 // indirect
 	github.com/rfjakob/eme v1.1.2 // indirect
-	github.com/shirou/gopsutil/v3 v3.21.8 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/spacemonkeygo/monkit/v3 v3.0.15 // indirect
 	github.com/spf13/afero v1.6.0 // indirect

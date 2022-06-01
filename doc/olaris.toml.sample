@@ -3,7 +3,6 @@
 #verbose = true
 #dblog = false
 #directFileAccess = false
-#systemFFmpeg = false
 
 [database]
 #connection = "postgres://host=localhost sslmode=disable dbname=olaris"

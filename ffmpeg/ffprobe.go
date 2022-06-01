@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"io/ioutil"
 	"math/big"
@@ -119,7 +118,7 @@ func Probe(fileLocator filesystem.FileLocator) (*ProbeContainer, error) {
 		Debugln("File not in cache, probing it.")
 	ffmpegUrl := buildFfmpegUrlFromFileLocator(fileLocator)
 	cmd := exec.Command(
-		executable.GetFFprobeExecutablePath(),
+		"ffprobe",
 		"-show_data",
 		"-show_format",
 		"-show_streams", ffmpegUrl, "-print_format", "json", "-v", "quiet")
