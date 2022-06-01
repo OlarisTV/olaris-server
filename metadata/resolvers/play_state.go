@@ -2,7 +2,7 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
+
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 )
@@ -52,7 +52,6 @@ func (r *Resolver) CreatePlayState(ctx context.Context, args *playStateArgs) *Pl
 	if args.Finished == false && args.Playtime == 0 {
 		db.DeletePlayState(args.UUID, userID)
 	} else {
-		fmt.Printf("%+v\n", ps)
 		db.SavePlayState(&ps)
 	}
 
