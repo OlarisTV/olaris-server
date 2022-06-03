@@ -34,7 +34,7 @@ type TranscodingSession struct {
 }
 
 // ProgressPercentage calculates the current transcoding progress based on the amount of segments available in the transcoding folder
-func (s *TranscodingSession) ProgressPercentage() float32 {
+func (s *TranscodingSession) ProgressPercentage() int32 {
 	totalSegments := math.Floor(s.Stream.Stream.TotalDuration.Seconds() / SegmentDuration.Seconds())
 
 	files, err := ioutil.ReadDir(s.OutputDir)
@@ -60,7 +60,8 @@ func (s *TranscodingSession) ProgressPercentage() float32 {
 		log.WithError(err).Warnln("Could not convert string result from the ffmpeg output filename to an actual segment id")
 		return -1
 	}
-	return (float32(latestSegment*100) / float32(totalSegments))
+
+	return int32((latestSegment * 100) / int(totalSegments))
 
 }
 

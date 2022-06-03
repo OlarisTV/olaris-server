@@ -61,7 +61,7 @@ func (t *SessionResolver) UserID() int32 {
 	return int32(t.s.userID)
 }
 func (t *SessionResolver) TranscodingPercentage() int32 {
-	return int32(t.s.TranscodingSession.ProgressPercentage())
+	return t.s.TranscodingSession.ProgressPercentage()
 }
 func (t *SessionResolver) Throttled() bool {
 	return t.s.TranscodingSession.State == ffmpeg.SessionStateThrottled
