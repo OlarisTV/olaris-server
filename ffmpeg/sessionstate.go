@@ -10,3 +10,11 @@ const (
 	SessionStateStopping
 	SessionStateExited
 )
+
+var StateToString = map[SessionState]string{
+	SessionStateNew:       "New",
+	SessionStateRunning:   "Running",
+	SessionStateThrottled: "Throttled",
+	SessionStateStopping:  "Stopping",
+	SessionStateExited:    "Exited",
+}
