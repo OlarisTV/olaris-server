@@ -6,6 +6,8 @@ schema {
 
 union MediaItem = Movie | Episode
 union SearchItem = Movie | Series
+union MediaFileItem = MovieFile | EpisodeFile
+
 
 enum SortDirection {
     asc
@@ -37,6 +39,7 @@ type Query {
     remotes: [String]!
     mediaStats: MediaStatsResponse!
 
+
     # List episodes before and after a given episode
     nearbyEpisodes(
         # The target episode's UUID
@@ -54,6 +57,9 @@ type Query {
       # Whether or not to return the full path of the discovered folders
       fullPath: Boolean = false 
     ): [String]!
+    
+    # Given a path return the file associated with this path. Useful to translate streaming package information to metadata information. 
+    getMediaFileFromFileLocator(fileLocator: String!): MediaFileItem
 
     unidentifiedMovieFiles(offset: Int, limit: Int): [MovieFile]!
     unidentifiedEpisodeFiles(offset: Int, limit: Int): [EpisodeFile]!
@@ -265,6 +271,7 @@ type EpisodeFile {
     fileSize: String!
     # Get the library for the given file
     library: Library!
+    episode: Episode
 }
 
 type Stream {
@@ -340,6 +347,8 @@ type MovieFile {
     fileSize: String!
     # Get the library for the given file
     library: Library!
+    # Get the movie this MovieFile belongs to
+    movie: Movie!
 }
 
 input UpdateMovieFileMetadataInput {
