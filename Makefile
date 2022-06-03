@@ -11,7 +11,6 @@ GOGET=go get
 GOGENERATE=$(GOCMD) generate
 BIN_LOC=build
 DIST_DIR=dist
-FFMPEG_LOC=ffmpeg/executable/build
 BINARY_NAME=olaris
 CMD_SERVER_PATH=main.go
 REACT_REPO=https://gitlab.com/olaris/olaris-react.git
@@ -24,17 +23,7 @@ LDFLAGS=-ldflags "-X $(SRC_PATH)/helpers.Version=$(RELEASE_IDENTIFIER)"
 all: generate
 
 .PHONY: ready-ci
-ready-ci: download-olaris-react download-ffmpeg generate
-
-.PHONY: download-ffmpeg
-download-ffmpeg:
-	curl -L 'https://gitlab.com/api/v4/projects/olaris%2Fffmpeg/jobs/artifacts/master/download?job=compile' > ffmpeg/executable/build.zip
-	unzip -o ffmpeg/executable/build.zip -d ffmpeg/executable/
-	mkdir -p $(FFMPEG_LOC)/linux-amd64
-	cp ffmpeg/executable/ffmpeg-static/bin/ffmpeg $(FFMPEG_LOC)/linux-amd64/ffmpeg
-	cp ffmpeg/executable/ffmpeg-static/bin/ffprobe $(FFMPEG_LOC)/linux-amd64/ffprobe
-	rm ffmpeg/executable/build.zip
-	rm -rf ffmpeg/executable/ffmpeg-static
+ready-ci: download-olaris-react generate
 
 .PHONY: download-olaris-react
 download-olaris-react:

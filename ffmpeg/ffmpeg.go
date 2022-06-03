@@ -131,13 +131,13 @@ func StreamRepresentationFromRepresentationId(
 			s.StreamId, representationId, s.FileLocator)
 }
 
-func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedbackURL string) (*TranscodingSession, error) {
+func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int) (*TranscodingSession, error) {
 	runtimeDir := getTranscodingSessionRuntimeDir()
 	helpers.EnsurePath(runtimeDir)
 
 	startTime := time.Duration(int64(segmentStartIndex) * int64(SegmentDuration))
 	if s.Representation.RepresentationId == "direct" {
-		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
+		session, err := NewTransmuxingSession(s, startTime, segmentStartIndex, runtimeDir)
 		if err != nil {
 			return nil, err
 		}
@@ -151,9 +151,9 @@ func NewTranscodingSession(s StreamRepresentation, segmentStartIndex int, feedba
 		var err error
 
 		if s.Stream.StreamType == "video" {
-			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
+			session, err = NewVideoTranscodingSession(s, startTime, segmentStartIndex, runtimeDir)
 		} else if s.Stream.StreamType == "audio" {
-			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, runtimeDir, feedbackURL)
+			session, err = NewAudioTranscodingSession(s, startTime, segmentStartIndex, runtimeDir)
 		} else if s.Stream.StreamType == "subtitle" {
 			session, err = NewSubtitleSession(s, runtimeDir)
 		}

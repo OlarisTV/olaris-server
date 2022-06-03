@@ -21,7 +21,6 @@ type ServerConfig struct {
 	DBLog            bool
 	DBConn           string
 	DirectFileAccess bool
-	SystemFFMPEG     bool
 }
 
 // LibraryConfig is for library settings

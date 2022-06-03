@@ -72,6 +72,24 @@ type avc1Level struct {
 	MaxBitrate   int64
 }
 
+// setHlsTsOptions adds the hls_ts_options parameter to the end of the argument
+// list.
+func setHlsTsOptions(args []string, segmentStartIndex int) []string {
+	if segmentStartIndex != 0 {
+		args = append(args, []string{
+			// If we are not starting with the first segment, indicate that the
+			// fragment is discontinuous
+			"-hls_ts_options", "movflags=dash+frag_discont",
+		}...)
+	} else {
+		args = append(args, []string{
+			"-hls_ts_options", "movflags=dash",
+		}...)
+	}
+
+	return args
+}
+
 // NOTE(Leon Handreke): This table is for Baseline Extended Main. We actually encode at High, so the accuracy
 // here could be improved. See also https://de.wikipedia.org/wiki/H.264#Level (German Wikipedia contains max
 // bitrates at other profiles).

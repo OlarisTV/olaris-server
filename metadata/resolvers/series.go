@@ -209,11 +209,18 @@ type EpisodeResolver struct {
 }
 
 // Files return all files for this episode.
-func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver) {
+func (r *EpisodeResolver) Files() (files []*EpisodeFileResolver, err error) {
+	if r.r.EpisodeFiles == nil || len(r.r.EpisodeFiles) == 0 {
+		r.r.EpisodeFiles, err = db.FindFilesForEpisodeUUID(r.r.UUID)
+	}
+	if err != nil {
+		return
+	}
+
 	for _, episode := range r.r.EpisodeFiles {
 		files = append(files, &EpisodeFileResolver{r: episode})
 	}
-	return files
+	return
 }
 
 // Name returns name.
@@ -343,9 +350,16 @@ func (r *EpisodeFileResolver) TotalDuration() *float64 {
 }
 
 // Streams return stream information.
-func (r *EpisodeFileResolver) Streams() (streams []*StreamResolver) {
+func (r *EpisodeFileResolver) Streams() (streams []*StreamResolver, err error) {
+	if r.r.Streams == nil || len(r.r.Streams) == 0 {
+		r.r.Streams, err = db.FindStreamsForEpisodeFileUUID(r.r.UUID)
+	}
+	if err != nil {
+		return
+	}
+
 	for _, stream := range r.r.Streams {
 		streams = append(streams, &StreamResolver{r: stream})
 	}
-	return streams
+	return
 }

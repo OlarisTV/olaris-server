@@ -3,7 +3,6 @@ package ffmpeg
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg/executable"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -58,8 +57,7 @@ func NewVideoTranscodingSession(
 	stream StreamRepresentation,
 	startTime time.Duration,
 	segmentStartIndex int,
-	outputDirBase string,
-	feedbackURL string) (*TranscodingSession, error) {
+	outputDirBase string) (*TranscodingSession, error) {
 
 	outputDir, err := ioutil.TempDir(outputDirBase, "transcoding-session-")
 	if err != nil {
@@ -79,6 +77,7 @@ func NewVideoTranscodingSession(
 	args = append(args, []string{
 		"-i", buildFfmpegUrlFromFileLocator(stream.Stream.FileLocator),
 		"-copyts",
+		"-start_at_zero",
 		"-map", fmt.Sprintf("0:%d", stream.Stream.StreamId),
 		"-c:0", "libx264", "-b:v", strconv.Itoa(encoderParams.videoBitrate),
 		"-preset:0", "veryfast",
@@ -88,8 +87,10 @@ func NewVideoTranscodingSession(
 		"-hls_time", fmt.Sprintf("%.3f", SegmentDuration.Seconds()),
 		"-hls_segment_type", "1", // fMP4
 		"-hls_segment_filename", "stream0_%d.m4s",
-		"-olaris_feedback_url", feedbackURL,
 	}...)
+
+	// Set the HLS output format options
+	args = setHlsTsOptions(args, segmentStartIndex)
 
 	if encoderParams.width != 0 || encoderParams.height != 0 {
 		args = append(args, []string{
@@ -99,7 +100,7 @@ func NewVideoTranscodingSession(
 	// We serve our own manifest, so we don't really care about this.
 	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 
-	cmd := exec.Command(executable.GetFFmpegExecutablePath(), args...)
+	cmd := exec.Command("ffmpeg", args...)
 	log.Infoln("ffmpeg started with", cmd.Path, cmd.Args)
 
 	logSink := getTranscodingLogSink("ffmpeg_transcode_video")
@@ -114,9 +115,10 @@ func NewVideoTranscodingSession(
 	//stdin.Close()
 
 	return &TranscodingSession{
-		cmd:       cmd,
-		Stream:    stream,
-		OutputDir: outputDir,
+		cmd:               cmd,
+		Stream:            stream,
+		OutputDir:         outputDir,
+		SegmentStartIndex: segmentStartIndex,
 	}, nil
 }
 

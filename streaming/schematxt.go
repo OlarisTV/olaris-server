@@ -9,6 +9,15 @@ var schemaTxt = `schema {
 type Query {
     sessions(): [Session]!
 }
+enum TranscodingState {
+    NEW
+    RUNNING
+    # Process is paused because there is enough transcoding buffer created.
+    THROTTLED 
+    STOPPING
+    # Done with it's job, when transmuxing this will happen almost immediately.
+    EXITED 
+}
 
 type Session {
     # Filelocater of the media file currently playing
@@ -41,10 +50,8 @@ type Session {
     language: String!
     # Title for audio/subtitle stream
     title: String!
-    # Number of the latest segment requested
-    lastRequestedSegmentIdx: Int!
     # Target bitrate
     bitRate: Int!
-    # Unique key used for FFMPEG feedback
-    playbackSessionID: String!
+    # Current state the transcoder is in
+    transcodingState: TranscodingState!
 }`

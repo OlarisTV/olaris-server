@@ -77,6 +77,11 @@ func (r *MovieResolver) Name() string {
 	return r.r.OriginalTitle
 }
 
+// OriginalTitle returns the title of the movie in the original language
+func (r *MovieResolver) OriginalTitle() string {
+	return r.r.OriginalTitle
+}
+
 // BackdropPath returns backdrop
 func (r *MovieResolver) BackdropPath() string {
 	return r.r.BackdropPath

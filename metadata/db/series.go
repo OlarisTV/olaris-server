@@ -372,6 +372,16 @@ func FindAllEpisodeFiles() (files []EpisodeFile) {
 	return files
 }
 
+// FindFilesForEpisodeUUID finds all episodeFiles for the associated episode UUID
+func FindFilesForEpisodeUUID(uuid string) (episodeFiles []EpisodeFile, err error) {
+	q := db.Model(&EpisodeFile{}).
+		Joins("INNER JOIN episodes ON episode_files.episode_id = episodes.id").
+		Where("episodes.uuid = ?", uuid)
+
+	err = q.Find(&episodeFiles).Error
+	return
+}
+
 // EpisodeFileExists checks whether there already is a EpisodeFile present with the given path.
 func EpisodeFileExists(filePath string) bool {
 	count := 0
@@ -525,19 +535,31 @@ func GetEpisodeCount() (int32, error) {
 func GetNextEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 	var episodes []Episode
 
+	// Fetching the episode and season ahead of time prevents several joins
+	// that can slow SQLite down quite a bit for large libraries.
+	episode, err := FindEpisodeByUUID(episodeUuid)
+	if err != nil {
+		return episodes, err
+	}
+	season, err := FindSeason(episode.SeasonID)
+	if err != nil {
+		return episodes, err
+	}
+
 	q := db.Preload("Season").
 		Model(&Episode{}).
-		Joins("CROSS JOIN episodes target_episode").
 		Joins("INNER JOIN seasons ON seasons.id = episodes.season_id").
-		Joins("INNER JOIN seasons target_season ON target_episode.season_id = target_season.id").
-		Where("target_episode.uuid = ?", episodeUuid).
-		Where("seasons.series_id = target_season.series_id").
-		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num > target_episode.episode_num) OR seasons.season_number > target_season.season_number").
+		Where("seasons.series_id = ?", season.SeriesID).
+		Where(
+			"(seasons.season_number = ? AND episodes.episode_num > ?) OR seasons.season_number > ?",
+			season.SeasonNumber,
+			episode.EpisodeNum,
+			season.SeasonNumber).
 		Order("seasons.season_number").
 		Order("episodes.episode_num").
 		Limit(limit)
 
-	err := q.Find(&episodes).Error
+	err = q.Find(&episodes).Error
 	return episodes, err
 }
 
@@ -546,18 +568,30 @@ func GetNextEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 func GetPreviousEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 	var episodes []Episode
 
+	// Fetching the episode and season ahead of time prevents several joins
+	// that can slow SQLite down quite a bit for large libraries.
+	episode, err := FindEpisodeByUUID(episodeUuid)
+	if err != nil {
+		return episodes, err
+	}
+	season, err := FindSeason(episode.SeasonID)
+	if err != nil {
+		return episodes, err
+	}
+
 	q := db.Preload("Season").
 		Model(&Episode{}).
-		Joins("CROSS JOIN episodes target_episode").
 		Joins("INNER JOIN seasons ON seasons.id = episodes.season_id").
-		Joins("INNER JOIN seasons target_season ON target_episode.season_id = target_season.id").
-		Where("target_episode.uuid = ?", episodeUuid).
-		Where("seasons.series_id = target_season.series_id").
-		Where("(seasons.season_number = target_season.season_number AND episodes.episode_num < target_episode.episode_num) OR seasons.season_number < target_season.season_number").
+		Where("seasons.series_id = ?", season.SeriesID).
+		Where(
+			"(seasons.season_number = ? AND episodes.episode_num < ?) OR seasons.season_number < ?",
+			season.SeasonNumber,
+			episode.EpisodeNum,
+			season.SeasonNumber).
 		Order("seasons.season_number DESC").
 		Order("episodes.episode_num DESC").
 		Limit(limit)
 
-	err := q.Find(&episodes).Error
+	err = q.Find(&episodes).Error
 	return episodes, err
 }

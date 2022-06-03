@@ -5,9 +5,11 @@ package streaming
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
 )
 
@@ -55,20 +57,17 @@ func (t *SessionResolver) SessionID() string {
 func (t *SessionResolver) LastAccessed() string {
 	return t.s.lastAccessed.String()
 }
-func (t *SessionResolver) PlaybackSessionID() string {
-	return t.s.playbackSessionID
-}
 func (t *SessionResolver) UserID() int32 {
 	return int32(t.s.userID)
-}
-func (t *SessionResolver) LastRequestedSegmentIdx() int32 {
-	return int32(t.s.lastRequestedSegmentIdx)
 }
 func (t *SessionResolver) TranscodingPercentage() int32 {
 	return int32(t.s.TranscodingSession.ProgressPercent)
 }
 func (t *SessionResolver) Throttled() bool {
-	return t.s.TranscodingSession.Throttled
+	return t.s.TranscodingSession.State == ffmpeg.SessionStateThrottled
+}
+func (t *SessionResolver) TranscodingState() string {
+	return strings.ToUpper(ffmpeg.StateToString[t.s.TranscodingSession.State])
 }
 func (t *SessionResolver) Transcoded() bool {
 	return t.s.TranscodingSession.Stream.Representation.Transcoded
