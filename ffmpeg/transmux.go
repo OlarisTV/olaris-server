@@ -2,12 +2,14 @@ package ffmpeg
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NewTransmuxingSession starts a new transmuxing-only (aka "Direct Stream") session.
@@ -52,7 +54,7 @@ func NewTransmuxingSession(
 	}...)
 
 	cmd := exec.Command("ffmpeg", args...)
-	log.Infoln("ffmpeg started with", cmd.Args)
+	log.WithField("command", strings.Join(cmd.Args, " ")).Infoln("ffmpeg transmuxing started")
 	cmd.Dir = outputDir
 
 	logSink := getTranscodingLogSink("ffmpeg_transmux")

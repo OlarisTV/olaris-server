@@ -3,14 +3,15 @@ package streaming
 import (
 	"context"
 	"errors"
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
 var videoMIMEType = "video/mp4"
@@ -105,6 +106,7 @@ func (sh *segmentHandler) toHandlerFunc() http.HandlerFunc {
 		for {
 			segmentPath, err := playbackSession.TranscodingSession.FindSegmentByIndex(segmentIdx)
 			if errors.Is(err, os.ErrNotExist) {
+				log.WithFields(log.Fields{"segmentIDx": segmentIdx, "segmentPath": segmentPath}).Warnln("We tried to get a segment but it wasn't available yet, sleeping")
 				if err := timeoutContext.Err(); err != nil {
 					log.WithError(err).Debug("Timed out waiting for segment")
 					http.Error(w, err.Error(), http.StatusRequestTimeout)
@@ -113,7 +115,7 @@ func (sh *segmentHandler) toHandlerFunc() http.HandlerFunc {
 
 				// Make sure the session isn't throttled and try again
 				playbackSession.TranscodingSession.Resume()
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(200 * time.Millisecond)
 				continue
 			}
 			if err != nil {

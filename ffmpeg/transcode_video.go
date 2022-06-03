@@ -2,13 +2,15 @@ package ffmpeg
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetVideoEncoderPreset(stream Stream, name string) (EncoderParams, error) {
@@ -101,7 +103,7 @@ func NewVideoTranscodingSession(
 	args = append(args, path.Join(outputDir, "generated_by_ffmpeg.m3u"))
 
 	cmd := exec.Command("ffmpeg", args...)
-	log.Infoln("ffmpeg started with", cmd.Path, cmd.Args)
+	log.WithField("command", strings.Join(cmd.Args, " ")).Infoln("ffmpeg transcoding started")
 
 	logSink := getTranscodingLogSink("ffmpeg_transcode_video")
 	//io.WriteString(logSink, fmt.Sprintf("%s %s\n\n", cmd.Args, options.String()))

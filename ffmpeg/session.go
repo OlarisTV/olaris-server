@@ -2,15 +2,21 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/abema/go-mp4"
-	"github.com/shirou/gopsutil/v3/process"
-	log "github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"sync"
 	"syscall"
+
+	"github.com/abema/go-mp4"
+	"github.com/shirou/gopsutil/v3/process"
+	log "github.com/sirupsen/logrus"
 )
 
 // InitialSegmentIdx is a magic segment index value to denote the initial segment
@@ -24,8 +30,38 @@ type TranscodingSession struct {
 	Stream            StreamRepresentation
 	OutputDir         string
 	ProcessWaitGroup  sync.WaitGroup
-	ProgressPercent   float32
 	SegmentStartIndex int
+}
+
+// ProgressPercentage calculates the current transcoding progress based on the amount of segments available in the transcoding folder
+func (s *TranscodingSession) ProgressPercentage() float32 {
+	totalSegments := math.Floor(s.Stream.Stream.TotalDuration.Seconds() / SegmentDuration.Seconds())
+
+	files, err := ioutil.ReadDir(s.OutputDir)
+	if err != nil {
+		log.WithError(err).Warnln("Could not open transcoding folder when trying to calculate current progress.")
+		return -1
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModTime().Before(files[j].ModTime())
+	})
+
+	f := files[len(files)-1] // Sometimes the ffmpeg manifest is the latest file in the folder so account for that.
+	if f.Name() == "generated_by_ffmpeg.m3u" {
+		f = files[len(files)-2]
+	}
+
+	r, _ := regexp.Compile(`_(\d*)`)
+
+	m := r.FindStringSubmatch(f.Name())[1]
+	latestSegment, err := strconv.Atoi(m)
+	if err != nil {
+		log.WithError(err).Warnln("Could not convert string result from the ffmpeg output filename to an actual segment id")
+		return -1
+	}
+	return (float32(latestSegment*100) / float32(totalSegments))
+
 }
 
 func (s *TranscodingSession) Start() error {
