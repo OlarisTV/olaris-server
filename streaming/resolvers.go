@@ -29,23 +29,39 @@ func ifAdmin(ctx context.Context) error {
 	return CreateNoAuthorisationError()
 }
 
-// Episode returns episode.
+// Sessions returns current transcoding/muxing sessions
 func (r *StreamingResolver) Sessions(ctx context.Context) (resolvers []*SessionResolver) {
 	err := ifAdmin(ctx)
 	if err != nil {
 		return resolvers
 	}
 
+	sessions := make(map[string]*SessionResolver)
+
 	for _, s := range PBSManager.GetPlaybackSessions() {
-		resolvers = append(resolvers, &SessionResolver{s: s})
+		session := sessions[s.sessionID]
+
+		if session == nil {
+			res := &SessionResolver{s: s}
+			res.streams = append(res.streams, &StreamResolver{s: s})
+			sessions[s.sessionID] = res
+		} else {
+			res := sessions[s.sessionID]
+			res.streams = append(sessions[s.sessionID].streams, &StreamResolver{s: s})
+		}
+	}
+
+	for _, v := range sessions {
+		resolvers = append(resolvers, v)
 	}
 
 	return resolvers
 }
 
-// SeriesResolver resolvers a serie.
+// SeriesResolver resolvers transcoding/muxing sessions.
 type SessionResolver struct {
-	s *PlaybackSession
+	s       *PlaybackSession
+	streams []*StreamResolver
 }
 
 func (t *SessionResolver) FileLocator() string {
@@ -54,50 +70,15 @@ func (t *SessionResolver) FileLocator() string {
 func (t *SessionResolver) SessionID() string {
 	return t.s.sessionID
 }
-func (t *SessionResolver) LastAccessed() string {
-	return t.s.lastAccessed.String()
-}
 func (t *SessionResolver) UserID() int32 {
 	return int32(t.s.userID)
 }
-func (t *SessionResolver) TranscodingPercentage() int32 {
-	return t.s.TranscodingSession.ProgressPercentage()
+func (t *SessionResolver) Streams() []*StreamResolver {
+	return t.streams
 }
-func (t *SessionResolver) Throttled() bool {
-	return t.s.TranscodingSession.State == ffmpeg.SessionStateThrottled
-}
-func (t *SessionResolver) TranscodingState() string {
-	return strings.ToUpper(ffmpeg.StateToString[t.s.TranscodingSession.State])
-}
-func (t *SessionResolver) Transcoded() bool {
-	return t.s.TranscodingSession.Stream.Representation.Transcoded
-}
-func (t *SessionResolver) Transmuxed() bool {
-	return t.s.TranscodingSession.Stream.Representation.Transmuxed
-}
-func (t *SessionResolver) BitRate() int32 {
-	return int32(t.s.TranscodingSession.Stream.Representation.BitRate)
-}
-func (t *SessionResolver) Container() string {
-	return t.s.TranscodingSession.Stream.Representation.Container
-}
-func (t *SessionResolver) CodecName() string {
-	return t.s.TranscodingSession.Stream.Stream.CodecName
-}
-func (t *SessionResolver) Codecs() string {
-	return t.s.TranscodingSession.Stream.Stream.Codecs
-}
-func (t *SessionResolver) StreamType() string {
-	return t.s.TranscodingSession.Stream.Stream.StreamType
-}
-func (t *SessionResolver) Language() string {
-	return t.s.TranscodingSession.Stream.Stream.Language
-}
-func (t *SessionResolver) Title() string {
-	return t.s.TranscodingSession.Stream.Stream.Title
-}
-func (t *SessionResolver) Resolution() string {
-	return fmt.Sprintf("%vx%v", t.s.TranscodingSession.Stream.Representation.Width, t.s.TranscodingSession.Stream.Representation.Height)
+
+type StreamResolver struct {
+	s *PlaybackSession
 }
 
 // InitSchema inits the graphql schema.
@@ -111,4 +92,52 @@ func NewRelayHandler() (*graphql.Schema, *relay.Handler) {
 	schema := InitSchema()
 	handler := &relay.Handler{Schema: schema}
 	return schema, handler
+}
+
+func (t *StreamResolver) LastAccessed() string {
+	return t.s.lastAccessed.String()
+}
+
+func (t *StreamResolver) TranscodingPercentage() int32 {
+	return t.s.TranscodingSession.ProgressPercentage()
+}
+func (t *StreamResolver) StreamID() int32 {
+	return int32(t.s.StreamId)
+}
+
+func (t *StreamResolver) Throttled() bool {
+	return t.s.TranscodingSession.State == ffmpeg.SessionStateThrottled
+}
+func (t *StreamResolver) TranscodingState() string {
+	return strings.ToUpper(ffmpeg.StateToString[t.s.TranscodingSession.State])
+}
+func (t *StreamResolver) Transcoded() bool {
+	return t.s.TranscodingSession.Stream.Representation.Transcoded
+}
+func (t *StreamResolver) Transmuxed() bool {
+	return t.s.TranscodingSession.Stream.Representation.Transmuxed
+}
+func (t *StreamResolver) BitRate() int32 {
+	return int32(t.s.TranscodingSession.Stream.Representation.BitRate)
+}
+func (t *StreamResolver) Container() string {
+	return t.s.TranscodingSession.Stream.Representation.Container
+}
+func (t *StreamResolver) CodecName() string {
+	return t.s.TranscodingSession.Stream.Stream.CodecName
+}
+func (t *StreamResolver) Codecs() string {
+	return t.s.TranscodingSession.Stream.Stream.Codecs
+}
+func (t *StreamResolver) StreamType() string {
+	return t.s.TranscodingSession.Stream.Stream.StreamType
+}
+func (t *StreamResolver) Language() string {
+	return t.s.TranscodingSession.Stream.Stream.Language
+}
+func (t *StreamResolver) Title() string {
+	return t.s.TranscodingSession.Stream.Stream.Title
+}
+func (t *StreamResolver) Resolution() string {
+	return fmt.Sprintf("%vx%v", t.s.TranscodingSession.Stream.Representation.Width, t.s.TranscodingSession.Stream.Representation.Height)
 }

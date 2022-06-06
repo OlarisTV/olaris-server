@@ -16,15 +16,8 @@ enum TranscodingState {
     # Done with it's job, when transmuxing this will happen almost immediately.
     EXITED 
 }
-
-type Session {
-    # Filelocater of the media file currently playing
-    fileLocator: String!
-    # Unique ID of the transcoder session, this is shared between multiple streams (a audio and video stream that pair together will have the same ID)
-    sessionID: String!
-    # UserID of the stream owner
-    userID: Int!
-    # Percentage of transcoded content available in buffer
+type Stream {
+ # Percentage of transcoded content available in buffer
     transcodingPercentage: Int!
     # Whether the stream is throttled since we have enough buffer available
     throttled: Boolean!
@@ -49,7 +42,19 @@ type Session {
     # Title for audio/subtitle stream
     title: String!
     # Target bitrate
-    bitRate: Int!
+    bitRate: Int!    
+    # ID of the stream
+    streamID: Int!
     # Current state the transcoder is in
     transcodingState: TranscodingState!
+}
+
+type Session {
+    # Filelocater of the media file currently playing
+    fileLocator: String!
+    # Unique ID of the transcoder session, this is shared between multiple streams (a audio and video stream that pair together will have the same ID)
+    sessionID: String!
+    # UserID of the stream owner
+    userID: Int!
+    streams: [Stream]!
 }
