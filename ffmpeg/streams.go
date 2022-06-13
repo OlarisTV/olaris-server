@@ -2,15 +2,16 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gitlab.com/olaris/olaris-server/filesystem"
 	"math/big"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/olaris/olaris-server/filesystem"
 )
 
 const TotalDurationInvalid = float64(-1)
@@ -238,10 +239,12 @@ func buildExternalSubtitleStreams(
 					},
 					StreamId: 0,
 				},
-				TotalDuration:    duration,
-				StreamType:       "subtitle",
-				Language:         lang,
-				Title:            lang,
+				TotalDuration: duration,
+				StreamType:    "subtitle",
+				// TODO: I'm probably breaking the spec here, I couldn't really find out what is and is not allowed in a lang field.
+				// It would be a neater solution if we can get VideoJS to use the `title` of the tag instead of the `lang` tag.
+				Language:         lang + " (external) ",
+				Title:            lang + " (external)",
 				EnabledByDefault: false,
 			})
 	}

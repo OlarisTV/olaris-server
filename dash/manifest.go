@@ -3,9 +3,10 @@ package dash
 import (
 	"bytes"
 	"fmt"
-	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"text/template"
 	"time"
+
+	"gitlab.com/olaris/olaris-server/ffmpeg"
 )
 
 const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
@@ -45,7 +46,7 @@ const dashManifestTemplate = `<?xml version="1.0" encoding="utf-8"?>
 		</AdaptationSet>
 		{{ end }}
 		{{ range $i, $s := .subtitleStreams -}}
-		<AdaptationSet contentType="text" mimeType="text/vtt" lang="{{ $s.Stream.Language }}" title="{{ $s.Stream.Language }}">
+		<AdaptationSet contentType="text" mimeType="text/vtt" lang="{{ $s.Stream.Language }}" title="{{ $s.Stream.Title }}">
 			<Representation id="{{ $s.Representation.RepresentationId }}">
 				<BaseURL>{{ $s.URI }}</BaseURL>
 			</Representation>

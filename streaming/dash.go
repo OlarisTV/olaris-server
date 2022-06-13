@@ -2,11 +2,12 @@ package streaming
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"gitlab.com/olaris/olaris-server/dash"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
 	"gitlab.com/olaris/olaris-server/metadata/auth"
-	"net/http"
 )
 
 func serveDASHManifest(w http.ResponseWriter, r *http.Request) {

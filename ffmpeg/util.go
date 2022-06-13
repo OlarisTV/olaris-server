@@ -35,6 +35,7 @@ var langTagToHumanized = map[string]string{
 	"vie": "Vietnamese",
 	"hun": "Hungarian",
 	"unk": "Unknown",
+	"nl":  "Dutch",
 }
 
 var humanizedToLangTag = GetHumanizedToLangTag()
