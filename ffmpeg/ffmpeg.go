@@ -4,12 +4,13 @@ package ffmpeg
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
-	"gitlab.com/olaris/olaris-server/helpers"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
+	"gitlab.com/olaris/olaris-server/helpers"
 )
 
 type Representation struct {
@@ -107,6 +108,7 @@ func StreamRepresentationFromRepresentationId(
 		presetId := representationId[7:]
 
 		encoderParams, err := GetVideoEncoderPreset(s, presetId)
+
 		if err == nil {
 			return GetTranscodedVideoRepresentation(s, representationId, encoderParams), nil
 		}
@@ -115,6 +117,7 @@ func StreamRepresentationFromRepresentationId(
 		}
 	} else if strings.HasPrefix(representationId, "transcode:") {
 		encoderParamsStr := representationId[10:]
+
 		encoderParams, err := EncoderParamsFromString(encoderParamsStr)
 		if err != nil {
 			return StreamRepresentation{}, err
@@ -127,7 +130,7 @@ func StreamRepresentationFromRepresentationId(
 	}
 
 	return StreamRepresentation{},
-		fmt.Errorf("No such stream %d/%s found for file %s",
+		fmt.Errorf("no such stream %d/%s found for file %s",
 			s.StreamId, representationId, s.FileLocator)
 }
 

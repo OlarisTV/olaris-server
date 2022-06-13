@@ -29,9 +29,13 @@ func GetVideoEncoderPreset(stream Stream, name string) (EncoderParams, error) {
 	if !exists {
 		return EncoderParams{}, fmt.Errorf("no preset \"%s\"", name)
 	}
+
 	scaledWidth, scaledHeight := scalePreserveAspectRatio(
 		stream.Width, stream.Height,
 		-2, encoderParams.height)
+
+	encoderParams.SetWidthAndHeight(scaledWidth, scaledHeight)
+
 	encoderParams.Codecs = GetAVC1Tag(
 		scaledWidth, scaledHeight,
 		int64(encoderParams.videoBitrate),
@@ -128,7 +132,6 @@ func GetTranscodedVideoRepresentation(
 	stream Stream,
 	representationId string,
 	encoderParams EncoderParams) StreamRepresentation {
-
 	return StreamRepresentation{
 		Stream: stream,
 		Representation: Representation{

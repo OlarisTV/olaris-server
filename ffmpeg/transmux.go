@@ -75,11 +75,17 @@ func NewTransmuxingSession(
 }
 
 func GetTransmuxedRepresentation(stream Stream) StreamRepresentation {
+	container := "video"
+
+	if stream.StreamType == "audio" {
+		container = "audio"
+	}
+
 	representation := StreamRepresentation{
 		Stream: stream,
 		Representation: Representation{
 			RepresentationId: "direct",
-			Container:        "video/mp4",
+			Container:        container + "/mp4",
 			Codecs:           stream.Codecs,
 			BitRate:          int(stream.BitRate),
 			Height:           stream.Height,

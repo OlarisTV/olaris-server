@@ -18,6 +18,12 @@ type EncoderParams struct {
 	Codecs string
 }
 
+// SetWidthAndHeight allows you to update the dimensions to scaled values when transcoding
+func (e *EncoderParams) SetWidthAndHeight(width int, height int) {
+	e.width = width
+	e.height = height
+}
+
 func EncoderParamsToString(m EncoderParams) string {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
