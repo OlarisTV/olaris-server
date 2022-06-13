@@ -51,7 +51,6 @@ func (r *Resolver) UpdateEpisodeFileMetadata(
 			episodeFiles = append(episodeFiles, episodeFile)
 		}
 	} else if args.Input.SeriesUUID != nil {
-		log.Debugln("Received SeriesUUID")
 		episodeFiles, err = findEpisodeFilesForSeries(*args.Input.SeriesUUID)
 		if err != nil {
 			return &UpdateEpisodeFileMetadataPayloadResolver{error: err}

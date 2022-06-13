@@ -33,10 +33,12 @@ type TranscodingSession struct {
 	SegmentStartIndex int
 }
 
+func (s *TranscodingSession) TotalSegments() float64 {
+	return math.Ceil(s.Stream.Stream.TotalDuration.Seconds() / SegmentDuration.Seconds())
+}
+
 // ProgressPercentage calculates the current transcoding progress based on the amount of segments available in the transcoding folder
 func (s *TranscodingSession) ProgressPercentage() int32 {
-	totalSegments := math.Ceil(s.Stream.Stream.TotalDuration.Seconds() / SegmentDuration.Seconds())
-
 	files, err := ioutil.ReadDir(s.OutputDir)
 	if err != nil {
 		log.WithError(err).Warnln("Could not open transcoding folder when trying to calculate current progress.")
@@ -61,7 +63,7 @@ func (s *TranscodingSession) ProgressPercentage() int32 {
 		return -1
 	}
 
-	return int32((latestSegment * 100) / int(totalSegments))
+	return int32((latestSegment * 100) / int(s.TotalSegments()))
 
 }
 

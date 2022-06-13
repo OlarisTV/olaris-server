@@ -388,6 +388,7 @@ func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error 
 
 	m.getSeasonLock(episode.SeasonID).Lock()
 	defer m.getSeasonLock(episode.SeasonID).Unlock()
+
 	// Garbage collect season
 	season, err := db.FindSeason(episode.SeasonID)
 	if err != nil {

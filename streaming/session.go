@@ -119,6 +119,10 @@ func (p *PlaybackSession) Paused() bool {
 	return time.Now().After(p.lastAccessed.Add(ffmpeg.SegmentDuration).Add(time.Second * 2))
 }
 
+func (p *PlaybackSession) Progress() int32 {
+	return int32(p.lastServedSegmentIdx * 100 / int(p.TranscodingSession.TotalSegments()))
+}
+
 func NewPlaybackSession(playbackSessionKey PlaybackSessionKey, segmentIdx int, m *PlaybackSessionManager) (*PlaybackSession, error) {
 	if !m.canCreateSessions {
 		return nil, errors.New("cannot create new playback sessions for this manager")

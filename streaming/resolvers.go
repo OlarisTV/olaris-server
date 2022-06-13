@@ -79,6 +79,9 @@ func (t *SessionResolver) Streams() []*StreamResolver {
 func (t *SessionResolver) Paused() bool {
 	return t.s.Paused()
 }
+func (t *SessionResolver) Progress() int32 {
+	return t.s.Progress()
+}
 
 type StreamResolver struct {
 	s *PlaybackSession
