@@ -45,6 +45,7 @@ type Stream {
     bitRate: Int!    
     # ID of the stream
     streamID: Int!
+
     # Current state the transcoder is in
     transcodingState: TranscodingState!
 }
@@ -56,5 +57,7 @@ type Session {
     sessionID: String!
     # UserID of the stream owner
     userID: Int!
+    # Paused returns when the client is in a paused state.
+    paused: Boolean!
     streams: [Stream]!
 }

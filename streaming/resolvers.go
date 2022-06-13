@@ -76,6 +76,9 @@ func (t *SessionResolver) UserID() int32 {
 func (t *SessionResolver) Streams() []*StreamResolver {
 	return t.streams
 }
+func (t *SessionResolver) Paused() bool {
+	return t.s.Paused()
+}
 
 type StreamResolver struct {
 	s *PlaybackSession
@@ -114,6 +117,7 @@ func (t *StreamResolver) TranscodingState() string {
 func (t *StreamResolver) Transcoded() bool {
 	return t.s.TranscodingSession.Stream.Representation.Transcoded
 }
+
 func (t *StreamResolver) Transmuxed() bool {
 	return t.s.TranscodingSession.Stream.Representation.Transmuxed
 }
