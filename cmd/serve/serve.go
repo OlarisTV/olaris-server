@@ -66,7 +66,6 @@ func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 			if viper.GetBool("server.verbose") {
 				log.SetLevel(log.DebugLevel)
 			}
-			viper.WatchConfig()
 
 			// Check FFmpeg version and warn if it's missing
 			ffmpegVersion, err := ffmpeg.GetFfmpegVersion()
@@ -104,6 +103,10 @@ func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 			}
 
 			mctx := app.NewMDContext(dbOptions, agents.NewTmdbAgent())
+			if viper.GetBool("server.verbose") {
+				log.SetLevel(log.DebugLevel)
+			}
+			viper.WatchConfig()
 
 			updateConfig := func(in fsnotify.Event) {
 				log.Infoln("configuration file change detected")
