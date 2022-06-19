@@ -1,11 +1,12 @@
 package streaming
 
 import (
-	"html/template"
-	"net/http"
-
+	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gitlab.com/olaris/olaris-server/ffmpeg"
+	"html/template"
+	"net/http"
 )
 
 const transcodingSessionsDebugPageTemplate = `
@@ -36,11 +37,8 @@ const transcodingSessionsDebugPageTemplate = `
 					<td>{{ .Stream.Stream.FileLocator }}:{{ .Stream.Stream.StreamId }} ({{ .Stream.Stream.StreamType }}) </td>
 					<td style="width: 200px;">{{ .Stream.Representation.RepresentationId }}</td>
 					<td>{{ .OutputDir }}</td>
-					<td>{{if .Terminated }}
-						Terminated
-						{{ else }} {{if .Throttled }}Throttled{{else}}Full Steam!{{end}}
-						{{end}}</td>
-					<td>{{ printf  "%.1f" .ProgressPercent }}%</td>
+					<td>{{ .State | sessionStateText }}</td>
+					<td>{{ .ProgressPercentage }}%</td>
 					{{ end }}
 				</tr>
 			{{ end }}
@@ -67,6 +65,19 @@ func servePlaybackSessionDebugPage(w http.ResponseWriter, r *http.Request) {
 		"sessions": playbackSessions,
 	}
 
-	t := template.Must(template.New("manifest").Parse(transcodingSessionsDebugPageTemplate))
-	t.Execute(w, templateData)
+	t := template.Must(template.New("manifest").
+		Funcs(map[string]any{
+			"sessionStateText": func(state ffmpeg.SessionState) string {
+				if stateText, exists := ffmpeg.StateToString[state]; exists {
+					return stateText
+				}
+				return fmt.Sprintf("Unknown State: %v", state)
+			},
+		}).
+		Parse(transcodingSessionsDebugPageTemplate))
+
+	err := t.Execute(w, templateData)
+	if err != nil {
+		log.WithError(err).Error("error executing HTML template")
+	}
 }
