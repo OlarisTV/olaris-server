@@ -802,6 +802,8 @@ gitlab.com/olaris/olaris-rename v0.0.0-20220506133140-36be76dcbab5 h1:T215qvogus
 gitlab.com/olaris/olaris-rename v0.0.0-20220506133140-36be76dcbab5/go.mod h1:kpf5KUVbC9YRn+POTw1rmGnMxbD74rosWWd6d+QH8Ng=
 gitlab.com/olaris/olaris-rename v0.0.0-20220506173015-d387e799d9ce h1:gAZ8UYrkhkGux68X+f9WsAT0lLIMs/t25Sv3hJc3tQQ=
 gitlab.com/olaris/olaris-rename v0.0.0-20220506173015-d387e799d9ce/go.mod h1:kpf5KUVbC9YRn+POTw1rmGnMxbD74rosWWd6d+QH8Ng=
+gitlab.com/olaris/olaris-rename v0.0.0-20220622131304-0c4097cdf6c6 h1:xwA6BxVvpS20T8iG3GyBshzOcy3wHRRx/oxWyOIpqcY=
+gitlab.com/olaris/olaris-rename v0.0.0-20220622131304-0c4097cdf6c6/go.mod h1:kpf5KUVbC9YRn+POTw1rmGnMxbD74rosWWd6d+QH8Ng=
 go.etcd.io/bbolt v1.3.6 h1:/ecaJf0sk1l4l6V4awd65v2C3ILy7MSj+s/x1ADCIMU=
 go.etcd.io/bbolt v1.3.6/go.mod h1:qXsaaIqmgQH0T+OPdb99Bf+PKfBBQVAdyD6TY9G8XM4=
 go.etcd.io/etcd/api/v3 v3.5.0/go.mod h1:cbVKeC6lCfl7j/8jBhAK6aIYO9XOjdptoxU/nLQcPvs=

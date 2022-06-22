@@ -29,6 +29,7 @@ var SupportedExtensions = map[string]bool{
 	".webm": true,
 	".wmv":  true,
 	".mpg":  true,
+	".m2ts": true,
 	".mpeg": true,
 }
 
