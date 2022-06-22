@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -231,9 +232,14 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 	}
 
 	episodeKey, err := m.getEpisodeKey(episodeFile)
+
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"Failed to get episode key from file %s", episodeFile.FilePath)
+	}
+
+	if episodeKey.SeasonNumber == 0 || episodeKey.EpisodeNumber == 0 {
+		return nil, fmt.Errorf("could not find a valid episode number or season number in filename or xattr")
 	}
 
 	episode, err := m.GetOrCreateEpisodeByTmdbID(
@@ -349,6 +355,7 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 }
 
 func (m *MetadataManager) GarbageCollectAllEpisodes() error {
+	log.Debugln("Running Garbagecollection on all episodes")
 	// TODO(Leon Handreke): We actually only need the ID here.
 	episodes, err := db.FindAllEpisodes()
 	if err != nil {
@@ -363,7 +370,7 @@ func (m *MetadataManager) GarbageCollectAllEpisodes() error {
 // GarbageCollectEpisodeIfRequired deletes an Episode and its associated Season/Series objects if
 // required if no more EpisodeFiles associated with them remain.
 func (m *MetadataManager) GarbageCollectEpisodeIfRequired(episodeID uint) error {
-	log.Debugln("Garbage collecting episode", episodeID)
+	log.WithField("episodeID", episodeID).Debugln("Checking if garbagecollection is needed on episode")
 
 	m.getEpisodeLock(episodeID).Lock()
 	defer m.getEpisodeLock(episodeID).Unlock()

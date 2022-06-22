@@ -595,3 +595,19 @@ func GetPreviousEpisodes(episodeUuid string, limit int32) ([]Episode, error) {
 	err = q.Find(&episodes).Error
 	return episodes, err
 }
+
+// FindSeriesWithoutSeasons queries the database for series that have no associated seasons
+func FindSeriesWithoutSeasons() (series []Series) {
+	db.Where("seasons.id IS NULL").
+		Joins("LEFT JOIN seasons ON series.id = seasons.series_id").
+		Find(&series)
+	return series
+}
+
+// FindSeasonsWithoutEpisodes queries the database for seasons that have no associated episodes
+func FindSeasonsWithoutEpisodes() (seasons []Season) {
+	db.Where("episodes.id IS NULL").
+		Joins("LEFT JOIN episodes ON episodes.season_id = seasons.id").
+		Find(&seasons)
+	return seasons
+}

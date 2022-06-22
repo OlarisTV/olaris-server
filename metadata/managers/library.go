@@ -1,6 +1,11 @@
 package managers
 
 import (
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/rclone/rclone/vfs"
@@ -10,10 +15,6 @@ import (
 	"gitlab.com/olaris/olaris-server/filesystem"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
-	"path"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 // MinFileSize defines how big a file has to be to be indexed.
@@ -150,7 +151,7 @@ func (man *LibraryManager) IdentifyUnidentifiedMovieFiles() error {
 		_, err := man.metadataManager.GetOrCreateMovieForMovieFile(movieFile)
 		if err != nil {
 			log.WithError(err).WithField("movieFile", movieFile.FilePath).
-				Warn("Failed to identify EpisodeFile")
+				Warn("Failed to identify movieFile")
 		}
 	}
 	return nil
@@ -250,7 +251,7 @@ func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
 		p := filepath.Base(n.Path())
-		if n.IsDir() && p[0] == '.' && viper.GetBool("metadata.scan_hidden") == false {
+		if n.IsDir() && p[0] == '.' && !viper.GetBool("metadata.scan_hidden") {
 			log.WithFields(log.Fields{"path": p, "fullPath": n.Path()}).Warnln("skipping hidden folder, if you want to index it please set metadata.scan_hidden to true.")
 			return filepath.SkipDir
 		}
@@ -318,7 +319,6 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 			},
 			Streams: collectStreams(streams),
 		}
-
 		db.SaveEpisodeFile(&episodeFile)
 
 		_, err := man.metadataManager.GetOrCreateEpisodeForEpisodeFile(&episodeFile)
@@ -440,6 +440,7 @@ func (man *LibraryManager) RemoveMissingFiles(locator filesystem.FileLocator) {
 
 // RefreshAll rescans all files and attempts to find missing metadata information.
 func (man *LibraryManager) RefreshAll() {
+	log.WithField("library", man.Library.FilePath).Debugln("Refreshing library")
 	locator := filesystem.FileLocator{
 		Backend: filesystem.BackendType(man.Library.Backend),
 		Path:    man.Library.FilePath,
@@ -452,6 +453,7 @@ func (man *LibraryManager) RefreshAll() {
 
 	man.RescanFilesystem("")
 	man.IdentifyUnidentifiedFiles()
+
 }
 
 func checkPanic() {

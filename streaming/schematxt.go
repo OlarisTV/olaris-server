@@ -61,6 +61,7 @@ type Session {
     userID: Int!
     # Paused returns when the client is in a paused state.
     paused: Boolean!
+    # Play progress for the client
     progress: Int!
     streams: [Stream]!
 }`

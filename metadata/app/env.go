@@ -3,6 +3,10 @@ package app
 
 import (
 	"fmt"
+	"math/rand"
+	"path"
+	"time"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -11,9 +15,6 @@ import (
 	"gitlab.com/olaris/olaris-server/metadata/agents"
 	"gitlab.com/olaris/olaris-server/metadata/db"
 	"gitlab.com/olaris/olaris-server/metadata/managers/metadata"
-	"math/rand"
-	"path"
-	"time"
 )
 
 // MetadataContext is a container for all important vars.
@@ -86,18 +87,24 @@ func NewMDContext(
 		MetadataManager:        metadata.NewMetadataManager(agent),
 	}
 
-	metadataRefreshTicker := time.NewTicker(2 * time.Hour)
+	metadataRefreshTicker := time.NewTicker(30 * time.Second)
 	go func() {
 		for range metadataRefreshTicker.C {
+			log.Debugln("Running maintenance jobs")
+			metadataRefreshTicker.Reset(2 * time.Hour)
 			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
+
+			for _, season := range db.FindSeasonsWithoutEpisodes() {
+				log.WithFields(log.Fields{"season #": season.SeasonNumber, "series": season.Series.Name}).Infoln("Found season with no episodes attached, cleaning it up.")
+				db.DeleteSeason(season.ID)
+			}
+
+			for _, series := range db.FindSeriesWithoutSeasons() {
+				log.WithFields(log.Fields{"series": series.Name}).Infoln("Found series with no seasons attached, cleaning it up.")
+				db.DeleteSeries(series.ID)
+			}
 		}
 	}()
-
-	// This is just to be sure we don't have leftover metadata from programming errors
-	// TODO(Leon Handreke): Have some reporting so that we can fix the bugs that lead to this and
-	//  still reduce user pain.
-	// TODO(Leon Handreke): Actually enable this, it breaks tests
-	//go env.MetadataManager.GarbageCollectAllEpisodes()
 
 	return env
 }
