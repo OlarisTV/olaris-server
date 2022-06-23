@@ -3,7 +3,8 @@ package filesystem
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
+
+	"github.com/opencontainers/selinux/pkg/pwalk"
 )
 
 type LocalNode struct {
@@ -56,7 +57,7 @@ func (n *LocalNode) FileLocator() FileLocator {
 	return FileLocator{Backend: n.BackendType(), Path: n.path}
 }
 func (n *LocalNode) Walk(walkFn WalkFunc, followFileSymlinks bool) error {
-	return filepath.Walk(n.path, func(walkPath string, info os.FileInfo, err error) error {
+	return pwalk.Walk(n.path, func(walkPath string, info os.FileInfo, err error) error {
 		// NOTE(Leon Handreke): This behaviour breaks with what filepath.Walk usually does
 		// and is a bit weird in general. We should figure out a good strategy here and how
 		// to properly abstract it out

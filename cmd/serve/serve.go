@@ -3,14 +3,16 @@ package serve
 import (
 	"context"
 	"fmt"
-	"gitlab.com/olaris/olaris-server/helpers"
-	"gitlab.com/olaris/olaris-server/interfaces/web"
 	"net/http"
 	_ "net/http/pprof" // For Profiling
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"time"
+
+	"gitlab.com/olaris/olaris-server/helpers"
+	"gitlab.com/olaris/olaris-server/interfaces/web"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/goava/di"
@@ -63,6 +65,7 @@ func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 		Use:   "serve",
 		Short: "Start the olaris server",
 		Run: func(cmd *cobra.Command, args []string) {
+			runtime.GOMAXPROCS(runtime.NumCPU())
 			if viper.GetBool("server.verbose") {
 				log.SetLevel(log.DebugLevel)
 			}

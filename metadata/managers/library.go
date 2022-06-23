@@ -251,10 +251,14 @@ func (man *LibraryManager) RecursiveProbe(rootNode filesystem.Node) {
 	}
 
 	rootNode.Walk(func(walkPath string, n filesystem.Node, err error) error {
-		p := filepath.Base(n.Path())
-		if n.IsDir() && p[0] == '.' && !viper.GetBool("metadata.scan_hidden") {
-			log.WithFields(log.Fields{"path": p, "fullPath": n.Path()}).Warnln("skipping hidden folder, if you want to index it please set metadata.scan_hidden to true.")
-			return filepath.SkipDir
+		res := strings.Replace(walkPath, rootNode.Path(), "", 1)
+
+		// Using opencontainers/selinux/pkg/pwalk we can no longer tell the walker to ignore certain folder and all their subfolders
+		// As a work around we simply check if there is a /. in the complete file path. This sucks and is slow but should still be faster then the
+		// original implementation.
+		if !viper.GetBool("metadata.scan_hidden") && strings.Contains(res, "/.") {
+			//log.WithFields(log.Fields{"path": walkPath, "fullPath": n.Path()}).Warnln("skipping file because it's in a hidden folder, if you want to index it please set metadata.scan_hidden to true.")
+			return nil
 		}
 
 		if err != nil {
