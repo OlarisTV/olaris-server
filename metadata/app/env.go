@@ -95,7 +95,7 @@ func NewMDContext(
 			env.MetadataManager.RefreshAgentMetadataWithMissingArt()
 
 			for _, season := range db.FindSeasonsWithoutEpisodes() {
-				log.WithFields(log.Fields{"season #": season.SeasonNumber, "series": season.Series.Name}).Infoln("Found season with no episodes attached, cleaning it up.")
+				log.WithFields(log.Fields{"season #": season.SeasonNumber}).Infoln("Found season with no episodes attached, cleaning it up.")
 				db.DeleteSeason(season.ID)
 			}
 
