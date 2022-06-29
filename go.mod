@@ -127,7 +127,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yunify/qingstor-sdk-go/v3 v3.2.0 // indirect
 	github.com/zeebo/errs v1.2.2 // indirect
-	gitlab.com/olaris/olaris-rename v0.0.0-20220622131304-0c4097cdf6c6 // indirect
+	gitlab.com/olaris/olaris-rename v0.0.0-20220629071935-c44ace6d9152 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
