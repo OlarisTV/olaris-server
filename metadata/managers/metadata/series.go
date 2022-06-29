@@ -84,7 +84,7 @@ func (m *MetadataManager) refreshSeriesMetadataFromAgent(series *db.Series) erro
 }
 
 func (m *MetadataManager) RefreshEpisodeMetadata(ep *db.Episode) error {
-	if err := m.refreshEpisodeMetadataFromAgent(ep); err != nil {
+	if err := m.refreshEpisodeMetadataFromAgent(ep, ep.SeasonNum, ep.GetSeries().TmdbID); err != nil {
 		return err
 	}
 	if err := db.SaveEpisode(ep); err != nil {
@@ -99,14 +99,14 @@ func (m *MetadataManager) RefreshEpisodeMetadata(ep *db.Episode) error {
 }
 
 // refreshEpisodeMetadataFromAgent updates the database record with the latest data from the agent
-func (m *MetadataManager) refreshEpisodeMetadataFromAgent(ep *db.Episode) error {
+func (m *MetadataManager) refreshEpisodeMetadataFromAgent(ep *db.Episode, seasonNumber int, seriesTmdbID int) error {
 	return m.agent.UpdateEpisodeMD(ep,
-		ep.GetSeries().TmdbID, ep.GetSeason().SeasonNumber, ep.EpisodeNum)
+		seriesTmdbID, seasonNumber, ep.EpisodeNum)
 }
 
 // RefreshSeasonMetadata refreshes and saves season metadata
 func (m *MetadataManager) RefreshSeasonMetadata(season *db.Season) error {
-	if err := m.refreshSeasonMetadataFromAgent(season); err != nil {
+	if err := m.refreshSeasonMetadataFromAgent(season, season.GetSeries().TmdbID); err != nil {
 		return err
 	}
 	if err := db.SaveSeason(season); err != nil {
@@ -116,9 +116,9 @@ func (m *MetadataManager) RefreshSeasonMetadata(season *db.Season) error {
 }
 
 // refreshSeasonMetadataFromAgent refreshes metadata from the agent but does not save
-func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season) error {
+func (m *MetadataManager) refreshSeasonMetadataFromAgent(season *db.Season, seriesTmdbID int) error {
 	if err := m.agent.UpdateSeasonMD(
-		season, season.GetSeries().TmdbID, season.SeasonNumber); err != nil {
+		season, seriesTmdbID, season.SeasonNumber); err != nil {
 		return errors.Wrapf(err,
 			"Failed to refresh metadata from agent for Season %s", season.UUID)
 	}
@@ -262,6 +262,14 @@ func (m *MetadataManager) GetOrCreateEpisodeForEpisodeFile(
 func (m *MetadataManager) GetOrCreateEpisodeByTmdbID(
 	seriesTmdbID int, seasonNum int, episodeNum int) (*db.Episode, error) {
 
+	// For now we can only handle one series at a time, if we don't do this it's possible that the series gets created twice since
+	// we only persist the series at the end of this method. If we don't persist at the end but before the episode gets saved it's possible the series/seasons get
+	// created even though we can't valid episode data.
+	// TODO: Could we rewrite this to just do some kind of pre-check on the episode to ensure it's a valid TMDB entry and only do the rest after? Might clean up code.
+	l := m.getSeriesLock(uint(seriesTmdbID))
+	l.Lock()
+	defer l.Unlock()
+
 	season, err := m.getOrCreateSeasonByTmdbID(seriesTmdbID, seasonNum)
 	if err != nil {
 		return nil, err
@@ -278,9 +286,32 @@ func (m *MetadataManager) GetOrCreateEpisodeByTmdbID(
 	}
 
 	episode = &db.Episode{Season: season, SeasonID: season.ID, EpisodeNum: episodeNum}
-	if err := m.refreshEpisodeMetadataFromAgent(episode); err != nil {
+	if err := m.refreshEpisodeMetadataFromAgent(episode, seasonNum, seriesTmdbID); err != nil {
 		return nil, err
 	}
+
+	if season.Series.ID == 0 {
+		if err := db.SaveSeries(season.Series); err != nil {
+			return nil, err
+		}
+
+		m.eventBroker.publish(&MetadataEvent{
+			EventType: MetadataEventTypeSeriesAdded,
+			Payload:   season.Series,
+		})
+	}
+
+	if season.ID == 0 {
+		if err := db.SaveSeason(season); err != nil {
+			return nil, err
+		}
+
+		m.eventBroker.publish(&MetadataEvent{
+			EventType: MetadataEventTypeSeasonAdded,
+			Payload:   season,
+		})
+	}
+
 	if err := db.SaveEpisode(episode); err != nil {
 		return nil, err
 	}
@@ -293,6 +324,7 @@ func (m *MetadataManager) GetOrCreateEpisodeByTmdbID(
 	return episode, nil
 }
 
+// getOrCreateSeriesByTmdbID creates a series in the database using the supplied TmdbID to grab the metadata.
 func (m *MetadataManager) getOrCreateSeriesByTmdbID(
 	seriesTmdbID int) (*db.Series, error) {
 
@@ -309,14 +341,6 @@ func (m *MetadataManager) getOrCreateSeriesByTmdbID(
 	if err := m.refreshSeriesMetadataFromAgent(series); err != nil {
 		return nil, err
 	}
-	if err := db.SaveSeries(series); err != nil {
-		return nil, err
-	}
-
-	m.eventBroker.publish(&MetadataEvent{
-		EventType: MetadataEventTypeSeriesAdded,
-		Payload:   series,
-	})
 
 	return series, nil
 }
@@ -329,27 +353,15 @@ func (m *MetadataManager) getOrCreateSeasonByTmdbID(
 		return nil, err
 	}
 
-	// Lock so that we don't create the same series twice
-	m.seriesCreationMutex.Lock()
-	defer m.seriesCreationMutex.Unlock()
-
 	season, err := db.FindSeasonBySeasonNumber(series, seasonNum)
 	if err == nil {
 		return season, nil
 	}
 
 	season = &db.Season{Series: series, SeriesID: series.ID, SeasonNumber: seasonNum}
-	if err := m.refreshSeasonMetadataFromAgent(season); err != nil {
+	if err := m.refreshSeasonMetadataFromAgent(season, seriesTmdbID); err != nil {
 		return nil, err
 	}
-	if err := db.SaveSeason(season); err != nil {
-		return nil, err
-	}
-
-	m.eventBroker.publish(&MetadataEvent{
-		EventType: MetadataEventTypeSeasonAdded,
-		Payload:   season,
-	})
 
 	return season, nil
 }

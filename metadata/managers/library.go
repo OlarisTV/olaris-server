@@ -348,7 +348,7 @@ func (man *LibraryManager) ProbeFile(n filesystem.Node) error {
 	}
 
 	dur := time.Since(st)
-	log.WithFields(log.Fields{"duration": dur.Seconds(), "path": n.Path()}).Printf("done scanning file")
+	log.WithFields(log.Fields{"duration": dur.Seconds(), "path": n.Path()}).Printf("Done scanning file")
 	return nil
 }
 

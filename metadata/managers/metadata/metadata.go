@@ -40,13 +40,14 @@ func NewMetadataManager(agent agents.MetadataRetrievalAgent) *MetadataManager {
 func (m *MetadataManager) RefreshAgentMetadataWithMissingArt() {
 	log.Debugln("Checking and updating media items for missing art.")
 	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	uuids := make(chan string, runtime.NumCPU())
 
 	missingItems := db.ItemsWithMissingMetadata()
 	log.Debugln(len(missingItems), " items appear to be missing art.")
 	for _, UUID := range missingItems {
 		go func(UUID string) {
-			wg.Add(1)
 			defer wg.Done()
 			uuids <- UUID
 			m.RefreshAgentMetadataForUUID(UUID)
@@ -55,7 +56,6 @@ func (m *MetadataManager) RefreshAgentMetadataWithMissingArt() {
 	}
 
 	wg.Wait()
-	return
 }
 
 // RefreshAgentMetadataForUUID takes an UUID of a mediaitem and refreshes all metadata
@@ -84,7 +84,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	season, err := db.FindSeasonByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.refreshSeasonMetadataFromAgent(season)
+			m.refreshSeasonMetadataFromAgent(season, season.GetSeries().TmdbID)
 			db.SaveSeason(season)
 		}, season.UUID)
 		return true
@@ -93,7 +93,7 @@ func (m *MetadataManager) RefreshAgentMetadataForUUID(UUID string) bool {
 	episode, err := db.FindEpisodeByUUID(UUID)
 	if err == nil {
 		mhelpers.WithLock(func() {
-			m.refreshEpisodeMetadataFromAgent(episode)
+			m.refreshEpisodeMetadataFromAgent(episode, episode.SeasonNum, episode.GetSeries().TmdbID)
 			db.SaveEpisode(episode)
 		}, episode.UUID)
 		return true
