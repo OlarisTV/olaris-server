@@ -40,13 +40,13 @@ func NewMetadataManager(agent agents.MetadataRetrievalAgent) *MetadataManager {
 func (m *MetadataManager) RefreshAgentMetadataWithMissingArt() {
 	log.Debugln("Checking and updating media items for missing art.")
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
 
 	uuids := make(chan string, runtime.NumCPU())
 
 	missingItems := db.ItemsWithMissingMetadata()
 	log.Debugln(len(missingItems), " items appear to be missing art.")
 	for _, UUID := range missingItems {
+		wg.Add(1)
 		go func(UUID string) {
 			defer wg.Done()
 			uuids <- UUID
