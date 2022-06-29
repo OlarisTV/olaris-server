@@ -1,6 +1,8 @@
 package managers
 
 import (
+	"runtime"
+
 	"github.com/Jeffail/tunny"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,8 +23,8 @@ func (p *WorkerPool) Shutdown() {
 func NewDefaultWorkerPool() *WorkerPool {
 	p := &WorkerPool{}
 
-	p.probePool = tunny.NewFunc(4, func(payload interface{}) interface{} {
-		log.Debugln("current probe queue length:", p.probePool.QueueLength())
+	p.probePool = tunny.NewFunc(runtime.NumCPU()*2, func(payload interface{}) interface{} {
+		log.Debugln("Current probe queue length:", p.probePool.QueueLength())
 		if job, ok := payload.(*probeJob); ok {
 			job.man.ProbeFile(job.node)
 		} else {
