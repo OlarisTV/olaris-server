@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"runtime"
 	"time"
 
 	"gitlab.com/olaris/olaris-server/helpers"
@@ -68,7 +67,6 @@ func NewServeCommand(params *Parameters) *cmd.CobraCommand {
 			if viper.GetBool("server.verbose") {
 				log.SetLevel(log.DebugLevel)
 			}
-			runtime.GOMAXPROCS(runtime.NumCPU())
 
 			// Check FFmpeg version and warn if it's missing
 			ffmpegVersion, err := ffmpeg.GetFfmpegVersion()
