@@ -79,8 +79,8 @@ The command below mounts `~/Videos` to `/var/media` in the container --- please 
     docker run \
       -p 127.0.0.1:8080:8080/tcp \
       -v $HOME/media/:/var/media \
-      -v $HOME/.config/olaris:/home/olaris/.config/olaris
-      -v $HOME/.config/rclone:/home/olaris/.config/rclone
+      -v $HOME/.config/olaris:/home/olaris/.config/olaris \
+      -v $HOME/.config/rclone:/home/olaris/.config/rclone \
       -e OLARIS_UID=$(id -u) -e OLARIS_GID=$(id -g) \
       olaristv/olaris-server
 
